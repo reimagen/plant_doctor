@@ -1,0 +1,8 @@
+{
+  "name": "Plant Doctor AI",
+  "description": "A world-class plant diagnostic app using Gemini Live API for real-time video/voice diagnosis, health tracking, and adaptive watering schedules.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
