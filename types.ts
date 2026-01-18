@@ -21,7 +21,7 @@ export interface Plant {
   lastWateredAt: string;
   cadenceDays: number;
   status: 'pending' | 'healthy' | 'warning' | 'critical';
-  needsCheckIn?: boolean; // Flag for post-rehab verification
+  needsCheckIn?: boolean; 
   careGuide?: string[]; 
   notes?: string[];     
   rescuePlan?: string[]; 
@@ -30,6 +30,7 @@ export interface Plant {
   nearWindow?: boolean;
   windowDirection?: WindowDirection;
   lightLevel?: string;
+  idealConditions?: string; // New field for AI-detected preferences
 }
 
 export interface AppState {

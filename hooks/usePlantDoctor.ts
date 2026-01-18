@@ -1,124 +1,184 @@
 
 import { useState, useRef, useCallback } from 'react';
-import { LiveServerMessage, Type, FunctionDeclaration } from "@google/genai";
-import { HomeProfile, Plant, LightLevel } from '../types';
+import { Type, FunctionDeclaration } from "@google/genai";
+import { HomeProfile, Plant } from '../types';
 import { GeminiLiveSession } from '../lib/gemini-live';
 import { AudioService } from '../lib/audio-service';
+import { useMediaStream } from './useMediaStream';
 
 export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Plant) => void) => {
   const [isCalling, setIsCalling] = useState(false);
   const [lastDetectedName, setLastDetectedName] = useState<string | null>(null);
+  const [discoveryLog, setDiscoveryLog] = useState<string[]>([]);
+  
+  const hardware = useMediaStream();
   const sessionRef = useRef<GeminiLiveSession | null>(null);
-  const audioServiceRef = useRef(new AudioService());
-  const frameIntervalRef = useRef<number | null>(null);
+  const audioServiceRef = useRef(new AudioService(24000));
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const intervalRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  
+  // Refs for video elements to allow frame capture during tool calls
+  const activeVideoRef = useRef<HTMLVideoElement | null>(null);
+  const activeCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const onPlantDetectedRef = useRef(onPlantDetected);
+  onPlantDetectedRef.current = onPlantDetected;
 
   const proposePlantFunction: FunctionDeclaration = {
     name: 'propose_plant_to_inventory',
     parameters: {
       type: Type.OBJECT,
-      description: 'Proposes a plant to be added to the inventory based on current visual assessment.',
+      description: 'Proposes a plant to the inventory. Can be called multiple times in one session.',
       properties: {
-        species: { type: Type.STRING },
-        soilStatus: { type: Type.STRING },
+        commonName: { type: Type.STRING },
+        scientificName: { type: Type.STRING },
+        healthStatus: { type: Type.STRING, enum: ['healthy', 'warning', 'critical'] },
+        habitGrade: { type: Type.STRING, description: 'A grade from A to F based on care habits visible (dust, soil moisture, pruning).' },
+        habitFeedback: { type: Type.STRING, description: 'Brief reasoning for the grade.' },
         cadenceDays: { type: Type.NUMBER },
-        careScore: { type: Type.NUMBER },
-        reasoning: { type: Type.STRING },
-        location: { type: Type.STRING },
-        careGuide: { type: Type.ARRAY, items: { type: Type.STRING } },
-        lightLevel: { 
-          type: Type.STRING, 
-          description: 'Observed or inferred light level: Low, Medium, Bright, Indirect, or Direct.' 
-        },
-        nearWindow: { 
-          type: Type.BOOLEAN, 
-          description: 'Whether the plant appears to be situated near a window.' 
-        }
+        idealConditions: { type: Type.STRING }
       },
-      required: ['species', 'soilStatus', 'cadenceDays', 'careScore', 'reasoning', 'careGuide']
+      required: ['commonName', 'scientificName', 'healthStatus', 'habitGrade', 'habitFeedback']
     }
   };
 
-  const stopCall = useCallback(() => {
-    if (frameIntervalRef.current) clearInterval(frameIntervalRef.current);
-    sessionRef.current?.close();
-    audioServiceRef.current.stopAll();
+  const stopCall = useCallback(async () => {
+    if (!isCalling) return;
     setIsCalling(false);
-  }, []);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (processorRef.current) {
+      processorRef.current.disconnect();
+      processorRef.current.onaudioprocess = null;
+    }
+    sessionRef.current?.close();
+    sessionRef.current = null;
+    hardware.stop();
+    await audioServiceRef.current.close();
+    if (audioContextRef.current?.state !== 'closed') {
+      await audioContextRef.current?.close();
+    }
+    activeVideoRef.current = null;
+    activeCanvasRef.current = null;
+  }, [hardware, isCalling]);
 
-  const startCall = useCallback(async (videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement) => {
+  const startCall = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
+    if (isCalling) return;
+    setIsCalling(true);
+    setDiscoveryLog([]);
+    activeVideoRef.current = video;
+    activeCanvasRef.current = canvas;
+
     try {
-      stopCall();
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: true, 
-        video: { width: 640, height: 480, facingMode: "environment" } 
-      });
-      videoElement.srcObject = stream;
+      const stream = await hardware.start();
+      video.srcObject = stream;
+      
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      await audioCtx.resume();
+      audioContextRef.current = audioCtx;
+      await audioServiceRef.current.ensureContext();
 
-      const inputAudioCtx = new AudioContext({ sampleRate: 16000 });
-
-      sessionRef.current = new GeminiLiveSession({
+      const session = new GeminiLiveSession({
         apiKey: process.env.API_KEY!,
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-        systemInstruction: `You are a real-time Plant Doctor. Home context: ${JSON.stringify(homeProfile)}. 
-        Identify plants and use 'propose_plant_to_inventory' tool when certain.
-        Pay attention to the plant's placement: Is it near a window? What is the light quality (Direct, Indirect, Bright, etc.)?`,
+        systemInstruction: `You are the Plant Doctor performing a "Jungle Inventory". 
+        Environment: ${JSON.stringify(homeProfile)}.
+        USER INTERACTION:
+        1. The user will walk around showing you many plants. 
+        2. For EVERY new plant you see, call propose_plant_to_inventory.
+        3. Grade their care habits (A-F) based on visual evidence.
+        4. Be conversational. Do NOT stop the session after one plant.`,
         tools: [{ functionDeclarations: [proposePlantFunction] }],
         callbacks: {
           onOpen: () => {
-            setIsCalling(true);
-            const source = inputAudioCtx.createMediaStreamSource(stream);
-            const processor = inputAudioCtx.createScriptProcessor(4096, 1, 1);
+            session.sendInitialGreet("I'm ready for the grand tour! Show me your plants one by one, and I'll catalog your whole jungle.");
+            
+            const source = audioCtx.createMediaStreamSource(stream);
+            const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+            processorRef.current = processor;
             processor.onaudioprocess = (e) => {
-              const base64 = GeminiLiveSession.encodeAudio(e.inputBuffer.getChannelData(0));
-              sessionRef.current?.sendMedia(base64, 'audio/pcm;rate=16000');
+              if (sessionRef.current?.session) {
+                const pcm = GeminiLiveSession.encodeAudio(e.inputBuffer.getChannelData(0));
+                sessionRef.current.sendMedia(pcm, 'audio/pcm;rate=16000');
+              }
             };
             source.connect(processor);
-            processor.connect(inputAudioCtx.destination);
+            processor.connect(audioCtx.destination);
 
-            frameIntervalRef.current = window.setInterval(() => {
-              if (canvasElement && videoElement.readyState >= 2) {
-                const ctx = canvasElement.getContext('2d');
-                ctx?.drawImage(videoElement, 0, 0, 640, 480);
-                const data = canvasElement.toDataURL('image/jpeg', 0.5).split(',')[1];
-                sessionRef.current?.sendMedia(data, 'image/jpeg');
-              }
+            intervalRef.current = window.setInterval(() => {
+              if (!sessionRef.current?.session || video.paused) return;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) return;
+              canvas.width = 320;
+              canvas.height = (320 * video.videoHeight) / video.videoWidth;
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              canvas.toBlob(blob => {
+                if (blob && sessionRef.current?.session) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    const base64 = (reader.result as string).split(',')[1];
+                    sessionRef.current?.sendMedia(base64, 'image/jpeg');
+                  };
+                  reader.readAsDataURL(blob);
+                }
+              }, 'image/jpeg', 0.5);
             }, 1000);
           },
-          onMessage: async (msg: LiveServerMessage) => {
+          onMessage: async (msg) => {
+            const audio = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+            if (audio) await audioServiceRef.current.playRawChunk(GeminiLiveSession.decodeAudio(audio));
+            
             if (msg.toolCall) {
               for (const fc of msg.toolCall.functionCalls) {
-                const args = fc.args as any;
-                setLastDetectedName(args.species);
-                onPlantDetected({
-                  id: Math.random().toString(36).substr(2, 9),
-                  name: args.species,
-                  species: args.species,
-                  photoUrl: canvasElement.toDataURL('image/jpeg'),
-                  location: args.location || 'Unknown',
-                  lastWateredAt: new Date().toISOString(),
-                  cadenceDays: args.cadenceDays || 7,
-                  status: 'pending',
-                  careGuide: args.careGuide,
-                  lightLevel: args.lightLevel as LightLevel,
-                  nearWindow: args.nearWindow
-                });
-                sessionRef.current?.sendToolResponse(fc.id, fc.name, { result: "ok" });
-                setTimeout(() => setLastDetectedName(null), 5000);
+                if (fc.name === 'propose_plant_to_inventory') {
+                  const args = fc.args as any;
+                  
+                  // Capture current frame for the plant photo
+                  let capturedPhoto = '';
+                  if (activeVideoRef.current && activeCanvasRef.current) {
+                    const vid = activeVideoRef.current;
+                    const can = activeCanvasRef.current;
+                    const ctx = can.getContext('2d');
+                    if (ctx) {
+                      can.width = vid.videoWidth;
+                      can.height = vid.videoHeight;
+                      ctx.drawImage(vid, 0, 0);
+                      capturedPhoto = can.toDataURL('image/jpeg', 0.8);
+                    }
+                  }
+
+                  session.sendToolResponse(fc.id, fc.name, { success: true, acknowledged: args.commonName });
+                  
+                  setLastDetectedName(args.commonName);
+                  setDiscoveryLog(prev => [args.commonName, ...prev].slice(0, 5));
+                  
+                  onPlantDetectedRef.current({
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: '',
+                    species: args.commonName,
+                    photoUrl: capturedPhoto || `https://images.unsplash.com/photo-1545239351-ef35f43d514b?q=80&w=400&auto=format&fit=crop`,
+                    location: 'Detected via Inventory Sweep',
+                    lastWateredAt: new Date().toISOString(),
+                    cadenceDays: args.cadenceDays || 7,
+                    status: 'pending',
+                    idealConditions: args.idealConditions,
+                    notes: [`Habit Grade: ${args.habitGrade}`, args.habitFeedback]
+                  });
+                }
               }
             }
-            const audioData = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-            if (audioData) {
-              audioServiceRef.current.playRawChunk(GeminiLiveSession.decodeAudio(audioData));
-            }
-          }
+          },
+          onError: stopCall,
+          onClose: stopCall
         }
       });
-      await sessionRef.current.connect();
-    } catch (e) {
-      console.error(e);
-      setIsCalling(false);
-    }
-  }, [homeProfile, stopCall, onPlantDetected]);
 
-  return { isCalling, lastDetectedName, startCall, stopCall };
+      sessionRef.current = session;
+      await session.connect();
+    } catch (e) {
+      stopCall();
+    }
+  };
+
+  return { isCalling, lastDetectedName, discoveryLog, startCall, stopCall };
 };

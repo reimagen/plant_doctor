@@ -1,40 +1,51 @@
 
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { HomeProfile, Plant } from '../types';
 import { Icons } from '../constants';
 import { usePlantDoctor } from '../hooks/usePlantDoctor';
+import { useRehabSpecialist } from '../hooks/useRehabSpecialist';
 
 interface Props {
   homeProfile: HomeProfile;
   onAutoDetect: (plant: Plant) => void;
+  onUpdatePlant: (id: string, updates: Partial<Plant>) => void;
+  plants: Plant[];
+  rehabTargetId?: string | null;
 }
 
-export const DoctorPage: React.FC<Props> = ({ homeProfile, onAutoDetect }) => {
+export const DoctorPage: React.FC<Props> = ({ homeProfile, onAutoDetect, onUpdatePlant, plants, rehabTargetId }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { isCalling, lastDetectedName, startCall, stopCall } = usePlantDoctor(homeProfile, onAutoDetect);
+  
+  const discovery = usePlantDoctor(homeProfile, onAutoDetect);
+  const rehab = useRehabSpecialist(homeProfile, onUpdatePlant);
+
+  const activeMode = rehabTargetId ? 'rehab' : 'discovery';
+  const isCalling = discovery.isCalling || rehab.isCalling;
+  const rehabPlant = rehabTargetId ? plants.find(p => p.id === rehabTargetId) : null;
 
   useEffect(() => {
-    return () => {
-      if (videoRef.current?.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-      }
-      stopCall();
-    };
-  }, [stopCall]);
+    if (rehabTargetId && !rehab.isCalling && rehabPlant) {
+      const timer = setTimeout(() => {
+        if (videoRef.current && canvasRef.current) {
+          rehab.startRehabCall(videoRef.current, canvasRef.current, rehabPlant);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [rehabTargetId]);
 
   const toggleCall = async () => {
     if (isCalling) {
-      stopCall();
-      if (videoRef.current?.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(t => t.stop());
-        videoRef.current.srcObject = null;
-      }
+      discovery.stopCall();
+      rehab.stopCall();
     } else {
       if (videoRef.current && canvasRef.current) {
-        await startCall(videoRef.current, canvasRef.current);
+        if (rehabTargetId && rehabPlant) {
+          await rehab.startRehabCall(videoRef.current, canvasRef.current, rehabPlant);
+        } else {
+          await discovery.startCall(videoRef.current, canvasRef.current);
+        }
       }
     }
   };
@@ -46,58 +57,70 @@ export const DoctorPage: React.FC<Props> = ({ homeProfile, onAutoDetect }) => {
         autoPlay 
         playsInline 
         muted 
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${isCalling ? 'opacity-80' : 'opacity-0'}`} 
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${isCalling ? 'opacity-90' : 'opacity-30'}`} 
       />
       <canvas ref={canvasRef} className="hidden" />
 
-      {isCalling && (
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-            <div className="w-64 h-64 border-2 border-dashed border-white/20 rounded-full animate-pulse flex items-center justify-center">
-                <div className="w-1 h-1 bg-white/50 rounded-full shadow-[0_0_20px_white]" />
+      {/* Discovery Log - Positioned to the right side */}
+      {isCalling && discovery.discoveryLog.length > 0 && (
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-end gap-3 pointer-events-none max-w-[180px]">
+          {discovery.discoveryLog.map((name, i) => (
+            <div 
+              key={`${name}-${i}`}
+              className="bg-black/60 backdrop-blur-md border border-white/20 px-4 py-2 rounded-2xl flex items-center gap-2 animate-slide-up shadow-lg"
+              style={{ 
+                opacity: Math.max(0, 1 - (i * 0.15)), 
+                transform: `translateX(${i * 4}px) scale(${1 - (i * 0.05)})`,
+                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+              }}
+            >
+              <span className="text-base flex-shrink-0">🌿</span>
+              <span className="text-white font-black text-[9px] uppercase tracking-widest truncate">
+                {name}
+              </span>
             </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40" />
+          ))}
         </div>
       )}
 
-      <div className="relative z-10 flex-1 p-6 flex flex-col justify-between">
-        <div className="flex justify-between items-start">
-          <div className="bg-black/40 backdrop-blur-xl p-4 rounded-3xl border border-white/10 w-fit">
-            <h1 className="text-white font-bold flex items-center gap-2 text-sm uppercase tracking-widest">
-              <span className={`w-2 h-2 rounded-full ${isCalling ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
-              Live Doctor
-            </h1>
-          </div>
-        </div>
-
-        {/* Silent Notification Toast */}
-        {lastDetectedName && (
-          <div className="absolute top-24 left-1/2 -translate-x-1/2 w-[80%] animate-slide-down">
-            <div className="bg-white/95 backdrop-blur-2xl rounded-2xl py-3 px-6 shadow-2xl border border-white/20 flex items-center gap-3 ring-1 ring-black/5">
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600">
-                <Icons.Leaf />
-              </div>
-              <div>
-                <p className="text-stone-800 text-[11px] font-black uppercase tracking-tight">Detection Successful</p>
-                <p className="text-stone-500 text-xs truncate">Added {lastDetectedName} to Jungle</p>
-              </div>
+      <div className="absolute inset-0 z-10 flex flex-col justify-between p-8 pointer-events-none">
+        <header className="flex justify-between items-start pt-4">
+          <div className="bg-black/40 backdrop-blur-xl px-5 py-3 rounded-[24px] border border-white/10">
+            <h2 className="text-white font-black text-[10px] uppercase tracking-[0.2em] mb-1">
+              {activeMode === 'rehab' ? `Target: ${rehabPlant?.name || 'Plant'}` : 'Inventory Sweep'}
+            </h2>
+            <div className="flex items-center gap-2">
+              <div className={`w-1.5 h-1.5 rounded-full ${isCalling ? 'bg-green-400 animate-pulse' : 'bg-white/20'}`} />
+              <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">
+                {isCalling ? 'Analyzing Stream...' : 'Camera Standby'}
+              </p>
             </div>
           </div>
-        )}
+        </header>
 
-        <div className="flex flex-col gap-4 items-center pb-24">
-          <button 
-            onClick={toggleCall} 
-            className={`p-10 rounded-full transition-all active:scale-90 shadow-2xl flex items-center justify-center border-4 ${isCalling ? 'bg-red-500 text-white border-red-400' : 'bg-green-600 text-white border-green-500'}`}
-          >
-            {isCalling ? <Icons.X /> : <Icons.Video />}
-          </button>
-          <div className="text-center drop-shadow-lg">
-            <p className="text-white font-black text-sm uppercase tracking-widest">{isCalling ? 'End Call' : 'Start Session'}</p>
-            <p className="text-white/60 text-[10px] font-bold mt-1 uppercase tracking-tighter">
-              {isCalling ? 'I am watching & listening...' : 'Point camera at your plant'}
-            </p>
+        <footer className="space-y-6 pb-24 pointer-events-auto flex flex-col items-center">
+          <div className="flex flex-col items-center gap-6">
+            <button 
+              onClick={toggleCall}
+              className={`w-24 h-24 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-[0_0_50px_rgba(255,255,255,0.1)] ${
+                isCalling 
+                ? 'bg-red-500 ring-8 ring-red-500/20' 
+                : 'bg-white ring-8 ring-white/10'
+              }`}
+            >
+              {isCalling ? (
+                <div className="w-8 h-8 bg-white rounded-md shadow-inner" />
+              ) : (
+                <div className="text-green-600 scale-150"><Icons.Camera /></div>
+              )}
+            </button>
+            <div className="text-center">
+              <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.4em] mb-1">
+                {isCalling ? 'End Tour' : 'Start Sweep'}
+              </p>
+            </div>
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   );

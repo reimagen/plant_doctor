@@ -37,7 +37,7 @@ export const RescueProtocolView: React.FC<Props> = ({ plant, homeProfile, onClos
       <div className="p-6 flex items-center justify-between border-b border-stone-100">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center animate-pulse ${isOverdue ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600'}`}>
-            {isOverdue ? <Icons.WaterDrop /> : <span className="text-xl">⚠️</span>}
+            {isOverdue ? <Icons.WateringCan /> : <span className="text-xl">⚠️</span>}
           </div>
           <div>
             <h2 className="font-black text-stone-800 uppercase tracking-tight">Rescue: {plant.name}</h2>
