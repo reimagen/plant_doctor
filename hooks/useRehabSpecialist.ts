@@ -13,7 +13,8 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
   const hardware = useMediaStream();
   const sessionRef = useRef<GeminiLiveSession | null>(null);
   const audioServiceRef = useRef(new AudioService(24000));
-  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const workletRef = useRef<AudioWorkletNode | null>(null);
+  const muteGainRef = useRef<GainNode | null>(null);
   const intervalRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -41,10 +42,14 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
       intervalRef.current = null;
     }
     
-    if (processorRef.current) {
-      processorRef.current.disconnect();
-      processorRef.current.onaudioprocess = null;
-      processorRef.current = null;
+    if (workletRef.current) {
+      workletRef.current.port.onmessage = null;
+      workletRef.current.disconnect();
+      workletRef.current = null;
+    }
+    if (muteGainRef.current) {
+      muteGainRef.current.disconnect();
+      muteGainRef.current = null;
     }
 
     // Close Gemini Session
@@ -88,22 +93,29 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
         systemInstruction,
         tools: [{ functionDeclarations: [verifyRehabFunction] }],
         callbacks: {
-          onOpen: () => {
+          onOpen: async () => {
             session.sendInitialGreet(`Hello! I'm here to check on ${plant.name || plant.species}. Please show me its current condition.`);
             
             // Start Audio Streaming
             const source = audioCtx.createMediaStreamSource(stream);
-            const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-            processorRef.current = processor;
+            await audioCtx.audioWorklet.addModule(
+              new URL('../lib/pcm-capture-worklet.ts', import.meta.url)
+            );
+            const worklet = new AudioWorkletNode(audioCtx, 'pcm-capture-processor');
+            workletRef.current = worklet;
+            const muteGain = audioCtx.createGain();
+            muteGain.gain.value = 0;
+            muteGainRef.current = muteGain;
 
-            processor.onaudioprocess = (e) => {
+            worklet.port.onmessage = (event) => {
               if (!session.session) return;
-              const pcm = GeminiLiveSession.encodeAudio(e.inputBuffer.getChannelData(0));
-              session.sendMedia(pcm, 'audio/pcm;rate=16000');
+              const pcm = GeminiLiveSession.encodeAudio(event.data as Float32Array);
+              session.sendMedia(pcm, `audio/pcm;rate=${audioCtx.sampleRate}`);
             };
 
-            source.connect(processor);
-            processor.connect(audioCtx.destination);
+            source.connect(worklet);
+            worklet.connect(muteGain);
+            muteGain.connect(audioCtx.destination);
 
             // Start Video Streaming
             intervalRef.current = window.setInterval(() => {
@@ -147,7 +159,10 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
               }
             }
           },
-          onError: stopCall,
+          onError: (e) => {
+            console.error('Rehab session error:', e);
+            stopCall();
+          },
           onClose: stopCall
         }
       });

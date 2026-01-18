@@ -14,7 +14,8 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
   const hardware = useMediaStream();
   const sessionRef = useRef<GeminiLiveSession | null>(null);
   const audioServiceRef = useRef(new AudioService(24000));
-  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const workletRef = useRef<AudioWorkletNode | null>(null);
+  const muteGainRef = useRef<GainNode | null>(null);
   const intervalRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   
@@ -47,9 +48,14 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
     if (!isCalling) return;
     setIsCalling(false);
     if (intervalRef.current) clearInterval(intervalRef.current);
-    if (processorRef.current) {
-      processorRef.current.disconnect();
-      processorRef.current.onaudioprocess = null;
+    if (workletRef.current) {
+      workletRef.current.port.onmessage = null;
+      workletRef.current.disconnect();
+      workletRef.current = null;
+    }
+    if (muteGainRef.current) {
+      muteGainRef.current.disconnect();
+      muteGainRef.current = null;
     }
     sessionRef.current?.close();
     sessionRef.current = null;
@@ -90,20 +96,26 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
         4. Be conversational. Do NOT stop the session after one plant.`,
         tools: [{ functionDeclarations: [proposePlantFunction] }],
         callbacks: {
-          onOpen: () => {
+          onOpen: async () => {
             session.sendInitialGreet("I'm ready for the grand tour! Show me your plants one by one, and I'll catalog your whole jungle.");
             
             const source = audioCtx.createMediaStreamSource(stream);
-            const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-            processorRef.current = processor;
-            processor.onaudioprocess = (e) => {
-              if (sessionRef.current?.session) {
-                const pcm = GeminiLiveSession.encodeAudio(e.inputBuffer.getChannelData(0));
-                sessionRef.current.sendMedia(pcm, 'audio/pcm;rate=16000');
-              }
+            await audioCtx.audioWorklet.addModule(
+              new URL('../lib/pcm-capture-worklet.ts', import.meta.url)
+            );
+            const worklet = new AudioWorkletNode(audioCtx, 'pcm-capture-processor');
+            workletRef.current = worklet;
+            const muteGain = audioCtx.createGain();
+            muteGain.gain.value = 0;
+            muteGainRef.current = muteGain;
+            worklet.port.onmessage = (event) => {
+              if (!sessionRef.current?.session) return;
+              const pcm = GeminiLiveSession.encodeAudio(event.data as Float32Array);
+              sessionRef.current.sendMedia(pcm, `audio/pcm;rate=${audioCtx.sampleRate}`);
             };
-            source.connect(processor);
-            processor.connect(audioCtx.destination);
+            source.connect(worklet);
+            worklet.connect(muteGain);
+            muteGain.connect(audioCtx.destination);
 
             intervalRef.current = window.setInterval(() => {
               if (!sessionRef.current?.session || video.paused) return;
@@ -168,7 +180,10 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
               }
             }
           },
-          onError: stopCall,
+          onError: (e) => {
+            console.error('Plant doctor session error:', e);
+            stopCall();
+          },
           onClose: stopCall
         }
       });

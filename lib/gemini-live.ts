@@ -86,7 +86,7 @@ export class GeminiLiveSession {
           media: { data, mimeType }
         });
       } catch (e) {
-        // Handle send errors during transition
+        console.warn("Failed to send media", e);
       }
     }
   }
