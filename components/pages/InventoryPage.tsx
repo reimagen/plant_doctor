@@ -144,6 +144,7 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
       {selectedPlant && (
         <PlantEditModal
           plant={selectedPlant}
+          homeProfile={homeProfile}
           onClose={() => setSelectedPlantId(null)}
           onUpdate={onUpdate}
           onDelete={onDelete}

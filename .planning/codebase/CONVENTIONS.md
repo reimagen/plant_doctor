@@ -140,15 +140,30 @@ try {
 }
 ```
 
-## Logging
+## Logging (Updated 2026-01-18)
 
-**Framework:** Native `console` methods
+**Framework:** Native `console` methods with structured prefixes
 
 **Patterns:**
-- `console.error` for operation failures
-- `console.warn` for non-critical issues
-- No structured logging in development
-- Consider adding structured logging for production
+- Structured logging with prefixes for easy filtering and monitoring:
+  - `[RATE_LIMIT]` - Rate limit violations
+  - `[TOOL_CALL]` - Successful tool invocations with context
+  - `[API_REQUEST]` - Incoming API requests
+  - `[SUCCESS]` - Successful operations
+  - `[GENERATION_ERROR]` - Gemini API failures
+  - `[PARSE_ERROR]` - Response parsing failures
+  - `[INVALID_REQUEST]` - Request validation failures
+- Legacy: `console.error` for operation failures, `console.warn` for non-critical issues
+- All logs should include relevant context (plant names, species, operation types)
+
+**Example:**
+```typescript
+if (!limiter.canCall(toolName)) {
+  console.warn(`[RATE_LIMIT] Tool '${toolName}' exceeded limit`)
+  return
+}
+console.log(`[TOOL_CALL] ${toolName} called for plant: ${plant.name}`)
+```
 
 ## Comments
 
@@ -252,6 +267,72 @@ export default async function PageName({ params }: Props) {
 }
 ```
 
+## Guardrails & Rate Limiting (Added 2026-01-18)
+
+**When Adding AI Features:**
+
+1. **Import Rate Limiters:**
+   ```typescript
+   import { ToolCallRateLimiter, TokenBucketLimiter, PlantContextValidator } from '@/lib/rate-limiter'
+   ```
+
+2. **Create Limiter Instances:**
+   ```typescript
+   // In a hook (per session)
+   const toolLimiterRef = useRef(new ToolCallRateLimiter(10, 60000)) // 10 calls/min
+
+   // In an API route (global)
+   const apiLimiter = new TokenBucketLimiter(10, 2) // 10 tokens, 2 refill/sec
+   ```
+
+3. **Check Before Processing:**
+   ```typescript
+   if (!toolLimiterRef.current.canCall(toolName)) {
+     console.warn(`[RATE_LIMIT] Tool '${toolName}' exceeded rate limit`)
+     // Return error to user or reject silently
+     return
+   }
+   ```
+
+4. **Update System Prompt:**
+   - Add "PLANT-ONLY FOCUS" mode heading
+   - Include CRITICAL RULES section
+   - Explicitly state "Do NOT engage with requests about other topics"
+
+5. **Log Operations:**
+   ```typescript
+   console.log(`[TOOL_CALL] ${toolName} called with context: ${context}`)
+   console.error(`[GENERATION_ERROR] Failed to generate for ${plant.species}`)
+   ```
+
+6. **API Endpoint Validation:**
+   - Validate request type/fields
+   - Return HTTP 400 for invalid requests
+   - Return HTTP 429 for rate-limited requests
+   - Return HTTP 500 for server errors
+
+**Example: New AI Integration Pattern**
+```typescript
+'use client'
+import { ToolCallRateLimiter } from '@/lib/rate-limiter'
+
+export const useNewFeature = () => {
+  const limiterRef = useRef(new ToolCallRateLimiter(5, 60000))
+
+  const processToolCall = (toolName: string, args: any) => {
+    if (!limiterRef.current.canCall(toolName)) {
+      console.warn(`[RATE_LIMIT] ${toolName} limit exceeded`)
+      return { error: 'Rate limit exceeded' }
+    }
+
+    console.log(`[TOOL_CALL] ${toolName} processing`)
+    // Process call...
+  }
+
+  return { processToolCall }
+}
+```
+
 ## CSS/Styling
 
 **Framework:** Tailwind CSS (utility-first)
@@ -270,3 +351,4 @@ export default async function PageName({ params }: Props) {
 ---
 
 *Convention analysis: 2026-01-18*
+*Updated with guardrails and rate limiting patterns: 2026-01-18*

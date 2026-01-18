@@ -28,26 +28,27 @@ export class GeminiLiveSession {
     const ai = new GoogleGenAI({ apiKey: this.config.apiKey })
 
     try {
+      console.log('[GeminiLiveSession] Attempting to connect to Gemini API...');
       const sessionPromise = ai.live.connect({
         model: this.config.model,
         config: {
           responseModalities: [Modality.AUDIO],
           tools: this.config.tools,
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
-          },
           systemInstruction: this.config.systemInstruction,
         },
         callbacks: {
           onopen: () => {
+            console.log('[GeminiLiveSession] WebSocket connection opened successfully!');
             if (this.isClosing) return
             this.config.callbacks.onOpen?.()
           },
           onclose: () => {
+            console.log('[GeminiLiveSession] WebSocket connection closed.');
             this.session = null
             this.config.callbacks.onClose?.()
           },
           onerror: (e) => {
+            console.error('[GeminiLiveSession] WebSocket error:', e);
             if (this.isClosing) return
             this.config.callbacks.onError?.(e)
           },
@@ -59,8 +60,10 @@ export class GeminiLiveSession {
       })
 
       this.session = await sessionPromise
+      console.log('[GeminiLiveSession] Session established.');
       return this.session
     } catch (err) {
+      console.error('[GeminiLiveSession] Error during connection attempt:', err);
       this.config.callbacks.onError?.(err)
       throw err
     }

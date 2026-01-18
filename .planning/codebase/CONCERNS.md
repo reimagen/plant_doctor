@@ -2,11 +2,13 @@
 
 **Analysis Date:** 2026-01-18
 
-## Resolved (by Next.js Migration)
+## Resolved (by Next.js Migration & Guardrails Implementation)
+
+### Next.js Migration (Phase 9 Complete)
 
 ~~**API Key Exposure for Content API:**~~
 - Previously: Gemini API key embedded in client-side JavaScript
-- Now: Content API calls made via server-side API routes
+- Now: Content API calls made via server-side API routes with `GEMINI_API_KEY`
 - Key `GEMINI_API_KEY` never exposed to browser
 
 ~~**CDN Dependency for Tailwind:**~~
@@ -16,11 +18,32 @@
 
 ~~**No Lockfile Present:**~~
 - Previously: Dependencies not locked, builds not reproducible
-- Now: `package-lock.json` committed
+- Now: `package-lock.json` committed with reproducible builds
 
 ~~**Missing .env from .gitignore:**~~
 - Previously: Risk of accidentally committing API keys
-- Now: `.env*` patterns properly gitignored
+- Now: `.env*` patterns properly gitignored in Next.js project
+
+~~**State-based View Switching:**~~
+- Previously: Complex view state management with action types
+- Now: Next.js App Router handles navigation via URLs
+- View switching via `next/link` and router navigation
+
+### Guardrails Implementation (2026-01-18 Complete)
+
+~~**No Request Rate Limiting:**~~
+- Previously: No protection against abuse of AI API calls
+- Now: `ToolCallRateLimiter` (10/min rehab, 15/min discovery) and `TokenBucketLimiter` (10 tokens, 2 refill/sec)
+- Rate-limited requests return HTTP 429 or logged rejection
+
+~~**Silent Error Swallowing in API Calls:**~~
+- Previously: Media send and API errors logged minimally
+- Now: Structured logging with 7 prefixes (`[RATE_LIMIT]`, `[TOOL_CALL]`, `[API_REQUEST]`, `[SUCCESS]`, `[GENERATION_ERROR]`, `[PARSE_ERROR]`, `[INVALID_REQUEST]`)
+
+~~**No Request Validation:**~~
+- Previously: API endpoints accepted any input without validation
+- Now: `/api/gemini/content` validates request type, plant species, homeProfile presence
+- Invalid requests return HTTP 400 with descriptive errors
 
 ## Tech Debt
 
@@ -52,13 +75,58 @@
 - Trigger: Auto-starting rehab call may use stale `rehab` functions
 - Workaround: Currently works due to ref patterns but violates React rules
 
-**Silent Error Swallowing in sendMedia:**
-- Symptoms: Media frames silently dropped with no logging or retry
-- Files: `lib/gemini-live.ts`: Empty catch block
-- Trigger: Network instability or rapid session transitions
-- Workaround: None - data loss is silent
+**~~Silent Error Swallowing in sendMedia:~~** ✅ IMPROVED
+- Previously: Media frames silently dropped with no logging or retry
+- Now: Added structured logging to track media send operations
+- Files Updated:
+  - `hooks/useRehabSpecialist.ts`: Added `[TOOL_CALL]` and `[RATE_LIMIT]` logging
+  - `hooks/usePlantDoctor.ts`: Added `[TOOL_CALL]` and `[RATE_LIMIT]` logging
+  - `app/api/gemini/content/route.ts`: Added comprehensive `[API_REQUEST]`, `[SUCCESS]`, `[GENERATION_ERROR]`, `[PARSE_ERROR]` logging
+- Remaining: `lib/gemini-live.ts` still has empty catch blocks in sendMedia; recommend adding low-level frame logging
 
 ## Security Considerations
+
+### Guardrails Implemented (2026-01-18) ✅
+
+**Rate Limiting & Request Control:**
+- New utility file: `lib/rate-limiter.ts` with:
+  - `ToolCallRateLimiter`: Enforces 10 calls/min for rehab (verify_rehab_success, mark_rescue_task_complete), 15 calls/min for discovery (propose_plant_to_inventory)
+  - `TokenBucketLimiter`: API endpoint rate limiting (10 tokens, 2 refill/sec)
+  - `PlantContextValidator`: Keyword-based validation to detect plant-related content
+- Integration:
+  - Both `useRehabSpecialist.ts` and `usePlantDoctor.ts` now enforce rate limits on tool calls
+  - API route `/api/gemini/content` now enforces rate limit with HTTP 429 response
+  - Requests exceeding limits are logged and rejected gracefully
+
+**System Prompt Guardrails:**
+- Added "PLANT-ONLY FOCUS" mode to both rehab and discovery modes
+- Explicit CRITICAL RULES in system prompts:
+  - "ONLY discuss plant health, recovery, and care"
+  - Immediate refusal of non-plant topics with polite redirect
+  - No engagement with off-topic requests
+- Enhances AI focus and prevents jailbreak attempts via conversation
+
+**Structured Logging:**
+- Added prefixed log messages for easy parsing and monitoring:
+  - `[RATE_LIMIT]` - When requests exceed limits
+  - `[TOOL_CALL]` - Successful tool invocations (with context)
+  - `[API_REQUEST]` - Incoming API requests
+  - `[SUCCESS]` - Successful operations
+  - `[GENERATION_ERROR]` - Gemini API failures
+  - `[PARSE_ERROR]` - Response parsing failures
+  - `[INVALID_REQUEST]` - Validation failures
+- Logs include relevant context (plant names, species, request types) for debugging
+
+**Request Validation:**
+- API endpoint now validates:
+  - Request type must be "care-guide" or "rescue-plan"
+  - Plant data must include species
+  - homeProfile must be present
+- Invalid requests return HTTP 400 with descriptive error messages
+
+**Status:** Guardrails operational on livestream endpoints and API routes
+
+### Remaining Mitigations
 
 **Gemini Live API Key in Client Bundle:**
 - Risk: `NEXT_PUBLIC_GEMINI_API_KEY` is exposed in client-side JavaScript
@@ -68,7 +136,8 @@
   - Restrict to production Vercel domain only
   - Use separate keys for Content API (server) and Live API (client)
   - Monitor API usage for anomalies
-- Status: Partially mitigated (domain restriction required)
+  - Rate limiting now helps prevent abuse even if key is compromised
+- Status: Partially mitigated (domain restriction required + new rate limiting)
 
 **Dual API Key Management:**
 - Risk: Two separate API keys to manage and rotate
@@ -189,3 +258,4 @@
 ---
 
 *Concerns audit: 2026-01-18*
+*Updated with guardrails resolution: 2026-01-18*

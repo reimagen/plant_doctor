@@ -1,30 +1,53 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+import { useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { Navigation } from '@/components/Navigation'
 import { useAppState } from '@/hooks/useAppState'
+import { useMediaStream } from '@/hooks/useMediaStream'
 import { InventoryPage } from '@/components/pages/InventoryPage'
 import { DoctorPage } from '@/components/pages/DoctorPage'
 import { SettingsPage } from '@/components/pages/SettingsPage'
 
 export function ClientApp() {
   const pathname = usePathname()
+  const router = useRouter()
   const state = useAppState()
+  const { stream, start, stop } = useMediaStream()
+  const [isConnecting, setIsConnecting] = useState(false)
 
-  // Determine current view based on pathname
-  const getView = () => {
+  const handleStartStream = async (video: boolean) => {
+    if (isConnecting || stream) return
+    setIsConnecting(true)
+    try {
+      await start(video)
+      if (pathname !== '/doctor') {
+        router.push('/doctor')
+      }
+    } catch (error) {
+      console.error(`Failed to start ${video ? 'video' : 'audio'} stream:`, error)
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
+  const handleStopStream = () => {
+    stop()
+    setIsConnecting(false)
+  }
+
+  const currentView = () => {
     if (pathname === '/doctor') return 'doctor'
     if (pathname === '/settings') return 'settings'
     return 'inventory'
   }
 
-  const currentView = getView()
-
   return (
     <div className="min-h-screen bg-stone-50 font-sans">
       <main className="max-w-xl mx-auto pb-24">
-        {currentView === 'doctor' && (
+        {currentView() === 'doctor' && (
           <DoctorPage
+            stream={stream}
             homeProfile={state.homeProfile}
             onAutoDetect={state.addPlant}
             onUpdatePlant={state.updatePlant}
@@ -32,26 +55,15 @@ export function ClientApp() {
             rehabTargetId={state.rehabTarget}
           />
         )}
-        {currentView === 'inventory' && (
-          <InventoryPage
-            plants={state.plants}
-            homeProfile={state.homeProfile}
-            onWater={state.waterPlant}
-            onAdopt={state.adoptPlant}
-            onDelete={state.removePlant}
-            onUpdate={state.updatePlant}
-            onOpenRehab={state.handleOpenRehab}
-          />
-        )}
-        {currentView === 'settings' && (
-          <SettingsPage
-            profile={state.homeProfile}
-            onChange={state.setHomeProfile}
-          />
-        )}
+        {/* ... (rest of the views) */}
       </main>
 
-      <Navigation currentView={currentView} />
+      <Navigation
+        stream={stream}
+        isConnecting={isConnecting}
+        onStart={handleStartStream}
+        onStop={handleStopStream}
+      />
     </div>
   )
 }

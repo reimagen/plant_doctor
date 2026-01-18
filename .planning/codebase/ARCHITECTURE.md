@@ -1,19 +1,21 @@
 # Architecture
 
-**Analysis Date:** 2026-01-18
+**Analysis Date:** 2026-01-18 (Updated with Guardrails implementation)
 
 ## Pattern Overview
 
-**Overall:** Next.js App Router with Server/Client Component Architecture
+**Overall:** Next.js App Router with Server/Client Component Architecture + AI Guardrails
 
 **Key Characteristics:**
 - Next.js App Router for file-based routing (replaces state-based view switching)
 - Server Components for pages, layouts, and data fetching
 - Client Components (`'use client'`) for interactive features
-- API Routes for secure server-side Gemini Content API calls
-- Client-side Gemini Live API for real-time audio/video (WebSocket)
-- Feature-based hooks encapsulate client-side AI/media logic
+- API Routes for secure server-side Gemini Content API calls with validation and rate limiting
+- Client-side Gemini Live API for real-time audio/video (WebSocket) with tool call rate limiting
+- Feature-based hooks encapsulate client-side AI/media logic with rate limiters
 - localStorage persistence handled in Client Components
+- Structured logging with prefixed messages for monitoring and debugging
+- System prompts enforce "PLANT-ONLY FOCUS" mode to prevent off-topic AI interactions
 
 ## Layers
 
@@ -122,6 +124,23 @@
 - Location: `types/index.ts`
 - Pattern: Simple object stored in localStorage, passed to AI prompts
 
+**Rate Limiting & Guardrails (Added 2026-01-18):**
+- **ToolCallRateLimiter:** Limits tool function calls per time window
+  - Location: `lib/rate-limiter.ts`
+  - Rehab mode: 10 calls/min (verify_rehab_success, mark_rescue_task_complete)
+  - Discovery mode: 15 calls/min (propose_plant_to_inventory)
+  - Rate-limited calls logged with `[RATE_LIMIT]` prefix and rejected gracefully
+
+- **TokenBucketLimiter:** Burst-friendly rate limiting for API endpoints
+  - Location: `lib/rate-limiter.ts`
+  - API endpoint `/api/gemini/content`: 10 tokens, 2 refill/sec
+  - Exceeded limit returns HTTP 429 with descriptive error
+
+- **PlantContextValidator:** Validates plant-related content via keyword matching
+  - Location: `lib/rate-limiter.ts`
+  - Reserved for future integration into request filtering
+  - Contains 29 plant-related keywords for context validation
+
 ## Entry Points
 
 **Application Entry:**
@@ -162,9 +181,22 @@
 
 ## Cross-Cutting Concerns
 
-**Logging:** Console-based via `console.error`, `console.warn` in catch blocks; no structured logging
+**Logging:** Structured logging via prefixed console messages (Added 2026-01-18)
+- Prefixes: `[RATE_LIMIT]`, `[TOOL_CALL]`, `[API_REQUEST]`, `[SUCCESS]`, `[GENERATION_ERROR]`, `[PARSE_ERROR]`, `[INVALID_REQUEST]`
+- Logs include relevant context (plant names, species, operation types) for debugging and monitoring
+- Legacy: `console.error`, `console.warn` in catch blocks
 
-**Validation:** TypeScript compile-time; runtime validation recommended for API inputs
+**Validation:**
+- TypeScript compile-time type checking
+- Runtime validation for API inputs in `/api/gemini/content` route handler
+- Request validation checks: request type, plant species presence, homeProfile presence
+
+**Rate Limiting & Guardrails (Added 2026-01-18):**
+- **Tool Call Limits:** Rehab mode (10 calls/min), Discovery mode (15 calls/min) via `ToolCallRateLimiter`
+- **API Endpoint Limits:** Token bucket (10 tokens, 2 refill/sec) via `TokenBucketLimiter` on `/api/gemini/content`
+- **System Prompt Enforcement:** "PLANT-ONLY FOCUS" mode with explicit CRITICAL RULES for both rehab and discovery modes
+- **Context Validation:** `PlantContextValidator` available for keyword-based plant content detection
+- Rate-limited requests return HTTP 429 with descriptive error messages
 
 **Authentication:** None for users; API key managed server-side for Content API, client-side (domain-restricted) for Live API
 
@@ -181,3 +213,4 @@
 ---
 
 *Architecture analysis: 2026-01-18*
+*Updated with guardrails, rate limiting, and structured logging: 2026-01-18*

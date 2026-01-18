@@ -299,24 +299,132 @@ vi.stubGlobal('localStorage', {
 }
 ```
 
-## Priority Test Targets
+## Testing Rate Limiters & Guardrails (Added 2026-01-18)
+
+**Rate Limiter Unit Tests:**
+```typescript
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { ToolCallRateLimiter, TokenBucketLimiter } from '@/lib/rate-limiter'
+
+describe('ToolCallRateLimiter', () => {
+  let limiter: ToolCallRateLimiter
+
+  beforeEach(() => {
+    limiter = new ToolCallRateLimiter(3, 1000) // 3 calls per second
+    vi.useFakeTimers()
+  })
+
+  it('allows calls within limit', () => {
+    expect(limiter.canCall('verify_rehab_success')).toBe(true)
+    expect(limiter.canCall('verify_rehab_success')).toBe(true)
+    expect(limiter.canCall('verify_rehab_success')).toBe(true)
+  })
+
+  it('blocks calls exceeding limit', () => {
+    limiter.canCall('verify_rehab_success')
+    limiter.canCall('verify_rehab_success')
+    limiter.canCall('verify_rehab_success')
+    expect(limiter.canCall('verify_rehab_success')).toBe(false)
+  })
+
+  it('resets after window expires', () => {
+    limiter.canCall('verify_rehab_success')
+    expect(limiter.canCall('verify_rehab_success')).toBe(true) // Still within limit
+
+    vi.advanceTimersByTime(1001)
+    expect(limiter.canCall('verify_rehab_success')).toBe(true) // Window reset
+  })
+})
+
+describe('TokenBucketLimiter', () => {
+  let limiter: TokenBucketLimiter
+
+  beforeEach(() => {
+    limiter = new TokenBucketLimiter(5, 1) // 5 tokens, 1 refill/sec
+    vi.useFakeTimers()
+  })
+
+  it('allows consumption within token limit', () => {
+    expect(limiter.canConsume(1)).toBe(true)
+    expect(limiter.canConsume(2)).toBe(true)
+    expect(limiter.canConsume(2)).toBe(false) // Only 2 tokens left
+  })
+
+  it('refills tokens over time', () => {
+    limiter.canConsume(5) // Consume all tokens
+    vi.advanceTimersByTime(2000) // Wait 2 seconds
+    expect(limiter.canConsume(2)).toBe(true) // 2 tokens refilled
+  })
+})
+```
+
+**API Route Test with Rate Limiting:**
+```typescript
+describe('POST /api/gemini/content with rate limiting', () => {
+  it('returns 429 when rate limit exceeded', async () => {
+    // Make requests up to limit
+    for (let i = 0; i < 10; i++) {
+      const request = new Request('http://localhost/api/gemini/content', {
+        method: 'POST',
+        body: JSON.stringify({
+          type: 'care-guide',
+          plant: { species: 'Test Plant' },
+          homeProfile: {},
+        }),
+      })
+      await POST(request)
+    }
+
+    // Next request should be rate limited
+    const rateLimitedRequest = new Request('http://localhost/api/gemini/content', {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'care-guide',
+        plant: { species: 'Test Plant' },
+        homeProfile: {},
+      }),
+    })
+
+    const response = await POST(rateLimitedRequest)
+    expect(response.status).toBe(429)
+  })
+
+  it('validates request before rate checking', async () => {
+    const request = new Request('http://localhost/api/gemini/content', {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'invalid-type', // Invalid type
+        plant: { species: 'Test' },
+        homeProfile: {},
+      }),
+    })
+
+    const response = await POST(request)
+    expect(response.status).toBe(400) // Validation error, not rate limit
+  })
+})
+```
+
+## Priority Test Targets (Updated 2026-01-18)
 
 **High Priority (core functionality):**
 1. `lib/storage-service.ts` - Data persistence logic
 2. `hooks/useAppState.ts` - Central state management
-3. `app/api/gemini/content/route.ts` - API route handler
+3. `app/api/gemini/content/route.ts` - API route handler with rate limiting
 4. `components/PlantCard.tsx` - Status computation logic
+5. `lib/rate-limiter.ts` - Rate limiting and guardrails logic
 
 **Medium Priority (business logic):**
 1. `lib/gemini-content.ts` - API response parsing
 2. `hooks/useMediaStream.ts` - Hardware access handling
 3. `lib/audio-service.ts` - Audio buffer operations
+4. `hooks/useRehabSpecialist.ts` - Tool call rate limiting
+5. `hooks/usePlantDoctor.ts` - Tool call rate limiting
 
 **Lower Priority (integration-heavy):**
-1. `hooks/usePlantDoctor.ts` - Requires extensive mocking
-2. `hooks/useRehabSpecialist.ts` - Requires extensive mocking
-3. `lib/gemini-live.ts` - WebSocket mocking complexity
+1. `lib/gemini-live.ts` - WebSocket mocking complexity
 
 ---
 
 *Testing analysis: 2026-01-18*
+*Updated with rate limiter tests: 2026-01-18*

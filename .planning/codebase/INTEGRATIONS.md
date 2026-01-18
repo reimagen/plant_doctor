@@ -19,13 +19,21 @@
    - API Key: `GEMINI_API_KEY` (server-only, never exposed to client)
 
 2. **Gemini Live API (Client-Side)**
-   - Model: `gemini-2.5-flash-native-audio-preview-12-2025`
+   - Model: `gemini-2.5-flash-native-audio-dialog`
    - Features: Bidirectional audio, video frame streaming, function calling
    - Implementation: `lib/gemini-live.ts` (`GeminiLiveSession` class)
    - Voice: Kore (prebuilt voice config)
    - Audio formats: PCM 16kHz input, 24kHz output
    - API Key: `NEXT_PUBLIC_GEMINI_API_KEY` (client-side, domain-restricted)
    - Note: Cannot be proxied through API routes (WebSocket connection)
+
+   **Guardrails (Added 2026-01-18):**
+   - System prompt enforces "PLANT-ONLY FOCUS" mode with explicit CRITICAL RULES
+   - Rate limiting on tool calls:
+     - Rehab mode: 10 calls/min (`verify_rehab_success`, `mark_rescue_task_complete`)
+     - Discovery mode: 15 calls/min (`propose_plant_to_inventory`)
+   - All tool calls logged with `[TOOL_CALL]` and `[RATE_LIMIT]` prefixes
+   - Rate-limited calls rejected with error response to user
 
 **Google Fonts:**
 - Inter font family from `fonts.googleapis.com`
@@ -62,10 +70,24 @@
 ## Monitoring & Observability
 
 **Error Tracking:**
-- None - Console logging only
+- Console logging with structured prefixes for debugging
 
-**Logs:**
-- `console.warn` for suppressed errors
+**Structured Logging (Added 2026-01-18):**
+
+All logging uses prefixed messages for easy parsing and filtering:
+
+| Prefix | Purpose | Location |
+|--------|---------|----------|
+| `[RATE_LIMIT]` | Rate limit violations | `useRehabSpecialist.ts`, `usePlantDoctor.ts`, `/api/gemini/content` |
+| `[TOOL_CALL]` | Successful tool invocations with context | `useRehabSpecialist.ts`, `usePlantDoctor.ts` |
+| `[API_REQUEST]` | Incoming API requests | `/api/gemini/content` |
+| `[SUCCESS]` | Successful operations | `/api/gemini/content` |
+| `[GENERATION_ERROR]` | Gemini API failures | `/api/gemini/content` |
+| `[PARSE_ERROR]` | Response parsing failures | `/api/gemini/content` |
+| `[INVALID_REQUEST]` | Request validation failures | `/api/gemini/content` |
+
+**Legacy Logs:**
+- `console.warn` for suppressed errors or warnings
 - `console.error` for critical failures
 
 ## CI/CD & Deployment
@@ -120,6 +142,8 @@ NEXT_PUBLIC_GEMINI_API_KEY=<your-client-gemini-api-key>
 
 **POST /api/gemini/content**
 
+Rate Limiting: Token bucket (10 tokens, 2 refill/sec) - returns HTTP 429 if exceeded
+
 Request body:
 ```typescript
 {
@@ -129,14 +153,54 @@ Request body:
 }
 ```
 
+Validation:
+- Request type must be 'care-guide' or 'rescue-plan'
+- Plant must include species field
+- homeProfile must be present
+- Invalid requests return HTTP 400 with error message
+
 Response:
 ```typescript
 {
   tips?: string[],           // For care-guide
-  plan?: RescuePlan,         // For rescue-plan
-  error?: string             // On failure
+  steps?: string[],          // For rescue-plan
+  error?: string             // On failure (HTTP 400, 429, or 500)
 }
 ```
+
+HTTP Status Codes:
+- `200` - Success
+- `400` - Invalid request (missing fields, wrong type)
+- `429` - Rate limit exceeded
+- `500` - Gemini API error
+
+## Rate Limiting & Guardrails Utilities
+
+**File:** `lib/rate-limiter.ts`
+
+**Classes:**
+
+1. **MediaThrottler**
+   - Purpose: Control video/audio frame sending rates
+   - Constructor: `minIntervalMs` (default 1000ms)
+   - Methods: `shouldSendFrame()`, `reset()`
+
+2. **ToolCallRateLimiter**
+   - Purpose: Limit tool function calls per time window
+   - Constructor: `maxCallsPerWindow`, `windowMs`
+   - Methods: `canCall()`, `getRemainingCalls()`, `getResetTime()`, `reset()`
+   - Used in: `useRehabSpecialist.ts` (10 calls/60s), `usePlantDoctor.ts` (15 calls/60s)
+
+3. **TokenBucketLimiter**
+   - Purpose: Burst-friendly rate limiting for API endpoints
+   - Constructor: `maxTokens`, `refillRatePerSecond`
+   - Methods: `canConsume()`, `getRemainingTokens()`, `reset()`
+   - Used in: `/api/gemini/content` (10 tokens, 2 refill/sec)
+
+4. **PlantContextValidator**
+   - Purpose: Validate plant-related content via keyword matching
+   - Methods: `isPlantRelated()`, `validateRequest()`
+   - Status: Implemented but not yet integrated into request filtering (reserved for future use)
 
 ## Gemini API Function Declarations
 
@@ -205,3 +269,4 @@ Declared in `metadata.json`:
 ---
 
 *Integration audit: 2026-01-18*
+*Updated with guardrails and rate limiting: 2026-01-18*

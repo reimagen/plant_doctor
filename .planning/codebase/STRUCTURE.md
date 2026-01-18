@@ -22,7 +22,12 @@ plant_doctor/
 │   ├── Navigation.tsx            # Bottom tab bar (Client Component)
 │   ├── PlantCard.tsx             # Plant display with status and actions
 │   ├── PlantEditModal.tsx        # Full-screen plant detail editor
-│   └── RescueProtocolView.tsx    # Emergency care flow UI
+│   ├── RescueProtocolView.tsx    # Emergency care flow UI
+│   ├── RescueTimeline.tsx        # Rescue plan task tracking with status indicators
+│   └── pages/                    # Page-specific components
+│       ├── DoctorPage.tsx        # Livestream UI (renamed from DoctorView)
+│       ├── InventoryPage.tsx     # Plant list UI (renamed from InventoryView)
+│       └── SettingsPage.tsx      # Settings UI (renamed from SettingsView)
 ├── hooks/                        # Client-side hooks
 │   ├── useAppState.ts            # Plant CRUD, profile (no view switching)
 │   ├── usePlantDoctor.ts         # Discovery mode AI session
@@ -33,7 +38,10 @@ plant_doctor/
 │   ├── gemini-content.ts         # Gemini Content API (for API route)
 │   ├── audio-service.ts          # AudioService for voice playback
 │   ├── storage-service.ts        # StorageService for localStorage
-│   └── test-data.ts              # Seed data for development
+│   ├── rate-limiter.ts           # Rate limiting, guardrails, and validators
+│   ├── test-data.ts              # Seed data for development
+│   ├── season.ts                 # Seasonal mode utilities
+│   └── constants.tsx             # App constants and configuration
 ├── types/
 │   └── index.ts                  # TypeScript interfaces
 ├── .planning/                    # GSD planning documents
@@ -83,7 +91,10 @@ plant_doctor/
   - `gemini-content.ts`: GeminiContentService for text generation
   - `audio-service.ts`: AudioService for voice playback
   - `storage-service.ts`: StorageService for localStorage
+  - `rate-limiter.ts`: Rate limiting utilities (ToolCallRateLimiter, TokenBucketLimiter, PlantContextValidator)
   - `test-data.ts`: Seed data for development
+  - `season.ts`: Seasonal mode and hemisphere calculations
+  - `constants.tsx`: App-wide constants and configuration
 
 **types/:**
 - Purpose: Shared TypeScript interfaces
@@ -213,6 +224,17 @@ plant_doctor/
 - Restrict to production Vercel domain only
 - Use separate keys for Content API (server) and Live API (client)
 
+## New Code: Guardrails & Rate Limiting
+
+**When to add guardrails to a new AI feature:**
+1. Create a rate limiter instance in the hook/handler: `const limiter = new ToolCallRateLimiter(10, 60000)`
+2. Check before processing tool calls: `if (!limiter.canCall(toolName)) { /* reject */ }`
+3. Add structured logging: `console.log(`[TOOL_CALL] ${toolName} called for ${context}`)`
+4. Update system prompt with "PLANT-ONLY FOCUS" and CRITICAL RULES
+5. Add request validation for API routes using the limiter
+6. Document the limits in INTEGRATIONS.md
+
 ---
 
 *Structure analysis: 2026-01-18*
+*Updated with guardrails implementation: 2026-01-18*

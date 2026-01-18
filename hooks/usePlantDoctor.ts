@@ -1,27 +1,24 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, type RefObject } from 'react'
 import { Type, FunctionDeclaration } from '@google/genai'
 import { HomeProfile, Plant } from '@/types'
 import { GeminiLiveSession } from '@/lib/gemini-live'
 import { AudioService } from '@/lib/audio-service'
-import { useMediaStream } from './useMediaStream'
+import { ToolCallRateLimiter } from '@/lib/rate-limiter'
 
 export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Plant) => void) => {
   const [isCalling, setIsCalling] = useState(false)
   const [lastDetectedName, setLastDetectedName] = useState<string | null>(null)
   const [discoveryLog, setDiscoveryLog] = useState<string[]>([])
 
-  const hardware = useMediaStream()
   const sessionRef = useRef<GeminiLiveSession | null>(null)
   const audioServiceRef = useRef(new AudioService(24000))
   const workletRef = useRef<AudioWorkletNode | null>(null)
   const muteGainRef = useRef<GainNode | null>(null)
   const intervalRef = useRef<number | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
-
-  const activeVideoRef = useRef<HTMLVideoElement | null>(null)
-  const activeCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const toolCallLimiterRef = useRef(new ToolCallRateLimiter(15, 60000))
 
   const onPlantDetectedRef = useRef(onPlantDetected)
   onPlantDetectedRef.current = onPlantDetected
@@ -39,7 +36,11 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
         habitFeedback: { type: Type.STRING, description: 'Brief reasoning for the grade.' },
         healthIssues: { type: Type.STRING, description: 'Specific visible issues (e.g. yellow leaves, pests, brown tips).' },
         cadenceDays: { type: Type.NUMBER },
-        idealConditions: { type: Type.STRING }
+        idealConditions: { type: Type.STRING },
+        lightIntensity: { type: Type.STRING, enum: ['Low', 'Medium', 'Bright'] },
+        lightQuality: { type: Type.STRING, enum: ['Indirect', 'Direct'] },
+        nearWindow: { type: Type.BOOLEAN },
+        windowDirection: { type: Type.STRING, enum: ['North', 'South', 'East', 'West'] }
       },
       required: ['commonName', 'scientificName', 'healthStatus', 'habitGrade', 'habitFeedback', 'healthIssues']
     }
@@ -58,26 +59,22 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
       muteGainRef.current.disconnect()
       muteGainRef.current = null
     }
-    if (activeVideoRef.current) {
-      activeVideoRef.current.srcObject = null
-    }
     sessionRef.current?.close()
     sessionRef.current = null
-    hardware.stop()
     await audioServiceRef.current.close()
     if (audioContextRef.current?.state !== 'closed') {
       await audioContextRef.current?.close()
     }
-    activeVideoRef.current = null
-    activeCanvasRef.current = null
-  }, [hardware, isCalling])
+  }, [isCalling])
 
-  const startCall = async (video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
+  const startCall = async (
+    stream: MediaStream,
+    videoRef: RefObject<HTMLVideoElement | null>,
+    canvasRef: RefObject<HTMLCanvasElement | null>
+  ) => {
     if (isCalling) return
     setIsCalling(true)
     setDiscoveryLog([])
-    activeVideoRef.current = video
-    activeCanvasRef.current = canvas
 
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
     if (!apiKey) {
@@ -87,10 +84,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
     }
 
     try {
-      const stream = await hardware.start()
-      video.srcObject = stream
-
-      const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)({ sampleRate: 16000 })
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 })
       await audioCtx.resume()
       audioContextRef.current = audioCtx
       await audioServiceRef.current.ensureContext()
@@ -98,13 +92,35 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
       const session = new GeminiLiveSession({
         apiKey,
         model: 'gemini-2.5-flash-preview-native-audio-dialog',
-        systemInstruction: `You are the Plant Doctor performing a "Jungle Inventory".
-        Environment: ${JSON.stringify(homeProfile)}.
-        USER INTERACTION:
-        1. The user will walk around showing you many plants.
-        2. For EVERY new plant you see, call propose_plant_to_inventory.
-        3. Grade their care habits (A-F) based on visual evidence.
-        4. Be conversational. Do NOT stop the session after one plant.`,
+        systemInstruction: `You are the Plant Doctor performing a "Jungle Inventory" - PLANT-ONLY MODE.
+
+CRITICAL RULES:
+1. ONLY catalog and discuss visible plants. Immediately decline any non-plant topics.
+2. If the user asks about anything unrelated to plants, politely redirect: "Let's focus on cataloging your amazing plants!"
+3. Do NOT engage with requests about other topics.
+
+INVENTORY MODE:
+- The user will show you many plants one by one
+- For EVERY visible plant, call propose_plant_to_inventory with details
+- Grade their care habits (A-F) based on visual evidence (dust, soil moisture, leaf condition, pruning)
+- Be conversational and encouraging
+- Do NOT stop the session after one plant - keep going!
+
+Environment Context: ${JSON.stringify(homeProfile)}
+
+Output Format: Always call propose_plant_to_inventory with:
+- commonName: the plant's common name
+- scientificName: the botanical name (if visible/identifiable)
+- healthStatus: healthy, warning, or critical (based on appearance)
+- habitGrade: A-F rating for care quality
+- habitFeedback: brief reason for the grade
+- healthIssues: specific visible issues (yellow leaves, pests, brown tips, etc.)
+- cadenceDays: estimated watering frequency in days (if visible from soil condition)
+- idealConditions: light and humidity needs based on species
+- lightIntensity: Low/Medium/Bright if visible
+- lightQuality: Indirect/Direct if visible
+- nearWindow: true/false if visible
+- windowDirection: North/South/East/West if visible`,
         tools: [{ functionDeclarations: [proposePlantFunction] }],
         callbacks: {
           onOpen: async () => {
@@ -119,31 +135,37 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
             muteGainRef.current = muteGain
             worklet.port.onmessage = (event) => {
               if (!sessionRef.current?.session) return
+              console.log(`[MainThread] Received PCM packet from worklet, length: ${event.data.length}`);
               const pcm = GeminiLiveSession.encodeAudio(event.data as Float32Array)
-              sessionRef.current.sendMedia(pcm, `audio/pcm;rate=${audioCtx.sampleRate}`)
+              sessionRef.current.sendMedia(pcm, 'audio/pcm;rate=' + audioCtx.sampleRate)
             }
             source.connect(worklet)
             worklet.connect(muteGain)
             muteGain.connect(audioCtx.destination)
 
-            intervalRef.current = window.setInterval(() => {
-              if (!sessionRef.current?.session || video.paused) return
-              const ctx = canvas.getContext('2d')
-              if (!ctx) return
-              canvas.width = 320
-              canvas.height = (320 * video.videoHeight) / video.videoWidth
-              ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-              canvas.toBlob(blob => {
-                if (blob && sessionRef.current?.session) {
-                  const reader = new FileReader()
-                  reader.onloadend = () => {
-                    const base64 = (reader.result as string).split(',')[1]
-                    sessionRef.current?.sendMedia(base64, 'image/jpeg')
+            const hasVideo = stream.getVideoTracks().length > 0
+            if (hasVideo && videoRef.current && canvasRef.current) {
+              const video = videoRef.current
+              const canvas = canvasRef.current
+              intervalRef.current = window.setInterval(() => {
+                if (!sessionRef.current?.session || video.paused) return
+                const ctx = canvas.getContext('2d')
+                if (!ctx) return
+                canvas.width = 320
+                canvas.height = (320 * video.videoHeight) / video.videoWidth
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+                canvas.toBlob(blob => {
+                  if (blob && sessionRef.current?.session) {
+                    const reader = new FileReader()
+                    reader.onloadend = () => {
+                      const base64 = (reader.result as string).split(',')[1]
+                      sessionRef.current?.sendMedia(base64, 'image/jpeg')
+                    }
+                    reader.readAsDataURL(blob)
                   }
-                  reader.readAsDataURL(blob)
-                }
-              }, 'image/jpeg', 0.5)
-            }, 1000)
+                }, 'image/jpeg', 0.5)
+              }, 1000)
+            }
           },
           onMessage: async (msg) => {
             const audio = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data
@@ -151,13 +173,21 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
 
             if (msg.toolCall?.functionCalls) {
               for (const fc of msg.toolCall.functionCalls) {
+                if (!toolCallLimiterRef.current.canCall(fc.name!)) {
+                  console.warn(`[RATE_LIMIT] Tool '${fc.name}' exceeded rate limit (max 15 calls/min)`)
+                  session.sendToolResponse(fc.id!, fc.name!, {
+                    success: false,
+                    error: 'Rate limit exceeded. Please slow down the catalog.'
+                  })
+                  continue
+                }
+
                 if (fc.name === 'propose_plant_to_inventory') {
                   const args = fc.args as Record<string, unknown>
-
                   let capturedPhoto = ''
-                  if (activeVideoRef.current && activeCanvasRef.current) {
-                    const vid = activeVideoRef.current
-                    const can = activeCanvasRef.current
+                  if (stream.getVideoTracks().length > 0 && videoRef.current && canvasRef.current) {
+                    const vid = videoRef.current
+                    const can = canvasRef.current
                     const ctx = can.getContext('2d')
                     if (ctx) {
                       can.width = vid.videoWidth
@@ -168,10 +198,8 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
                   }
 
                   session.sendToolResponse(fc.id!, fc.name!, { success: true, acknowledged: args.commonName })
-
                   setLastDetectedName(args.commonName as string)
                   setDiscoveryLog(prev => [args.commonName as string, ...prev].slice(0, 5))
-
                   onPlantDetectedRef.current({
                     id: crypto.randomUUID(),
                     name: '',
@@ -182,8 +210,12 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
                     cadenceDays: (args.cadenceDays as number) || 7,
                     status: 'pending',
                     idealConditions: args.idealConditions as string,
+                    lightIntensity: args.lightIntensity as Plant['lightIntensity'],
+                    lightQuality: args.lightQuality as Plant['lightQuality'],
+                    nearWindow: args.nearWindow as boolean | undefined,
+                    windowDirection: args.nearWindow ? (args.windowDirection as Plant['windowDirection']) : undefined,
                     notes: [`Health: ${args.healthIssues}`, `Habit Grade: ${args.habitGrade}`, args.habitFeedback as string]
-                  })
+                  });
                 }
               }
             }

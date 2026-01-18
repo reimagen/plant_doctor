@@ -12,6 +12,12 @@ export type QualityLevel = 'Indirect' | 'Direct';
 export type LightLevel = IntensityLevel | QualityLevel;
 export type WindowDirection = 'North' | 'South' | 'East' | 'West';
 
+export interface RescueTask {
+  id: string;
+  description: string;
+  completed: boolean;
+}
+
 export interface Plant {
   id: string;
   name: string;
@@ -25,6 +31,7 @@ export interface Plant {
   careGuide?: string[];
   notes?: string[];
   rescuePlan?: string[];
+  rescuePlanTasks?: RescueTask[];
   lightIntensity?: IntensityLevel;
   lightQuality?: QualityLevel;
   nearWindow?: boolean;
