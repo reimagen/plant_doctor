@@ -9,14 +9,17 @@ import { useMediaStream } from './useMediaStream';
 export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: string, updates: Partial<Plant>) => void) => {
   const [isCalling, setIsCalling] = useState(false);
   const [lastVerifiedId, setLastVerifiedId] = useState<string | null>(null);
-  
+
   const hardware = useMediaStream();
+  const isCallingRef = useRef(false);
+  const activeStreamRef = useRef<MediaStream | null>(null);
   const sessionRef = useRef<GeminiLiveSession | null>(null);
   const audioServiceRef = useRef(new AudioService(24000));
   const workletRef = useRef<AudioWorkletNode | null>(null);
   const muteGainRef = useRef<GainNode | null>(null);
   const intervalRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const activeVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const verifyRehabFunction: FunctionDeclaration = {
     name: 'verify_rehab_success',
@@ -27,6 +30,7 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
         success: { type: Type.BOOLEAN },
         newStatus: { type: Type.STRING, enum: ['healthy', 'warning'] },
         recoveryNote: { type: Type.STRING },
+        observedSymptoms: { type: Type.STRING, description: 'Any remaining or new visible issues (e.g. still yellow, new growth).' },
         updatedCadence: { type: Type.NUMBER }
       },
       required: ['success', 'newStatus']
@@ -35,13 +39,14 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
 
   const stopCall = useCallback(async () => {
     setIsCalling(false);
-    
+    isCallingRef.current = false;
+
     // Stop intervals and disconnect audio nodes immediately
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    
+
     if (workletRef.current) {
       workletRef.current.port.onmessage = null;
       workletRef.current.disconnect();
@@ -57,6 +62,18 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
     sessionRef.current = null;
 
     // Release Hardware
+    if (activeVideoRef.current) {
+      const videoStream = activeVideoRef.current.srcObject;
+      if (videoStream && videoStream instanceof MediaStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+      }
+      activeVideoRef.current.srcObject = null;
+      activeVideoRef.current = null;
+    }
+    if (activeStreamRef.current) {
+      activeStreamRef.current.getTracks().forEach(track => track.stop());
+      activeStreamRef.current = null;
+    }
     hardware.stop();
 
     // Cleanup Audio Services
@@ -69,9 +86,16 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
 
   const startRehabCall = async (video: HTMLVideoElement, canvas: HTMLCanvasElement, plant: Plant) => {
     setIsCalling(true);
+    isCallingRef.current = true;
+    activeVideoRef.current = video;
 
     try {
       const stream = await hardware.start();
+      if (!isCallingRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      activeStreamRef.current = stream;
       video.srcObject = stream;
 
       // Initialize Input Audio Context (16kHz for Gemini)
@@ -95,7 +119,7 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
         callbacks: {
           onOpen: async () => {
             session.sendInitialGreet(`Hello! I'm here to check on ${plant.name || plant.species}. Please show me its current condition.`);
-            
+
             // Start Audio Streaming
             const source = audioCtx.createMediaStreamSource(stream);
             await audioCtx.audioWorklet.addModule(
@@ -121,11 +145,11 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
             intervalRef.current = window.setInterval(() => {
               const ctx = canvas.getContext('2d');
               if (!ctx || !session.session) return;
-              
+
               canvas.width = 320;
               canvas.height = (320 * video.videoHeight) / video.videoWidth;
               ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-              
+
               canvas.toBlob((blob) => {
                 if (blob) {
                   const reader = new FileReader();
@@ -143,7 +167,7 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
             if (audioData) {
               await audioServiceRef.current.playRawChunk(GeminiLiveSession.decodeAudio(audioData));
             }
-            
+
             if (msg.toolCall) {
               for (const fc of msg.toolCall.functionCalls) {
                 if (fc.name === 'verify_rehab_success') {
@@ -151,7 +175,11 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
                   onUpdate(plant.id, {
                     status: args.newStatus,
                     needsCheckIn: !args.success,
-                    notes: args.recoveryNote ? [args.recoveryNote, ...(plant.notes || [])] : plant.notes
+                    notes: [
+                      ...(args.observedSymptoms ? [`Observation: ${args.observedSymptoms}`] : []),
+                      ...(args.recoveryNote ? [args.recoveryNote] : []),
+                      ...(plant.notes || [])
+                    ]
                   });
                   setLastVerifiedId(plant.id);
                   session.sendToolResponse(fc.id, fc.name, { confirmed: true });

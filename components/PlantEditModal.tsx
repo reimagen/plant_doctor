@@ -15,7 +15,7 @@ interface Props {
 export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDelete }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [newNote, setNewNote] = useState('');
-  
+
   // Use local state for the date input to avoid sync issues with ISO strings
   const [localDate, setLocalDate] = useState('');
 
@@ -36,7 +36,7 @@ export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDe
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setLocalDate(val); // Update local UI immediately
-    
+
     if (val) {
       const newDate = new Date(val);
       // Set to noon to avoid timezone shift issues
@@ -78,27 +78,26 @@ export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDe
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="bg-white w-full max-w-md h-[92vh] sm:h-auto sm:max-h-[85vh] rounded-t-[40px] sm:rounded-[40px] overflow-hidden flex flex-col animate-slide-up shadow-2xl">
-        
+
         {/* Header Section */}
         <div className="relative flex-shrink-0 bg-stone-50 border-b border-stone-100 p-6 flex gap-5 items-center">
           <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-sm flex-shrink-0 border-4 border-white">
             <img src={plant.photoUrl} className="w-full h-full object-cover" alt={plant.species} />
           </div>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-               <span className={`w-2 h-2 rounded-full ${isOverdue ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
-               <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${
-                  isOverdue ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'
+              <span className={`w-2 h-2 rounded-full ${isOverdue ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
+              <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${isOverdue ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'
                 }`}>
-                  {isOverdue ? 'Urgent Care' : 'Stable'}
-                </span>
+                {isOverdue ? 'Urgent Care' : 'Stable'}
+              </span>
             </div>
-            
+
             <h2 className="text-xl font-black text-stone-800 truncate leading-tight">
               {plant.name || 'Unnamed'}
             </h2>
-            
+
             <p className="text-[11px] font-bold text-stone-400 italic truncate">
               {plant.species}
             </p>
@@ -111,11 +110,11 @@ export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDe
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-24">
-          
+
           {/* Last Watered History */}
           <section className="bg-blue-50/50 p-5 rounded-3xl border border-blue-100">
             <label className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-3 block">Last Watered Date</label>
-            <input 
+            <input
               type="date"
               value={localDate}
               onChange={handleDateChange}
@@ -134,7 +133,7 @@ export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDe
           {/* Identity */}
           <section>
             <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-2 block">Nickname</label>
-            <input 
+            <input
               value={plant.name}
               onChange={(e) => onUpdate(plant.id, { name: e.target.value })}
               className="w-full bg-stone-50 border border-stone-100 rounded-2xl px-5 py-3 font-bold text-stone-700 focus:outline-none focus:ring-2 focus:ring-green-100"
@@ -150,13 +149,29 @@ export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDe
             </p>
           </section>
 
+          {/* Health Notes */}
+          <section className="bg-amber-50/40 p-5 rounded-3xl border border-amber-100/50">
+            <label className="text-[10px] font-black text-amber-600/60 uppercase tracking-[0.2em] mb-2 block">Health Notes</label>
+            {plant.notes && plant.notes.length > 0 ? (
+              <ul className="space-y-2">
+                {plant.notes.map((note, i) => (
+                  <li key={i} className="text-xs font-bold text-amber-800/80 leading-relaxed flex gap-2">
+                    <span className="opacity-50">•</span> {note}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[10px] font-medium text-amber-800/40 italic">No health issues detected yet.</p>
+            )}
+          </section>
+
           {/* Environment Settings */}
           <section>
             <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-4 block">Environment Settings</label>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-2 block">Light Intensity</label>
-                <select 
+                <select
                   value={plant.lightIntensity}
                   onChange={(e) => onUpdate(plant.id, { lightIntensity: e.target.value as IntensityLevel })}
                   className="w-full bg-stone-50 border border-stone-100 rounded-2xl px-4 py-3 text-xs font-bold text-stone-700"
@@ -165,8 +180,18 @@ export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDe
                 </select>
               </div>
               <div>
+                <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-2 block">Light Exposure</label>
+                <select
+                  value={plant.lightQuality}
+                  onChange={(e) => onUpdate(plant.id, { lightQuality: e.target.value as QualityLevel })}
+                  className="w-full bg-stone-50 border border-stone-100 rounded-2xl px-4 py-3 text-xs font-bold text-stone-700"
+                >
+                  {exposures.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+              <div>
                 <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-2 block">Water Cycle (Days)</label>
-                <input 
+                <input
                   type="number"
                   value={plant.cadenceDays}
                   onChange={(e) => onUpdate(plant.id, { cadenceDays: parseInt(e.target.value) || 1 })}
@@ -180,9 +205,9 @@ export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDe
           <section>
             <div className="flex items-center justify-between mb-4">
               <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">AI Expert Tips</label>
-              <button 
-                onClick={handleGenerateTips} 
-                disabled={isGenerating} 
+              <button
+                onClick={handleGenerateTips}
+                disabled={isGenerating}
                 className="text-[10px] font-black text-green-600 uppercase tracking-widest disabled:opacity-50"
               >
                 {isGenerating ? 'Analyzing...' : 'Refresh Protocol'}
@@ -205,7 +230,7 @@ export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDe
 
           {/* Danger Zone */}
           <section className="pt-8 border-t border-stone-100 flex justify-center">
-            <button 
+            <button
               onClick={handleDelete}
               className="flex items-center gap-2 text-[10px] font-black text-stone-400 hover:text-red-500 uppercase tracking-[0.2em] transition-colors p-4"
             >

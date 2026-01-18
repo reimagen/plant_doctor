@@ -10,7 +10,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
   const [isCalling, setIsCalling] = useState(false);
   const [lastDetectedName, setLastDetectedName] = useState<string | null>(null);
   const [discoveryLog, setDiscoveryLog] = useState<string[]>([]);
-  
+
   const hardware = useMediaStream();
   const sessionRef = useRef<GeminiLiveSession | null>(null);
   const audioServiceRef = useRef(new AudioService(24000));
@@ -18,7 +18,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
   const muteGainRef = useRef<GainNode | null>(null);
   const intervalRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  
+
   // Refs for video elements to allow frame capture during tool calls
   const activeVideoRef = useRef<HTMLVideoElement | null>(null);
   const activeCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -37,10 +37,11 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
         healthStatus: { type: Type.STRING, enum: ['healthy', 'warning', 'critical'] },
         habitGrade: { type: Type.STRING, description: 'A grade from A to F based on care habits visible (dust, soil moisture, pruning).' },
         habitFeedback: { type: Type.STRING, description: 'Brief reasoning for the grade.' },
+        healthIssues: { type: Type.STRING, description: 'Specific visible issues (e.g. yellow leaves, pests, brown tips).' },
         cadenceDays: { type: Type.NUMBER },
         idealConditions: { type: Type.STRING }
       },
-      required: ['commonName', 'scientificName', 'healthStatus', 'habitGrade', 'habitFeedback']
+      required: ['commonName', 'scientificName', 'healthStatus', 'habitGrade', 'habitFeedback', 'healthIssues']
     }
   };
 
@@ -56,6 +57,9 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
     if (muteGainRef.current) {
       muteGainRef.current.disconnect();
       muteGainRef.current = null;
+    }
+    if (activeVideoRef.current) {
+      activeVideoRef.current.srcObject = null;
     }
     sessionRef.current?.close();
     sessionRef.current = null;
@@ -78,7 +82,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
     try {
       const stream = await hardware.start();
       video.srcObject = stream;
-      
+
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       await audioCtx.resume();
       audioContextRef.current = audioCtx;
@@ -98,7 +102,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
         callbacks: {
           onOpen: async () => {
             session.sendInitialGreet("I'm ready for the grand tour! Show me your plants one by one, and I'll catalog your whole jungle.");
-            
+
             const source = audioCtx.createMediaStreamSource(stream);
             await audioCtx.audioWorklet.addModule(
               new URL('../lib/pcm-capture-worklet.ts', import.meta.url)
@@ -139,12 +143,12 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
           onMessage: async (msg) => {
             const audio = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (audio) await audioServiceRef.current.playRawChunk(GeminiLiveSession.decodeAudio(audio));
-            
+
             if (msg.toolCall) {
               for (const fc of msg.toolCall.functionCalls) {
                 if (fc.name === 'propose_plant_to_inventory') {
                   const args = fc.args as any;
-                  
+
                   // Capture current frame for the plant photo
                   let capturedPhoto = '';
                   if (activeVideoRef.current && activeCanvasRef.current) {
@@ -160,10 +164,10 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
                   }
 
                   session.sendToolResponse(fc.id, fc.name, { success: true, acknowledged: args.commonName });
-                  
+
                   setLastDetectedName(args.commonName);
                   setDiscoveryLog(prev => [args.commonName, ...prev].slice(0, 5));
-                  
+
                   onPlantDetectedRef.current({
                     id: Math.random().toString(36).substr(2, 9),
                     name: '',
@@ -174,7 +178,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
                     cadenceDays: args.cadenceDays || 7,
                     status: 'pending',
                     idealConditions: args.idealConditions,
-                    notes: [`Habit Grade: ${args.habitGrade}`, args.habitFeedback]
+                    notes: [`Health: ${args.healthIssues}`, `Habit Grade: ${args.habitGrade}`, args.habitFeedback]
                   });
                 }
               }

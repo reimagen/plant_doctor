@@ -10,3 +10,6 @@
 
 ## Next Up
 - [ ] Review `.planning/codebase/` docs and implement.
+- [ ] Health notes: stop unbounded append during calls (dedupe/replace strategy).
+- [ ] Health notes: add manual removal UI from plant details.
+- [ ] Rehab checkups: confirm existing health notes are provided to the rehab specialist context.
