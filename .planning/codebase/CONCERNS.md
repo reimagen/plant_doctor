@@ -1,91 +1,117 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-01-17
+**Analysis Date:** 2026-01-18
+
+## Resolved (by Next.js Migration)
+
+~~**API Key Exposure for Content API:**~~
+- Previously: Gemini API key embedded in client-side JavaScript
+- Now: Content API calls made via server-side API routes
+- Key `GEMINI_API_KEY` never exposed to browser
+
+~~**CDN Dependency for Tailwind:**~~
+- Previously: Tailwind CSS loaded via CDN script tag
+- Now: Tailwind CSS installed via npm with PostCSS
+- Proper tree-shaking and production builds
+
+~~**No Lockfile Present:**~~
+- Previously: Dependencies not locked, builds not reproducible
+- Now: `package-lock.json` committed
+
+~~**Missing .env from .gitignore:**~~
+- Previously: Risk of accidentally committing API keys
+- Now: `.env*` patterns properly gitignored
 
 ## Tech Debt
-
-~~**Deprecated Web Audio API Usage:**~~
-~~- Issue: Uses deprecated `ScriptProcessorNode` for audio processing instead of `AudioWorklet`~~
-~~- Files: `hooks/usePlantDoctor.ts` (lines 97-106), `hooks/useRehabSpecialist.ts` (lines 95-106)~~
-~~- Impact: ScriptProcessorNode runs on main thread, causing potential audio glitches and UI jank. Will be removed from browsers eventually.~~
-~~- Fix approach: Migrate to AudioWorkletNode with a separate AudioWorklet processor file~~
 
 **Weak Type Safety with `any`:**
 - Issue: Multiple uses of `any` type bypass TypeScript's safety guarantees
 - Files:
-  - `lib/gemini-live.ts` (lines 13, 18, 94): `session: any`, `error: any`, `response: any`
-  - `hooks/usePlantDoctor.ts` (line 134): `const args = fc.args as any`
-  - `hooks/useRehabSpecialist.ts` (line 138): `const args = fc.args as any`
-  - `lib/audio-service.ts` (line 14): `(window as any).webkitAudioContext`
+  - `lib/gemini-live.ts`: `session: any`, `error: any`, `response: any`
+  - `hooks/usePlantDoctor.ts`: `const args = fc.args as any`
+  - `hooks/useRehabSpecialist.ts`: `const args = fc.args as any`
+  - `lib/audio-service.ts`: `(window as any).webkitAudioContext`
 - Impact: Runtime type errors possible from AI function call responses; no compile-time validation
 - Fix approach: Define proper interfaces for Gemini API responses and function call arguments; use type guards
 
 **Duplicated Audio/Video Session Logic:**
-- Issue: `usePlantDoctor.ts` and `useRehabSpecialist.ts` share ~80% identical code for WebRTC/Gemini session management
-- Files: `hooks/usePlantDoctor.ts` (184 lines), `hooks/useRehabSpecialist.ts` (165 lines)
+- Issue: `usePlantDoctor.ts` and `useRehabSpecialist.ts` share ~80% identical code for media session management
 - Impact: Bug fixes must be applied in two places; inconsistent behavior risk
-- Fix approach: Extract shared session management into a common hook or class (e.g., `useGeminiMediaSession`)
+- Fix approach: Extract shared session management into a common hook (e.g., `useGeminiMediaSession`)
 
 **Non-deterministic Plant IDs:**
-- Issue: Plant IDs generated with `Math.random().toString(36).substr(2, 9)` - not cryptographically random, potential collisions
-- Files: `hooks/usePlantDoctor.ts` (line 156)
-- Impact: Duplicate ID collision risk in large inventories; not suitable for sync/export
+- Issue: Plant IDs generated with `Math.random().toString(36).substr(2, 9)` - not cryptographically random
+- Impact: Duplicate ID collision risk in large inventories
 - Fix approach: Use `crypto.randomUUID()` for proper UUID generation
 
 ## Known Bugs
 
 **useEffect Missing Dependencies:**
 - Symptoms: React warns about missing dependencies; potential stale closure bugs
-- Files: `pages/DoctorPage.tsx` (line 36): `useEffect` references `rehab` but only lists `rehabTargetId` as dependency
+- Files: `pages/DoctorPage.tsx`: `useEffect` references `rehab` but only lists `rehabTargetId` as dependency
 - Trigger: Auto-starting rehab call may use stale `rehab` functions
 - Workaround: Currently works due to ref patterns but violates React rules
 
 **Silent Error Swallowing in sendMedia:**
 - Symptoms: Media frames silently dropped with no logging or retry
-- Files: `lib/gemini-live.ts` (lines 88-90): Empty catch block
+- Files: `lib/gemini-live.ts`: Empty catch block
 - Trigger: Network instability or rapid session transitions
 - Workaround: None - data loss is silent
 
 ## Security Considerations
 
-**API Key in Client Bundle:**
-- Risk: Gemini API key is embedded in client-side JavaScript via Vite's `define` config
-- Files: `vite.config.ts` (lines 14-15), usage in `hooks/usePlantDoctor.ts`, `hooks/useRehabSpecialist.ts`, `components/PlantEditModal.tsx`, `components/RescueProtocolView.tsx`
-- Current mitigation: None - key is fully exposed in production build
-- Recommendations:
-  - Implement a backend proxy for API calls
-  - Use Gemini's client-side key restrictions (domain locking, rate limiting)
-  - Consider Google's recommended client-side token flow
+**Gemini Live API Key in Client Bundle:**
+- Risk: `NEXT_PUBLIC_GEMINI_API_KEY` is exposed in client-side JavaScript
+- Necessity: WebSocket-based Live API cannot be proxied through API routes
+- Mitigation:
+  - Configure domain restriction in Google Cloud Console
+  - Restrict to production Vercel domain only
+  - Use separate keys for Content API (server) and Live API (client)
+  - Monitor API usage for anomalies
+- Status: Partially mitigated (domain restriction required)
 
-~~**Missing .env from .gitignore:**~~
-~~- Risk: `.env` files containing API keys could be accidentally committed~~
-~~- Files: `.gitignore` - no `.env` pattern present~~
-~~- Current mitigation: No `.env` file exists yet~~
-~~- Recommendations: Add `.env*` and `!.env.example` patterns to `.gitignore` before creating env files~~
+**Dual API Key Management:**
+- Risk: Two separate API keys to manage and rotate
+- Impact: Increased operational complexity
+- Mitigation: Document key rotation process; use Vercel environment variables
 
 **Native Confirm Dialog for Destructive Actions:**
 - Risk: `confirm()` is blockable by browsers and provides no styling/branding
-- Files: `components/PlantEditModal.tsx` (line 72)
-- Current mitigation: None
+- Files: `components/PlantEditModal.tsx`
 - Recommendations: Implement custom modal confirmation component
+
+## Next.js-Specific Concerns
+
+**Hydration Mismatches:**
+- Risk: localStorage reads in Server Components will cause hydration errors
+- Impact: Must use Client Components for all localStorage access
+- Mitigation: Keep `StorageService` usage in Client Components only; never access localStorage in Server Components
+
+**Server/Client Boundary Management:**
+- Risk: Unnecessary JavaScript shipped to client if `'use client'` placed too high in component tree
+- Impact: Larger bundle sizes, slower initial load
+- Mitigation: Keep client boundary as low as possible; only wrap truly interactive components
+
+**Client-Side Navigation State:**
+- Risk: App state (`useAppState`) must be accessible across all pages
+- Consideration: May need to lift state to root layout or use React Context
+- Alternative: Keep state in a Client Component wrapper that persists across navigation
 
 ## Performance Bottlenecks
 
 **Frequent Canvas Operations:**
 - Problem: Canvas captures and blob conversions every 1 second during active sessions
-- Files: `hooks/usePlantDoctor.ts` (lines 108-125), `hooks/useRehabSpecialist.ts` (lines 109-127)
+- Files: `hooks/usePlantDoctor.ts`, `hooks/useRehabSpecialist.ts`
 - Cause: Synchronous canvas operations + FileReader for base64 conversion on main thread
 - Improvement path: Use OffscreenCanvas in worker; reduce frame rate; use createImageBitmap for async decode
 
 **Repeated Storage Reads:**
-- Problem: `StorageService.getHomeProfile()` called on each component mount in `PlantEditModal`
-- Files: `components/PlantEditModal.tsx` (line 53)
+- Problem: `StorageService.getHomeProfile()` called on each component mount
 - Cause: Service reads localStorage synchronously; not cached
-- Improvement path: Pass homeProfile as prop (already available in parent); or use React context
+- Improvement path: Pass homeProfile as prop; or use React context
 
 **Unnecessary Re-renders on Plant Updates:**
 - Problem: Every plant update triggers full list re-render; no memoization
-- Files: `hooks/useAppState.ts` (line 54): `updatePlant` creates new array every call
 - Cause: Callback always creates new array reference
 - Improvement path: Add React.memo to PlantCard; use immer for immutable updates; implement virtualization for large lists
 
@@ -93,18 +119,18 @@
 
 **Gemini Live Session State:**
 - Files: `lib/gemini-live.ts`, `hooks/usePlantDoctor.ts`, `hooks/useRehabSpecialist.ts`
-- Why fragile: Complex state machine across WebSocket, WebRTC, and React state; `isClosing` flag is the only guard against race conditions
+- Why fragile: Complex state machine across WebSocket and React state; `isClosing` flag is the only guard against race conditions
 - Safe modification: Add explicit state machine (idle/connecting/active/closing); add comprehensive logging
-- Test coverage: None - no test files exist
+- Test coverage: None
 
 **Audio Context Lifecycle:**
-- Files: `lib/audio-service.ts`, `hooks/usePlantDoctor.ts` (lines 58-60), `hooks/useRehabSpecialist.ts` (lines 59-62)
+- Files: `lib/audio-service.ts`, hooks
 - Why fragile: Multiple AudioContext instances created/destroyed; browser limits on concurrent contexts (6-12 depending on browser)
 - Safe modification: Implement singleton AudioContext; add context pool with reuse
 - Test coverage: None
 
 **Date Handling:**
-- Files: `components/PlantEditModal.tsx` (lines 36-45), `components/PlantCard.tsx` (lines 16-30)
+- Files: `components/PlantEditModal.tsx`, `components/PlantCard.tsx`
 - Why fragile: Date math with manual setHours() to avoid timezone issues; ISO string parsing scattered across components
 - Safe modification: Centralize date utilities; consider date-fns or dayjs for consistency
 - Test coverage: None
@@ -118,15 +144,10 @@
 
 **Single-threaded Audio Processing:**
 - Current capacity: Works for single active session
-- Limit: CPU spikes with ScriptProcessorNode; no concurrent sessions possible
-- Scaling path: Migrate to AudioWorklet; implement session queuing
+- Limit: CPU spikes possible; no concurrent sessions
+- Scaling path: Ensure AudioWorklet usage; implement session queuing
 
 ## Dependencies at Risk
-
-~~**No Lockfile Present:**~~
-~~- Risk: Dependencies not locked - builds are not reproducible; potential for silent breaking changes~~
-~~- Impact: `npm install` can pull different versions across environments~~
-~~- Migration plan: Run `npm install` to generate package-lock.json and commit it~~
 
 **Google GenAI SDK:**
 - Risk: Using preview/beta Gemini model (`gemini-2.5-flash-native-audio-preview-12-2025`)
@@ -155,7 +176,6 @@
 
 **No Tests Exist:**
 - What's not tested: Entire codebase - no test files found
-- Files: All `*.ts` and `*.tsx` files in `hooks/`, `lib/`, `components/`, `pages/`
 - Risk: Any change could break existing functionality without detection
 - Priority: High - no safety net for refactoring
 
@@ -164,7 +184,8 @@
 - Date calculations for watering schedules (`PlantCard.tsx`)
 - AI function call argument parsing (`usePlantDoctor.ts`, `useRehabSpecialist.ts`)
 - Storage serialization/deserialization (`storage-service.ts`)
+- API route handlers (`app/api/gemini/content/route.ts`)
 
 ---
 
-*Concerns audit: 2026-01-17*
+*Concerns audit: 2026-01-18*

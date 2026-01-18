@@ -1,122 +1,143 @@
 # Architecture
 
-**Analysis Date:** 2026-01-17
+**Analysis Date:** 2026-01-18
 
 ## Pattern Overview
 
-**Overall:** Component-Based Single Page Application with Custom Hook State Management
+**Overall:** Next.js App Router with Server/Client Component Architecture
 
 **Key Characteristics:**
-- React SPA with centralized state in a custom hook (`useAppState`)
-- Feature-based hooks encapsulate AI/media integration logic
-- Services layer for external APIs and browser storage
-- No routing library; view switching via state enum
-- Real-time multimodal AI integration via WebSocket sessions
+- Next.js App Router for file-based routing (replaces state-based view switching)
+- Server Components for pages, layouts, and data fetching
+- Client Components (`'use client'`) for interactive features
+- API Routes for secure server-side Gemini Content API calls
+- Client-side Gemini Live API for real-time audio/video (WebSocket)
+- Feature-based hooks encapsulate client-side AI/media logic
+- localStorage persistence handled in Client Components
 
 ## Layers
 
-**Presentation Layer:**
-- Purpose: React components that render UI and handle user interactions
-- Location: `components/`, `pages/`
-- Contains: JSX components, event handlers, local UI state
-- Depends on: Types, Constants, Hooks
-- Used by: Root `App` component in `index.tsx`
+**Server Components Layer:**
+- Purpose: Render pages, layouts, and static content on the server
+- Location: `app/page.tsx`, `app/layout.tsx`, `app/*/page.tsx`
+- Contains: Async components, server-side data fetching, SEO metadata
+- Depends on: Types
+- Used by: Next.js router
 
-**State Management Layer:**
-- Purpose: Centralized application state and business logic
-- Location: `hooks/useAppState.ts`
-- Contains: Plant CRUD operations, view navigation, persistence sync
-- Depends on: StorageService, Types
-- Used by: Root `App` component, passed down via props
+**API Routes Layer:**
+- Purpose: Server-side proxy for Gemini Content API (keeps API key secure)
+- Location: `app/api/`
+- Contains: Route handlers for POST requests to Gemini
+- Depends on: `@google/genai`, server environment variables
+- Used by: Client Components via fetch
 
-**Feature Hooks Layer:**
-- Purpose: Encapsulate complex features (AI sessions, media capture)
-- Location: `hooks/usePlantDoctor.ts`, `hooks/useRehabSpecialist.ts`, `hooks/useMediaStream.ts`
-- Contains: WebSocket session management, audio/video streaming, tool call handling
-- Depends on: GeminiLiveSession, AudioService, Types
-- Used by: `DoctorPage` component
+**Client Components Layer:**
+- Purpose: Interactive UI that requires browser APIs or user interaction
+- Location: Components with `'use client'` directive
+- Contains: Camera/audio features, forms, localStorage access, state management
+- Depends on: Hooks, Types, Browser APIs
+- Used by: Server Components (as children)
+
+**Hooks Layer:**
+- Purpose: Encapsulate client-side stateful logic (AI sessions, media, persistence)
+- Location: `hooks/`
+- Contains: Plant CRUD, Gemini Live sessions, media capture, audio playback
+- Depends on: Services (lib/), Types, Browser APIs
+- Used by: Client Components only
 
 **Services Layer:**
 - Purpose: External API clients and browser API wrappers
 - Location: `lib/`
-- Contains: Gemini API wrappers, localStorage abstraction, audio playback
+- Contains: Gemini Live session, audio playback, localStorage abstraction
 - Depends on: External SDKs (@google/genai), Browser APIs
-- Used by: Hooks, Components
+- Used by: Hooks, Client Components
 
-**Types/Constants Layer:**
-- Purpose: Shared type definitions and static configuration
-- Location: `types.ts`, `constants.tsx`
-- Contains: TypeScript interfaces, default values, icon components
+**Types Layer:**
+- Purpose: Shared type definitions
+- Location: `types/`
+- Contains: TypeScript interfaces
 - Depends on: Nothing
 - Used by: All other layers
 
 ## Data Flow
 
+**Navigation Flow:**
+
+1. User clicks navigation link (`next/link`)
+2. Next.js router handles navigation (no state-based view switching)
+3. Target page's Server Component renders
+4. Client Components hydrate for interactivity
+
 **Plant Discovery Flow:**
 
-1. User activates camera via `DoctorPage` toggle button
-2. `usePlantDoctor` hook starts media stream and Gemini Live session
-3. Video frames and audio sent to Gemini every 1 second
-4. Gemini calls `propose_plant_to_inventory` tool when plant detected
-5. Hook captures current frame and calls `onAutoDetect` callback
-6. `useAppState.addPlant()` adds plant with `pending` status
-7. Plant appears in `InventoryPage` pending section
+1. User navigates to `/doctor` via Navigation
+2. `DoctorPage` (Client Component) mounts
+3. User activates camera via toggle button
+4. `usePlantDoctor` hook starts media stream and Gemini Live session
+5. Video frames and audio sent to Gemini every 1 second (client-side WebSocket)
+6. Gemini calls `propose_plant_to_inventory` tool when plant detected
+7. Hook captures current frame and calls `onAutoDetect` callback
+8. `useAppState.addPlant()` adds plant with `pending` status
+9. User navigates to `/` (inventory) to see pending plant
 
-**Plant Care Flow:**
+**Care Guide Generation Flow (Server-Side):**
 
-1. User interacts with `PlantCard` (water, adopt, check-in)
-2. Handler calls state mutation from `useAppState` (e.g., `waterPlant`)
-3. State update triggers `useEffect` which persists to localStorage
-4. Component re-renders with new state
-
-**Rehab Verification Flow:**
-
-1. User triggers rehab from `InventoryPage` via `onOpenRehab`
-2. `useAppState` sets `rehabTarget` and switches to doctor view
-3. `DoctorPage` detects `rehabTargetId` and auto-starts rehab session
-4. `useRehabSpecialist` connects to Gemini with plant context
-5. Gemini calls `verify_rehab_success` tool after analyzing plant
-6. Hook calls `onUpdate` to update plant status
+1. Client Component requests care guide via fetch to `/api/gemini/content`
+2. API Route handler receives request with plant data
+3. Server-side code calls Gemini Content API with secure `GEMINI_API_KEY`
+4. Response returned to Client Component
+5. UI updates with care guide
 
 **State Management:**
-- Single source of truth in `useAppState` hook
-- State passed down via props (prop drilling pattern)
-- No context providers or state management libraries
-- Persistence via localStorage on every state change
+- Plant CRUD and profile managed in `useAppState` hook (Client Component)
+- Navigation handled by Next.js router (not in app state)
+- Persistence via localStorage (Client Components only)
+- Server Components pass initial props; Client Components manage interactivity
 
 ## Key Abstractions
 
 **GeminiLiveSession:**
-- Purpose: Wraps WebSocket connection to Gemini Live API
-- Examples: `lib/gemini-live.ts`
+- Purpose: Wraps WebSocket connection to Gemini Live API (client-side only)
+- Location: `lib/gemini-live.ts`
 - Pattern: Class with connect/send/close lifecycle, callback-based message handling
+- Note: Cannot be proxied through API routes due to WebSocket nature
+
+**API Route Handlers:**
+- Purpose: Server-side Gemini Content API proxy
+- Location: `app/api/gemini/content/route.ts`
+- Pattern: POST handler that forwards requests to Gemini, returns JSON
 
 **AudioService:**
 - Purpose: Manages audio playback of Gemini voice responses
-- Examples: `lib/audio-service.ts`
+- Location: `lib/audio-service.ts`
 - Pattern: Class managing AudioContext and buffer queue for gapless playback
 
 **Plant:**
 - Purpose: Core domain entity representing a tracked houseplant
-- Examples: `types.ts` interface, used throughout
+- Location: `types/index.ts`
 - Pattern: Plain object with status enum driving UI states
 
 **HomeProfile:**
 - Purpose: User's home environment settings for AI context
-- Examples: `types.ts` interface, `SettingsPage` for editing
+- Location: `types/index.ts`
 - Pattern: Simple object stored in localStorage, passed to AI prompts
 
 ## Entry Points
 
 **Application Entry:**
-- Location: `index.tsx`
-- Triggers: Browser loads `index.html`
-- Responsibilities: Creates React root, renders `App` component
+- Location: `app/layout.tsx` (root layout)
+- Triggers: Any page navigation
+- Responsibilities: HTML shell, global styles, Navigation component
 
-**Vite Dev Server:**
-- Location: `vite.config.ts`
-- Triggers: `npm run dev`
-- Responsibilities: Bundles app, injects env vars, serves HMR
+**Page Entries:**
+- Location: `app/page.tsx` (home/inventory), `app/doctor/page.tsx`, `app/settings/page.tsx`
+- Triggers: Route navigation via Next.js
+- Responsibilities: Render page content, instantiate Client Components
+
+**API Entries:**
+- Location: `app/api/gemini/content/route.ts`
+- Triggers: POST requests from Client Components
+- Responsibilities: Proxy Gemini Content API calls with server-side key
 
 **AI Session Entries:**
 - Location: `hooks/usePlantDoctor.ts:startCall()`, `hooks/useRehabSpecialist.ts:startRehabCall()`
@@ -128,22 +149,35 @@
 **Strategy:** Catch-and-recover with graceful degradation
 
 **Patterns:**
+- API Routes return proper HTTP status codes and error messages
+- Client Components handle fetch errors with try/catch
 - AI hooks wrap connection in try/catch, call `stopCall()` on error
 - `onError` and `onClose` callbacks trigger cleanup
 - StorageService returns defaults on parse errors
-- GeminiContentService returns fallback tips on API failure
 - No global error boundary; errors handled at feature level
+
+**Next.js Error Handling:**
+- `error.tsx` files can be added for route-level error boundaries
+- `loading.tsx` files for loading states during navigation
 
 ## Cross-Cutting Concerns
 
 **Logging:** Console-based via `console.error`, `console.warn` in catch blocks; no structured logging
 
-**Validation:** TypeScript compile-time only; no runtime validation of API responses or user input
+**Validation:** TypeScript compile-time; runtime validation recommended for API inputs
 
-**Authentication:** None; API key injected via `process.env.API_KEY` at build time
+**Authentication:** None for users; API key managed server-side for Content API, client-side (domain-restricted) for Live API
 
-**Persistence:** LocalStorage via `StorageService` with automatic sync on state changes
+**Persistence:** localStorage via Client Components with automatic sync on state changes
+
+**Server/Client Boundary:**
+- Default to Server Components (no directive needed)
+- Add `'use client'` only for components that need:
+  - Browser APIs (localStorage, AudioContext, MediaDevices)
+  - React hooks (useState, useEffect)
+  - Event handlers
+- Keep client boundary as low as possible in component tree
 
 ---
 
-*Architecture analysis: 2026-01-17*
+*Architecture analysis: 2026-01-18*

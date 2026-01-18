@@ -1,79 +1,77 @@
+'use client'
 
-import React, { useState, useEffect } from 'react';
-import { Plant, IntensityLevel, QualityLevel } from '../types';
-import { Icons } from '../constants';
-import { GeminiContentService } from '../lib/gemini-content';
-import { StorageService } from '../lib/storage-service';
+import { useState, useEffect } from 'react'
+import { Plant, IntensityLevel, QualityLevel, HomeProfile } from '@/types'
+import { Icons } from '@/lib/constants'
+import { StorageService } from '@/lib/storage-service'
 
 interface Props {
-  plant: Plant;
-  onClose: () => void;
-  onUpdate: (id: string, updates: Partial<Plant>) => void;
-  onDelete?: (id: string) => void;
+  plant: Plant
+  onClose: () => void
+  onUpdate: (id: string, updates: Partial<Plant>) => void
+  onDelete?: (id: string) => void
 }
 
 export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDelete }) => {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [newNote, setNewNote] = useState('');
-
-  // Use local state for the date input to avoid sync issues with ISO strings
-  const [localDate, setLocalDate] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [localDate, setLocalDate] = useState('')
 
   useEffect(() => {
     if (plant.lastWateredAt) {
-      setLocalDate(new Date(plant.lastWateredAt).toISOString().split('T')[0]);
+      setLocalDate(new Date(plant.lastWateredAt).toISOString().split('T')[0])
     }
-  }, [plant.lastWateredAt]);
+  }, [plant.lastWateredAt])
 
-  const amounts: IntensityLevel[] = ['Low', 'Medium', 'Bright'];
-  const exposures: QualityLevel[] = ['Indirect', 'Direct'];
+  const amounts: IntensityLevel[] = ['Low', 'Medium', 'Bright']
+  const exposures: QualityLevel[] = ['Indirect', 'Direct']
 
-  const lastDate = new Date(plant.lastWateredAt);
-  const nextDate = new Date(lastDate);
-  nextDate.setDate(lastDate.getDate() + plant.cadenceDays);
-  const isOverdue = nextDate.getTime() < Date.now();
+  const lastDate = new Date(plant.lastWateredAt)
+  const nextDate = new Date(lastDate)
+  nextDate.setDate(lastDate.getDate() + plant.cadenceDays)
+  const isOverdue = nextDate.getTime() < Date.now()
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setLocalDate(val); // Update local UI immediately
+    const val = e.target.value
+    setLocalDate(val)
 
     if (val) {
-      const newDate = new Date(val);
-      // Set to noon to avoid timezone shift issues
-      newDate.setHours(12, 0, 0, 0);
-      onUpdate(plant.id, { lastWateredAt: newDate.toISOString() });
+      const newDate = new Date(val)
+      newDate.setHours(12, 0, 0, 0)
+      onUpdate(plant.id, { lastWateredAt: newDate.toISOString() })
     }
-  };
+  }
 
   const handleGenerateTips = async () => {
-    if (!plant.species) return;
-    setIsGenerating(true);
+    if (!plant.species) return
+    setIsGenerating(true)
     try {
-      const service = new GeminiContentService(process.env.API_KEY!);
-      const tips = await service.generateCareGuide(plant, StorageService.getHomeProfile());
-      if (tips.length > 0) {
-        onUpdate(plant.id, { careGuide: tips });
+      const homeProfile = StorageService.getHomeProfile()
+      const response = await fetch('/api/gemini/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'care-guide',
+          plant,
+          homeProfile
+        })
+      })
+      const data = await response.json()
+      if (data.tips && data.tips.length > 0) {
+        onUpdate(plant.id, { careGuide: data.tips })
       }
     } catch (err) {
-      console.error("Failed to generate tips", err);
+      console.error('Failed to generate tips', err)
     } finally {
-      setIsGenerating(false);
+      setIsGenerating(false)
     }
-  };
-
-  const addNote = () => {
-    if (!newNote.trim()) return;
-    const notes = plant.notes || [];
-    onUpdate(plant.id, { notes: [newNote, ...notes] });
-    setNewNote('');
-  };
+  }
 
   const handleDelete = () => {
     if (confirm(`Remove ${plant.name || plant.species} from your jungle?`)) {
-      onDelete?.(plant.id);
-      onClose();
+      onDelete?.(plant.id)
+      onClose()
     }
-  };
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -88,8 +86,7 @@ export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDe
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className={`w-2 h-2 rounded-full ${isOverdue ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
-              <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${isOverdue ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'
-                }`}>
+              <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${isOverdue ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
                 {isOverdue ? 'Urgent Care' : 'Stable'}
               </span>
             </div>
@@ -145,7 +142,7 @@ export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDe
           <section className="bg-emerald-50/40 p-5 rounded-3xl border border-emerald-100/50">
             <label className="text-[10px] font-black text-emerald-600/60 uppercase tracking-[0.2em] mb-2 block">Ideal Conditions</label>
             <p className="text-xs font-bold text-emerald-800/80 leading-relaxed italic">
-              {plant.idealConditions || "Scanning botanical requirements..."}
+              {plant.idealConditions || 'Scanning botanical requirements...'}
             </p>
           </section>
 
@@ -156,7 +153,7 @@ export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDe
               <ul className="space-y-2">
                 {plant.notes.map((note, i) => (
                   <li key={i} className="text-xs font-bold text-amber-800/80 leading-relaxed flex gap-2">
-                    <span className="opacity-50">•</span> {note}
+                    <span className="opacity-50">-</span> {note}
                   </li>
                 ))}
               </ul>
@@ -241,5 +238,5 @@ export const PlantEditModal: React.FC<Props> = ({ plant, onClose, onUpdate, onDe
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

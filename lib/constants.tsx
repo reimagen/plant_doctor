@@ -1,14 +1,14 @@
+import React from 'react'
+import { HomeProfile } from '@/types'
 
-import React from 'react';
-
-export const DEFAULT_HOME_PROFILE = {
+export const DEFAULT_HOME_PROFILE: HomeProfile = {
   heatedHome: true,
-  humidity: 'normal' as const,
-  temp: 'normal' as const,
-  light: 'medium' as const,
-  seasonMode: 'Spring' as const,
-  hemisphere: 'Northern' as const,
-};
+  humidity: 'normal',
+  temp: 'normal',
+  light: 'medium',
+  seasonMode: 'Spring',
+  hemisphere: 'Northern',
+}
 
 export const Icons = {
   Leaf: () => (
@@ -49,4 +49,4 @@ export const Icons = {
       <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" opacity="0.3" />
     </svg>
   ),
-};
+}

@@ -1,4 +1,3 @@
-
 export interface HomeProfile {
   heatedHome: boolean;
   humidity: 'dry' | 'normal' | 'humid';
@@ -31,11 +30,5 @@ export interface Plant {
   nearWindow?: boolean;
   windowDirection?: WindowDirection;
   lightLevel?: string;
-  idealConditions?: string; // New field for AI-detected preferences
-}
-
-export interface AppState {
-  view: 'doctor' | 'inventory' | 'settings';
-  homeProfile: HomeProfile;
-  plants: Plant[];
+  idealConditions?: string;
 }

@@ -1,33 +1,35 @@
 # External Integrations
 
-**Analysis Date:** 2026-01-17
+**Analysis Date:** 2026-01-18
 
 ## APIs & External Services
 
 **Google Gemini AI:**
 - Purpose: AI-powered plant identification, health assessment, and care recommendations
-- SDK: `@google/genai` 1.35.0
-- Auth: `GEMINI_API_KEY` environment variable
+- SDK: `@google/genai`
+- Auth: API keys (see Environment Configuration below)
 
 **Two Integration Modes:**
 
-1. **Gemini Live API (Real-time Audio/Video)**
+1. **Gemini Content API (Server-Side)**
+   - Model: `gemini-3-flash-preview`
+   - Features: JSON schema responses for structured data
+   - Implementation: API route at `app/api/gemini/content/route.ts`
+   - Used for: Care guide generation, rescue plan generation
+   - API Key: `GEMINI_API_KEY` (server-only, never exposed to client)
+
+2. **Gemini Live API (Client-Side)**
    - Model: `gemini-2.5-flash-native-audio-preview-12-2025`
    - Features: Bidirectional audio, video frame streaming, function calling
    - Implementation: `lib/gemini-live.ts` (`GeminiLiveSession` class)
    - Voice: Kore (prebuilt voice config)
    - Audio formats: PCM 16kHz input, 24kHz output
+   - API Key: `NEXT_PUBLIC_GEMINI_API_KEY` (client-side, domain-restricted)
+   - Note: Cannot be proxied through API routes (WebSocket connection)
 
-2. **Gemini Content API (Text Generation)**
-   - Model: `gemini-3-flash-preview`
-   - Features: JSON schema responses for structured data
-   - Implementation: `lib/gemini-content.ts` (`GeminiContentService` class)
-   - Used for: Care guide generation, rescue plan generation
-
-**CDN Services:**
-- Tailwind CSS: `https://cdn.tailwindcss.com`
-- Google Fonts: Inter font family from `fonts.googleapis.com`
-- esm.sh: React and @google/genai modules in browser import map
+**Google Fonts:**
+- Inter font family from `fonts.googleapis.com`
+- Loaded in root layout
 
 **Fallback Images:**
 - Unsplash: Default plant photo URL when camera capture fails
@@ -43,6 +45,7 @@
 - Keys: `plants`, `homeProfile`
 - Implementation: `lib/storage-service.ts` (`StorageService` object)
 - Data format: JSON-serialized TypeScript objects
+- Access: Client Components only (browser API)
 
 **File Storage:**
 - None - Images stored as base64 data URLs in localStorage
@@ -54,7 +57,7 @@
 
 **Auth Provider:**
 - None - No user authentication
-- API key is build-time environment variable, not user-provided
+- API keys are environment-managed, not user-provided
 
 ## Monitoring & Observability
 
@@ -68,26 +71,42 @@
 ## CI/CD & Deployment
 
 **Hosting:**
-- Not configured
-- Designed for static hosting (Vite build output)
+- Vercel (zero-config deployment)
+- Automatic HTTPS
+- Environment variables via Vercel dashboard
 
 **CI Pipeline:**
-- None configured
+- None configured (recommended: GitHub Actions)
 
 ## Environment Configuration
 
 **Required Environment Variables:**
+
 ```
-GEMINI_API_KEY=<your-gemini-api-key>
+# Server-only (for Content API) - DO NOT prefix with NEXT_PUBLIC_
+GEMINI_API_KEY=<your-server-gemini-api-key>
+
+# Client-side (for Live API) - MUST prefix with NEXT_PUBLIC_
+NEXT_PUBLIC_GEMINI_API_KEY=<your-client-gemini-api-key>
 ```
 
 **Configuration Files:**
 - `.env.local` - Local environment variables (not committed)
-- Loaded by Vite via `loadEnv()` in `vite.config.ts`
+- Auto-loaded by Next.js at runtime
 
-**Secrets Location:**
-- `.env.local` file (gitignored)
-- Injected at build time via Vite's `define` config
+**API Key Security Strategy:**
+
+| API | Key Variable | Location | Security |
+|-----|--------------|----------|----------|
+| Content API | `GEMINI_API_KEY` | Server only | Never exposed to browser |
+| Live API | `NEXT_PUBLIC_GEMINI_API_KEY` | Client-side | Domain-restricted in Google Cloud Console |
+
+**Setting Up Domain Restriction:**
+1. Go to Google Cloud Console > APIs & Services > Credentials
+2. Edit the API key used for `NEXT_PUBLIC_GEMINI_API_KEY`
+3. Under "Application restrictions", select "HTTP referrers"
+4. Add your Vercel production domain (e.g., `https://your-app.vercel.app/*`)
+5. Optionally add localhost for development (remove for production)
 
 ## Webhooks & Callbacks
 
@@ -96,6 +115,28 @@ GEMINI_API_KEY=<your-gemini-api-key>
 
 **Outgoing:**
 - None
+
+## API Route Details
+
+**POST /api/gemini/content**
+
+Request body:
+```typescript
+{
+  type: 'care-guide' | 'rescue-plan',
+  plant: Plant,
+  homeProfile: HomeProfile
+}
+```
+
+Response:
+```typescript
+{
+  tips?: string[],           // For care-guide
+  plan?: RescuePlan,         // For rescue-plan
+  error?: string             // On failure
+}
+```
 
 ## Gemini API Function Declarations
 
@@ -146,6 +187,21 @@ Declared in `metadata.json`:
 - Format: JPEG, quality 0.4-0.5
 - Frequency: 1 frame per second
 
+## Vercel Deployment
+
+**Zero-Config Setup:**
+1. Connect Git repository to Vercel
+2. Set environment variables in Vercel dashboard
+3. Deploy automatically on push
+
+**Environment Variables in Vercel:**
+- Add `GEMINI_API_KEY` (not exposed to browser)
+- Add `NEXT_PUBLIC_GEMINI_API_KEY` (exposed to browser, domain-restricted)
+
+**Edge Functions:**
+- Available for API routes if needed for performance
+- Not currently used
+
 ---
 
-*Integration audit: 2026-01-17*
+*Integration audit: 2026-01-18*

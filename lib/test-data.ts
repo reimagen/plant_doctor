@@ -1,4 +1,4 @@
-import { Plant } from '../types';
+import { Plant } from '@/types'
 
 export const TEST_PLANTS: Plant[] = [
   {
@@ -7,18 +7,18 @@ export const TEST_PLANTS: Plant[] = [
     species: 'Fiddle Leaf Fig',
     photoUrl: 'https://images.unsplash.com/photo-1597055181300-e3633a207519?q=80&w=800&auto=format&fit=crop',
     location: 'Studio',
-    lastWateredAt: new Date(Date.now() - (1000 * 60 * 60 * 30)).toISOString(), // 30 hours ago (graduated)
+    lastWateredAt: new Date(Date.now() - (1000 * 60 * 60 * 30)).toISOString(),
     cadenceDays: 7,
     status: 'healthy',
-    needsCheckIn: true, // TRIGGER FOR TESTING post-rehab state
+    needsCheckIn: true,
     lightIntensity: 'Bright',
     lightQuality: 'Indirect',
     nearWindow: true,
     windowDirection: 'West',
     careGuide: [
-      "Check-in required to verify stabilization.",
-      "Monitor for leaf drop after recent stress.",
-      "Keep in a consistent location."
+      'Check-in required to verify stabilization.',
+      'Monitor for leaf drop after recent stress.',
+      'Keep in a consistent location.'
     ]
   },
   {
@@ -35,10 +35,10 @@ export const TEST_PLANTS: Plant[] = [
     nearWindow: true,
     windowDirection: 'South',
     careGuide: [
-      "Let soil dry out completely between waterings.",
-      "Thrives in indirect sunlight but tolerates low light.",
-      "Avoid getting water on the leaves to prevent rot.",
-      "Perfect for bedrooms as it produces oxygen at night."
+      'Let soil dry out completely between waterings.',
+      'Thrives in indirect sunlight but tolerates low light.',
+      'Avoid getting water on the leaves to prevent rot.',
+      'Perfect for bedrooms as it produces oxygen at night.'
     ]
   },
   {
@@ -47,22 +47,22 @@ export const TEST_PLANTS: Plant[] = [
     species: 'Calathea Ornata',
     photoUrl: 'https://images.unsplash.com/photo-1614594975525-e45190c55d0b?q=80&w=800&auto=format&fit=crop',
     location: 'Bedroom Corner',
-    lastWateredAt: new Date(Date.now() - (1000 * 60 * 60 * 24 * 10)).toISOString(), 
-    cadenceDays: 4, 
+    lastWateredAt: new Date(Date.now() - (1000 * 60 * 60 * 24 * 10)).toISOString(),
+    cadenceDays: 4,
     status: 'critical',
     lightIntensity: 'Low',
     lightQuality: 'Indirect',
     nearWindow: true,
     windowDirection: 'North',
     notes: [
-      "Leaves are starting to curl at the edges.",
-      "Soil feels bone dry."
+      'Leaves are starting to curl at the edges.',
+      'Soil feels bone dry.'
     ],
     careGuide: [
-      "Keep soil consistently moist but not soggy.",
-      "Requires high humidity to prevent leaf crisping.",
-      "Sensitive to tap water chemicals; use filtered if possible.",
-      "Avoid any direct midday sun."
+      'Keep soil consistently moist but not soggy.',
+      'Requires high humidity to prevent leaf crisping.',
+      'Sensitive to tap water chemicals; use filtered if possible.',
+      'Avoid any direct midday sun.'
     ]
   }
-];
+]

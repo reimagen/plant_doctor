@@ -1,6 +1,37 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-01-17
+**Analysis Date:** 2026-01-18
+
+## Next.js App Router Conventions
+
+**Server vs Client Components:**
+- Default: Server Components (no directive needed)
+- Interactive: Add `'use client'` at top of file
+- Keep client boundary as low as possible in component tree
+- Server Components cannot use hooks, event handlers, or browser APIs
+
+**When to use `'use client'`:**
+- Component uses React hooks (`useState`, `useEffect`, etc.)
+- Component has event handlers (`onClick`, `onChange`, etc.)
+- Component accesses browser APIs (`localStorage`, `navigator`, etc.)
+- Component uses third-party libraries that require browser environment
+
+**File Naming (Next.js):**
+- `page.tsx` - Route pages (required for route to exist)
+- `layout.tsx` - Shared layouts (wraps child pages)
+- `loading.tsx` - Loading UI (optional)
+- `error.tsx` - Error boundaries (optional, must be Client Component)
+- `route.ts` - API route handlers
+
+**Data Fetching:**
+- Server Components: `async function` with direct data access or fetch
+- Client Components: `useEffect` + fetch, or React Query
+- API Routes: For server-side operations with secrets
+
+**Navigation:**
+- Use `next/link` for internal links (enables prefetching)
+- Use `useRouter` from `next/navigation` for programmatic navigation
+- Avoid `<a>` tags for internal navigation
 
 ## Naming Patterns
 
@@ -8,21 +39,22 @@
 - Components: PascalCase with `.tsx` extension (e.g., `PlantCard.tsx`, `Navigation.tsx`)
 - Hooks: camelCase prefixed with `use` (e.g., `useAppState.ts`, `usePlantDoctor.ts`)
 - Services/Libraries: kebab-case with `.ts` extension (e.g., `audio-service.ts`, `gemini-live.ts`)
-- Types: lowercase singular noun (e.g., `types.ts`)
-- Constants: lowercase plural noun (e.g., `constants.tsx`)
+- Types: lowercase in `types/` directory (e.g., `types/index.ts`)
+- Route files: lowercase Next.js conventions (`page.tsx`, `route.ts`)
 
 **Functions:**
 - React components: PascalCase (e.g., `PlantCard`, `DoctorPage`)
 - Custom hooks: camelCase with `use` prefix (e.g., `useAppState`, `useMediaStream`)
-- Handler functions: camelCase with `handle` prefix (e.g., `handleOpenRehab`, `handleSetView`)
+- Handler functions: camelCase with `handle` prefix (e.g., `handleOpenRehab`, `handleSubmit`)
 - Callbacks: camelCase with `on` prefix for props (e.g., `onWater`, `onUpdate`, `onClose`)
+- API route handlers: lowercase HTTP method names (`GET`, `POST`, `PUT`, `DELETE`)
 - Service methods: camelCase verbs (e.g., `getPlants`, `savePlants`, `generateCareGuide`)
 
 **Variables:**
 - State variables: camelCase nouns (e.g., `plants`, `homeProfile`, `isCalling`)
 - Boolean state: camelCase with `is`/`has`/`needs` prefix (e.g., `isCalling`, `isGenerating`, `needsCheckIn`)
 - Refs: camelCase with `Ref` suffix (e.g., `videoRef`, `sessionRef`, `audioContextRef`)
-- Constants: UPPER_SNAKE_CASE for object keys (e.g., `KEYS.PLANTS`)
+- Environment variables: UPPER_SNAKE_CASE (e.g., `GEMINI_API_KEY`, `NEXT_PUBLIC_GEMINI_API_KEY`)
 
 **Types:**
 - Interfaces: PascalCase nouns (e.g., `Plant`, `HomeProfile`, `AppState`)
@@ -32,7 +64,6 @@
 ## Code Style
 
 **Formatting:**
-- No explicit Prettier or ESLint configuration detected
 - Indentation: 2 spaces
 - Semicolons: optional (generally omitted)
 - Quotes: single quotes for strings
@@ -40,66 +71,72 @@
 - Line length: no enforced limit, but generally under 120 characters
 
 **Linting:**
-- No ESLint configuration present
-- TypeScript strict mode not enabled (no `strict: true` in tsconfig)
-- `skipLibCheck: true` enabled
+- ESLint with Next.js config (`next lint`)
+- TypeScript strict mode recommended
 
 ## Import Organization
 
 **Order:**
-1. React imports (e.g., `import React from 'react'`, `import { useState, useCallback } from 'react'`)
-2. External library imports (e.g., `import { GoogleGenAI } from "@google/genai"`)
-3. Internal type imports (e.g., `import { Plant, HomeProfile } from '../types'`)
-4. Internal component/hook imports (e.g., `import { PlantCard } from '../components/PlantCard'`)
-5. Internal service/utility imports (e.g., `import { StorageService } from '../lib/storage-service'`)
+1. React imports (e.g., `import { useState, useCallback } from 'react'`)
+2. Next.js imports (e.g., `import Link from 'next/link'`, `import { useRouter } from 'next/navigation'`)
+3. External library imports (e.g., `import { GoogleGenAI } from "@google/genai"`)
+4. Internal type imports (e.g., `import { Plant, HomeProfile } from '@/types'`)
+5. Internal component/hook imports (e.g., `import { PlantCard } from '@/components/PlantCard'`)
+6. Internal service/utility imports (e.g., `import { StorageService } from '@/lib/storage-service'`)
 
 **Path Aliases:**
-- `@/*` maps to project root (configured in `tsconfig.json` and `vite.config.ts`)
-- Currently not used in codebase - relative paths used instead
+- `@/*` maps to project root (configured in `tsconfig.json`)
+- Use path aliases for cleaner imports
 
-**Examples from codebase:**
+**Examples:**
 ```typescript
-// From hooks/usePlantDoctor.ts
-import { useState, useRef, useCallback } from 'react';
-import { Type, FunctionDeclaration } from "@google/genai";
-import { HomeProfile, Plant } from '../types';
-import { GeminiLiveSession } from '../lib/gemini-live';
-import { AudioService } from '../lib/audio-service';
-import { useMediaStream } from './useMediaStream';
+// From a Client Component
+'use client'
+
+import { useState, useCallback } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Plant } from '@/types'
+import { PlantCard } from '@/components/PlantCard'
+import { useAppState } from '@/hooks/useAppState'
 ```
 
 ## Error Handling
 
 **Patterns:**
-- Try-catch blocks for async operations with silent fallbacks
+- Try-catch blocks for async operations with fallbacks
 - `console.error` or `console.warn` for logging errors
 - Graceful fallback to default values on parse errors
+- API routes return proper HTTP status codes
 
-**Examples from codebase:**
+**API Route Error Handling:**
 ```typescript
-// From lib/storage-service.ts - silent fallback pattern
-getPlants: (): Plant[] => {
+// From app/api/gemini/content/route.ts
+export async function POST(request: Request) {
   try {
-    const saved = localStorage.getItem(KEYS.PLANTS);
-    if (!saved) return TEST_PLANTS;
-    const parsed = JSON.parse(saved);
-    return parsed.length === 0 ? TEST_PLANTS : parsed;
-  } catch {
-    return TEST_PLANTS;
+    const body = await request.json()
+    // ... process request
+    return Response.json({ data })
+  } catch (error) {
+    console.error('API error:', error)
+    return Response.json({ error: 'Failed to process request' }, { status: 500 })
   }
 }
+```
 
-// From lib/gemini-content.ts - fallback with default data
+**Client Error Handling:**
+```typescript
+// From hooks or components
 try {
-  const data = JSON.parse(response.text || '{"tips":[]}');
-  return data.tips;
-} catch (e) {
-  return ["Keep soil moist", "Ensure adequate light", "Avoid drafts", "Check regularly"];
-}
-
-// From hooks/usePlantDoctor.ts - cleanup on error
-} catch (e) {
-  stopCall();
+  const response = await fetch('/api/gemini/content', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
+  if (!response.ok) throw new Error('Request failed')
+  const result = await response.json()
+} catch (error) {
+  console.error('Fetch error:', error)
+  // Fallback behavior
 }
 ```
 
@@ -108,31 +145,21 @@ try {
 **Framework:** Native `console` methods
 
 **Patterns:**
-- `console.error` for operation failures (e.g., "Hardware access denied:", "Rescue plan generation failed")
-- `console.warn` for non-critical issues (e.g., "Playback suppressed:", "Failed to send initial greet")
-- No structured logging or log levels beyond console methods
-- No production logging strategy detected
+- `console.error` for operation failures
+- `console.warn` for non-critical issues
+- No structured logging in development
+- Consider adding structured logging for production
 
 ## Comments
 
 **When to Comment:**
 - Critical business logic explanations
-- TODO/FIXME markers (none detected in codebase)
-- JSDoc-style for type hints where TypeScript inference is unclear
+- `'use client'` directive explanation when non-obvious
+- Complex async flows or state management
 
 **JSDoc/TSDoc:**
-- Not used for public API documentation
+- Not required for public API documentation
 - Inline comments for complex logic only
-
-**Examples from codebase:**
-```typescript
-// From hooks/useAppState.ts
-// CRITICAL: We do NOT setView here. Detection happens in the background.
-// Newly detected plants are ALWAYS 'pending' until the user "Adopts" them.
-
-// From hooks/usePlantDoctor.ts
-// Refs for video elements to allow frame capture during tool calls
-```
 
 ## Function Design
 
@@ -140,7 +167,7 @@ try {
 - Components: 50-200 lines typical
 - Hooks: 50-180 lines
 - Service methods: 10-50 lines
-- No explicit line limit enforced
+- API route handlers: 20-80 lines
 
 **Parameters:**
 - Destructured objects for component props
@@ -151,45 +178,21 @@ try {
 - Hooks return objects with state and functions
 - Components return JSX
 - Service methods return Promises or direct values
-
-**Examples from codebase:**
-```typescript
-// Hook return pattern from hooks/useAppState.ts
-return {
-  view,
-  setView: handleSetView,
-  plants,
-  homeProfile,
-  setHomeProfile,
-  rehabTarget,
-  addPlant,
-  updatePlant,
-  removePlant,
-  waterPlant,
-  adoptPlant,
-  handleOpenRehab
-};
-
-// Props interface pattern from components/PlantCard.tsx
-interface Props {
-  plant: Plant;
-  onWater: (id: string) => void;
-  onAdopt?: (id: string) => void;
-  onDelete?: (id: string) => void;
-  onCheckIn?: (id: string, mode: 'discovery' | 'rehab') => void;
-  onRescue?: (id: string) => void;
-}
-```
+- API routes return `Response` objects
 
 ## Module Design
 
 **Exports:**
 - Named exports preferred (e.g., `export const PlantCard`, `export class AudioService`)
-- No default exports used
-- Types exported from central `types.ts` file
+- Default exports for page components (Next.js convention)
+- Types exported from central `types/index.ts` file
 
-**Barrel Files:**
-- Not used - direct imports from individual files
+**API Route Exports:**
+```typescript
+// Named exports for HTTP methods
+export async function GET(request: Request) { }
+export async function POST(request: Request) { }
+```
 
 ## React Patterns
 
@@ -198,32 +201,55 @@ interface Props {
 - `useCallback` for memoized callbacks passed to children
 - `useRef` for mutable values that don't trigger re-renders
 - `useEffect` for side effects and cleanup
+- Custom hooks for shared stateful logic
 
-**Component Structure:**
+**Component Structure (Client Component):**
 ```typescript
-// Standard component pattern
-export const ComponentName: React.FC<Props> = ({ prop1, prop2 }) => {
+'use client'
+
+interface Props {
+  prop1: string
+  prop2: () => void
+}
+
+export const ComponentName = ({ prop1, prop2 }: Props) => {
   // 1. State declarations
-  const [state, setState] = useState();
+  const [state, setState] = useState()
 
   // 2. Refs
-  const ref = useRef();
+  const ref = useRef()
 
-  // 3. Derived values / useMemo
-  const derived = useMemo(() => {}, [deps]);
+  // 3. Custom hooks
+  const { data } = useAppState()
 
-  // 4. Effects
-  useEffect(() => {}, [deps]);
+  // 4. Derived values / useMemo
+  const derived = useMemo(() => {}, [deps])
 
-  // 5. Handler functions
-  const handleAction = () => {};
+  // 5. Effects
+  useEffect(() => {}, [deps])
 
-  // 6. Helper functions (render helpers)
-  const renderSection = () => {};
+  // 6. Handler functions
+  const handleAction = () => {}
 
   // 7. Return JSX
-  return (<div>...</div>);
-};
+  return (<div>...</div>)
+}
+```
+
+**Server Component Structure:**
+```typescript
+// No 'use client' directive - Server Component by default
+
+interface Props {
+  params: { id: string }
+}
+
+export default async function PageName({ params }: Props) {
+  // Can use async/await directly
+  const data = await fetchData(params.id)
+
+  return (<div>...</div>)
+}
 ```
 
 ## CSS/Styling
@@ -234,18 +260,13 @@ export const ComponentName: React.FC<Props> = ({ prop1, prop2 }) => {
 - Inline className strings with Tailwind utilities
 - Conditional classes using template literals
 - Design tokens: `stone-*` for neutrals, `green-*` for success, `red-*` for danger, `amber-*` for warning, `blue-*` for info
-- Border radius: rounded-2xl, rounded-3xl, rounded-[40px] for cards
-- Responsive: `sm:` prefix for breakpoints
+- Border radius: rounded-2xl, rounded-3xl for cards
+- Responsive: `sm:`, `md:`, `lg:` prefixes for breakpoints
 
-**Example:**
-```typescript
-className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
-  isOverdue
-  ? 'bg-blue-600 text-white shadow-lg shadow-blue-100'
-  : 'bg-stone-100 text-stone-400 hover:bg-stone-200'
-}`}
-```
+**Global Styles:**
+- Tailwind imports in `app/globals.css`
+- Minimal custom CSS; prefer Tailwind utilities
 
 ---
 
-*Convention analysis: 2026-01-17*
+*Convention analysis: 2026-01-18*

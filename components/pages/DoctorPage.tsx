@@ -1,63 +1,64 @@
+'use client'
 
-import { useRef, useEffect, useState } from 'react';
-import { HomeProfile, Plant } from '../types';
-import { Icons } from '../constants';
-import { usePlantDoctor } from '../hooks/usePlantDoctor';
-import { useRehabSpecialist } from '../hooks/useRehabSpecialist';
+import { useRef, useEffect } from 'react'
+import { HomeProfile, Plant } from '@/types'
+import { Icons } from '@/lib/constants'
+import { usePlantDoctor } from '@/hooks/usePlantDoctor'
+import { useRehabSpecialist } from '@/hooks/useRehabSpecialist'
 
 interface Props {
-  homeProfile: HomeProfile;
-  onAutoDetect: (plant: Plant) => void;
-  onUpdatePlant: (id: string, updates: Partial<Plant>) => void;
-  plants: Plant[];
-  rehabTargetId?: string | null;
+  homeProfile: HomeProfile
+  onAutoDetect: (plant: Plant) => void
+  onUpdatePlant: (id: string, updates: Partial<Plant>) => void
+  plants: Plant[]
+  rehabTargetId?: string | null
 }
 
 export const DoctorPage: React.FC<Props> = ({ homeProfile, onAutoDetect, onUpdatePlant, plants, rehabTargetId }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  
-  const discovery = usePlantDoctor(homeProfile, onAutoDetect);
-  const rehab = useRehabSpecialist(homeProfile, onUpdatePlant);
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  const activeMode = rehabTargetId ? 'rehab' : 'discovery';
-  const isCalling = discovery.isCalling || rehab.isCalling;
-  const rehabPlant = rehabTargetId ? plants.find(p => p.id === rehabTargetId) : null;
+  const discovery = usePlantDoctor(homeProfile, onAutoDetect)
+  const rehab = useRehabSpecialist(homeProfile, onUpdatePlant)
+
+  const activeMode = rehabTargetId ? 'rehab' : 'discovery'
+  const isCalling = discovery.isCalling || rehab.isCalling
+  const rehabPlant = rehabTargetId ? plants.find(p => p.id === rehabTargetId) : null
 
   useEffect(() => {
     if (rehabTargetId && !rehab.isCalling && rehabPlant) {
       const timer = setTimeout(() => {
         if (videoRef.current && canvasRef.current) {
-          rehab.startRehabCall(videoRef.current, canvasRef.current, rehabPlant);
+          rehab.startRehabCall(videoRef.current, canvasRef.current, rehabPlant)
         }
-      }, 500);
-      return () => clearTimeout(timer);
+      }, 500)
+      return () => clearTimeout(timer)
     }
-  }, [rehabTargetId]);
+  }, [rehabTargetId, rehabPlant, rehab])
 
   const toggleCall = async () => {
     if (isCalling) {
-      discovery.stopCall();
-      rehab.stopCall();
+      discovery.stopCall()
+      rehab.stopCall()
     } else {
       if (videoRef.current && canvasRef.current) {
         if (rehabTargetId && rehabPlant) {
-          await rehab.startRehabCall(videoRef.current, canvasRef.current, rehabPlant);
+          await rehab.startRehabCall(videoRef.current, canvasRef.current, rehabPlant)
         } else {
-          await discovery.startCall(videoRef.current, canvasRef.current);
+          await discovery.startCall(videoRef.current, canvasRef.current)
         }
       }
     }
-  };
+  }
 
   return (
     <div className="relative h-screen bg-black overflow-hidden flex flex-col font-sans">
-      <video 
-        ref={videoRef} 
-        autoPlay 
-        playsInline 
-        muted 
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${isCalling ? 'opacity-90' : 'opacity-30'}`} 
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${isCalling ? 'opacity-90' : 'opacity-30'}`}
       />
       <canvas ref={canvasRef} className="hidden" />
 
@@ -65,16 +66,16 @@ export const DoctorPage: React.FC<Props> = ({ homeProfile, onAutoDetect, onUpdat
       {isCalling && discovery.discoveryLog.length > 0 && (
         <div className="absolute right-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-end gap-3 pointer-events-none max-w-[180px]">
           {discovery.discoveryLog.map((name, i) => (
-            <div 
+            <div
               key={`${name}-${i}`}
               className="bg-black/60 backdrop-blur-md border border-white/20 px-4 py-2 rounded-2xl flex items-center gap-2 animate-slide-up shadow-lg"
-              style={{ 
-                opacity: Math.max(0, 1 - (i * 0.15)), 
+              style={{
+                opacity: Math.max(0, 1 - (i * 0.15)),
                 transform: `translateX(${i * 4}px) scale(${1 - (i * 0.05)})`,
                 transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
-              <span className="text-base flex-shrink-0">🌿</span>
+              <span className="text-base flex-shrink-0">L</span>
               <span className="text-white font-black text-[9px] uppercase tracking-widest truncate">
                 {name}
               </span>
@@ -100,12 +101,12 @@ export const DoctorPage: React.FC<Props> = ({ homeProfile, onAutoDetect, onUpdat
 
         <footer className="space-y-6 pb-24 pointer-events-auto flex flex-col items-center">
           <div className="flex flex-col items-center gap-6">
-            <button 
+            <button
               onClick={toggleCall}
               className={`w-24 h-24 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-[0_0_50px_rgba(255,255,255,0.1)] ${
-                isCalling 
-                ? 'bg-red-500 ring-8 ring-red-500/20' 
-                : 'bg-white ring-8 ring-white/10'
+                isCalling
+                  ? 'bg-red-500 ring-8 ring-red-500/20'
+                  : 'bg-white ring-8 ring-white/10'
               }`}
             >
               {isCalling ? (
@@ -123,5 +124,5 @@ export const DoctorPage: React.FC<Props> = ({ homeProfile, onAutoDetect, onUpdat
         </footer>
       </div>
     </div>
-  );
-};
+  )
+}

@@ -1,16 +1,16 @@
+'use client'
 
-import React from 'react';
-import { HomeProfile } from '../types';
+import { HomeProfile } from '@/types'
 
 interface Props {
-  profile: HomeProfile;
-  onChange: (profile: HomeProfile) => void;
+  profile: HomeProfile
+  onChange: (profile: HomeProfile) => void
 }
 
 export const SettingsPage: React.FC<Props> = ({ profile, onChange }) => {
-  const update = (key: keyof HomeProfile, value: any) => {
-    onChange({ ...profile, [key]: value });
-  };
+  const update = (key: keyof HomeProfile, value: HomeProfile[keyof HomeProfile]) => {
+    onChange({ ...profile, [key]: value })
+  }
 
   return (
     <div className="p-6 pb-24 space-y-8 animate-fade-in min-h-screen bg-stone-50">
@@ -93,5 +93,5 @@ export const SettingsPage: React.FC<Props> = ({ profile, onChange }) => {
         </p>
       </div>
     </div>
-  );
-};
+  )
+}

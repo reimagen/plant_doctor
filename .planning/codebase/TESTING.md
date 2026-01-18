@@ -1,181 +1,299 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-01-17
+**Analysis Date:** 2026-01-18
 
 ## Test Framework
 
 **Runner:**
-- Not configured
-- No test framework dependencies in `package.json`
-- No test configuration files detected (jest.config.*, vitest.config.*, etc.)
+- Vitest (Vite-native, works well with Next.js)
+- Jest-compatible API
 
 **Assertion Library:**
-- Not configured
+- Vitest built-in (`expect`)
+- @testing-library/jest-dom for DOM assertions
 
 **Run Commands:**
 ```bash
-# No test scripts defined in package.json
-# Available scripts:
-npm run dev        # Start development server
-npm run build      # Build for production
-npm run preview    # Preview production build
+npm test              # Run tests in watch mode
+npm run test:run      # Run tests once
+npm run test:coverage # Run with coverage report
 ```
 
 ## Test File Organization
 
 **Location:**
-- No test files exist in the codebase
+- Co-located with source files (recommended)
+- `__tests__/` directories for integration tests
 
 **Naming:**
-- Not established (no test files present)
+- `*.test.ts` or `*.test.tsx` for test files
+- Match source file name (e.g., `PlantCard.test.tsx` for `PlantCard.tsx`)
 
 **Structure:**
 ```
-# No test directory structure exists
-# Recommended structure for this codebase:
-/Users/lisagu/Projects/plant_doctor/
-├── __tests__/                    # Integration tests
-│   ├── pages/
-│   └── hooks/
+plant_doctor/
+├── app/
+│   ├── api/
+│   │   └── gemini/
+│   │       └── content/
+│   │           ├── route.ts
+│   │           └── route.test.ts      # API route tests
+│   └── __tests__/                     # Page integration tests
 ├── components/
 │   ├── PlantCard.tsx
-│   └── PlantCard.test.tsx       # Co-located unit tests
+│   └── PlantCard.test.tsx             # Component unit tests
 ├── hooks/
 │   ├── useAppState.ts
-│   └── useAppState.test.ts
+│   └── useAppState.test.ts            # Hook unit tests
 └── lib/
     ├── storage-service.ts
-    └── storage-service.test.ts
+    └── storage-service.test.ts        # Service unit tests
 ```
 
 ## Test Structure
 
 **Suite Organization:**
-- Not established
+```typescript
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+
+describe('ComponentName', () => {
+  beforeEach(() => {
+    // Setup
+  })
+
+  describe('when condition', () => {
+    it('should behave this way', () => {
+      // Arrange, Act, Assert
+    })
+  })
+})
+```
 
 **Patterns:**
-- Not established
+- Arrange-Act-Assert (AAA) pattern
+- One assertion per test when possible
+- Descriptive test names that read as sentences
 
 ## Mocking
 
 **Framework:**
-- Not configured
+- Vitest built-in (`vi.mock`, `vi.fn`, `vi.spyOn`)
 
-**Patterns:**
-- Not established
-
-**What to Mock (recommendations based on codebase):**
+**What to Mock:**
 - `localStorage` for `StorageService` tests
 - `navigator.mediaDevices.getUserMedia` for `useMediaStream` tests
+- `fetch` for API route and client fetch tests
 - `@google/genai` SDK for Gemini integration tests
 - `AudioContext` and Web Audio API for `AudioService` tests
+- `next/navigation` for router mocking
 
-**What NOT to Mock (recommendations):**
+**What NOT to Mock:**
 - Pure utility functions
 - Type transformations
-- React component rendering logic
+- React component rendering logic (use Testing Library)
+
+**Examples:**
+
+```typescript
+// Mocking localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  clear: vi.fn(),
+}
+vi.stubGlobal('localStorage', localStorageMock)
+
+// Mocking next/navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+  }),
+  usePathname: () => '/',
+}))
+
+// Mocking fetch for API tests
+global.fetch = vi.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({ tips: ['Tip 1', 'Tip 2'] }),
+  })
+) as any
+```
 
 ## Fixtures and Factories
 
 **Test Data:**
-- `lib/test-data.ts` contains `TEST_PLANTS` array used as default/fallback data
+- `lib/test-data.ts` contains `TEST_PLANTS` array
+- Use factories for generating test data with variations
 
+**Example Factory:**
 ```typescript
-// From lib/test-data.ts - existing test data
-export const TEST_PLANTS: Plant[] = [
-  {
-    id: 'test-checkin-verification',
-    name: 'Recovery Test',
-    species: 'Fiddle Leaf Fig',
-    photoUrl: 'https://images.unsplash.com/...',
-    location: 'Studio',
-    lastWateredAt: new Date(Date.now() - (1000 * 60 * 60 * 30)).toISOString(),
-    cadenceDays: 7,
-    status: 'healthy',
-    needsCheckIn: true,
-    // ... additional properties
-  },
-  // ... more test plants
-];
-```
+// test/factories.ts
+import { Plant } from '@/types'
 
-**Location:**
-- `lib/test-data.ts` - Application test/demo data (committed, used in production fallback)
+export const createTestPlant = (overrides: Partial<Plant> = {}): Plant => ({
+  id: crypto.randomUUID(),
+  name: 'Test Plant',
+  species: 'Testus plantus',
+  photoUrl: 'https://example.com/plant.jpg',
+  location: 'Living Room',
+  lastWateredAt: new Date().toISOString(),
+  cadenceDays: 7,
+  status: 'healthy',
+  needsCheckIn: false,
+  ...overrides,
+})
+```
 
 ## Coverage
 
 **Requirements:**
-- None enforced (no testing framework configured)
+- No minimum enforced (recommended: 70%+ for critical paths)
 
 **View Coverage:**
 ```bash
-# Not available - no test framework configured
+npm run test:coverage
+# Opens HTML report in coverage/index.html
 ```
 
 ## Test Types
 
 **Unit Tests:**
-- Not implemented
-- Recommended targets:
-  - `lib/storage-service.ts` - localStorage operations
-  - `lib/audio-service.ts` - audio buffer manipulation
-  - `hooks/useAppState.ts` - state management logic
-  - `types.ts` - type guard functions (if added)
+- Target: Individual functions, hooks, services
+- Location: Co-located with source files
+- Dependencies: Mocked
+
+Recommended targets:
+- `lib/storage-service.ts` - localStorage operations
+- `lib/audio-service.ts` - audio buffer manipulation
+- `hooks/useAppState.ts` - state management logic
+- API route handlers
+
+**Component Tests:**
+- Target: React components
+- Framework: @testing-library/react
+- Focus: User interactions, rendered output
+
+```typescript
+import { render, screen, fireEvent } from '@testing-library/react'
+import { PlantCard } from './PlantCard'
+import { createTestPlant } from '@/test/factories'
+
+describe('PlantCard', () => {
+  it('displays plant name', () => {
+    const plant = createTestPlant({ name: 'My Fern' })
+    render(<PlantCard plant={plant} onWater={vi.fn()} />)
+    expect(screen.getByText('My Fern')).toBeInTheDocument()
+  })
+
+  it('calls onWater when water button clicked', () => {
+    const onWater = vi.fn()
+    const plant = createTestPlant()
+    render(<PlantCard plant={plant} onWater={onWater} />)
+    fireEvent.click(screen.getByRole('button', { name: /water/i }))
+    expect(onWater).toHaveBeenCalledWith(plant.id)
+  })
+})
+```
+
+**API Route Tests:**
+- Target: Route handlers in `app/api/`
+- Test as functions, mock external dependencies
+
+```typescript
+import { POST } from './route'
+import { vi } from 'vitest'
+
+// Mock the Gemini SDK
+vi.mock('@google/genai', () => ({
+  GoogleGenAI: vi.fn(() => ({
+    getGenerativeModel: vi.fn(() => ({
+      generateContent: vi.fn(() => ({
+        text: () => JSON.stringify({ tips: ['Water regularly'] }),
+      })),
+    })),
+  })),
+}))
+
+describe('POST /api/gemini/content', () => {
+  it('returns care tips for valid request', async () => {
+    const request = new Request('http://localhost/api/gemini/content', {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'care-guide',
+        plant: { name: 'Fern', species: 'Boston Fern' },
+        homeProfile: {},
+      }),
+    })
+
+    const response = await POST(request)
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.tips).toBeDefined()
+  })
+})
+```
 
 **Integration Tests:**
-- Not implemented
-- Recommended targets:
-  - `hooks/usePlantDoctor.ts` - Gemini Live API integration
-  - `hooks/useRehabSpecialist.ts` - Gemini Live API integration
-  - `lib/gemini-content.ts` - Gemini Content API integration
-  - `lib/gemini-live.ts` - WebSocket session management
+- Target: Multiple components/hooks working together
+- Location: `__tests__/` directories
+- Dependencies: Minimal mocking
 
 **E2E Tests:**
-- Not implemented
-- Recommended framework: Playwright or Cypress
-- Recommended targets:
-  - Plant inventory CRUD operations
-  - Doctor camera session flow
-  - Settings profile persistence
-
-## Common Patterns
-
-**Async Testing:**
-- Not established (recommend using async/await with proper cleanup)
-
-**Error Testing:**
-- Not established (recommend testing fallback behaviors in storage-service and gemini-content)
+- Framework: Playwright (recommended) or Cypress
+- Not yet configured
+- Would test full user flows
 
 ## Recommended Setup
 
-**For this React + Vite project, consider:**
-
-1. **Vitest** (Vite-native, fast, Jest-compatible API)
+**1. Install dependencies:**
 ```bash
-npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom
+npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom @vitejs/plugin-react
 ```
 
-2. **vitest.config.ts:**
+**2. Create `vitest.config.ts`:**
 ```typescript
-import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: './src/test/setup.ts',
+    setupFiles: './test/setup.ts',
+    include: ['**/*.test.{ts,tsx}'],
   },
-});
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './'),
+    },
+  },
+})
 ```
 
-3. **package.json scripts:**
+**3. Create `test/setup.ts`:**
+```typescript
+import '@testing-library/jest-dom'
+import { vi } from 'vitest'
+
+// Global mocks
+vi.stubGlobal('localStorage', {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  clear: vi.fn(),
+})
+```
+
+**4. Add to `package.json`:**
 ```json
 {
   "scripts": {
     "test": "vitest",
-    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
     "test:coverage": "vitest run --coverage"
   }
 }
@@ -186,7 +304,8 @@ export default defineConfig({
 **High Priority (core functionality):**
 1. `lib/storage-service.ts` - Data persistence logic
 2. `hooks/useAppState.ts` - Central state management
-3. `components/PlantCard.tsx` - Status computation logic
+3. `app/api/gemini/content/route.ts` - API route handler
+4. `components/PlantCard.tsx` - Status computation logic
 
 **Medium Priority (business logic):**
 1. `lib/gemini-content.ts` - API response parsing
@@ -200,4 +319,4 @@ export default defineConfig({
 
 ---
 
-*Testing analysis: 2026-01-17*
+*Testing analysis: 2026-01-18*

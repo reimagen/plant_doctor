@@ -1,43 +1,53 @@
+'use client'
 
-import React, { useState } from 'react';
-import { Plant, HomeProfile } from '../types';
-import { Icons } from '../constants';
-import { GeminiContentService } from '../lib/gemini-content';
+import { useState } from 'react'
+import { Plant, HomeProfile } from '@/types'
+import { Icons } from '@/lib/constants'
 
 interface Props {
-  plant: Plant;
-  homeProfile: HomeProfile;
-  onClose: () => void;
-  onUpdate: (id: string, updates: Partial<Plant>) => void;
+  plant: Plant
+  homeProfile: HomeProfile
+  onClose: () => void
+  onUpdate: (id: string, updates: Partial<Plant>) => void
 }
 
 export const RescueProtocolView: React.FC<Props> = ({ plant, homeProfile, onClose, onUpdate }) => {
-  const [isRescuing, setIsRescuing] = useState(false);
+  const [isRescuing, setIsRescuing] = useState(false)
 
-  const lastDate = new Date(plant.lastWateredAt);
-  const nextDate = new Date(lastDate);
-  nextDate.setDate(lastDate.getDate() + plant.cadenceDays);
-  const isOverdue = nextDate.getTime() < Date.now();
+  const lastDate = new Date(plant.lastWateredAt)
+  const nextDate = new Date(lastDate)
+  nextDate.setDate(lastDate.getDate() + plant.cadenceDays)
+  const isOverdue = nextDate.getTime() < Date.now()
 
   const handleRescueTrigger = async () => {
-    setIsRescuing(true);
+    setIsRescuing(true)
     try {
-      const service = new GeminiContentService(process.env.API_KEY!);
-      const steps = await service.generateRescuePlan(plant, homeProfile);
-      onUpdate(plant.id, { rescuePlan: steps });
+      const response = await fetch('/api/gemini/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'rescue-plan',
+          plant,
+          homeProfile
+        })
+      })
+      const data = await response.json()
+      if (data.steps) {
+        onUpdate(plant.id, { rescuePlan: data.steps })
+      }
     } catch (err) {
-      console.error("Rescue plan generation failed", err);
+      console.error('Rescue plan generation failed', err)
     } finally {
-      setIsRescuing(false);
+      setIsRescuing(false)
     }
-  };
+  }
 
   return (
     <div className="fixed inset-0 z-[60] bg-white animate-slide-up flex flex-col">
       <div className="p-6 flex items-center justify-between border-b border-stone-100">
         <div className="flex items-center gap-3">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center animate-pulse ${isOverdue ? 'bg-blue-100 text-blue-600' : 'bg-red-100 text-red-600'}`}>
-            {isOverdue ? <Icons.WateringCan /> : <span className="text-xl">⚠️</span>}
+            {isOverdue ? <Icons.WateringCan /> : <span className="text-xl">!</span>}
           </div>
           <div>
             <h2 className="font-black text-stone-800 uppercase tracking-tight">Rescue: {plant.name}</h2>
@@ -57,7 +67,7 @@ export const RescueProtocolView: React.FC<Props> = ({ plant, homeProfile, onClos
             Vitals Assessment
           </h3>
           <p className="text-sm font-medium text-stone-700 leading-relaxed">
-            {isOverdue 
+            {isOverdue
               ? `Your ${plant.species} is severely dehydrated. It's past its watering window and is struggling to maintain cellular pressure.`
               : `Your ${plant.species} is showing physical signs of stress (Status: ${plant.status}). We need to investigate potential issues like overwatering, pests, or light shock.`
             }
@@ -66,12 +76,12 @@ export const RescueProtocolView: React.FC<Props> = ({ plant, homeProfile, onClos
 
         {!plant.rescuePlan || plant.rescuePlan.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-4xl mb-4">{isOverdue ? '💧' : '🩺'}</div>
+            <div className="text-4xl mb-4">{isOverdue ? 'D' : 'S'}</div>
             <h3 className="font-black text-stone-800 text-xl mb-2">No Plan Active</h3>
             <p className="text-stone-500 text-sm mb-6 max-w-[240px] mx-auto">
               Generate a specialized AI recovery roadmap for {plant.name} based on its current {isOverdue ? 'dryness' : 'symptoms'}.
             </p>
-            <button 
+            <button
               onClick={handleRescueTrigger}
               disabled={isRescuing}
               className={`w-full max-w-xs py-4 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl disabled:opacity-50 transition-colors ${
@@ -92,7 +102,7 @@ export const RescueProtocolView: React.FC<Props> = ({ plant, homeProfile, onClos
                 <p className="text-xs font-bold text-stone-700 leading-relaxed">{step}</p>
               </div>
             ))}
-            <button 
+            <button
               onClick={handleRescueTrigger}
               className="w-full py-4 text-[10px] font-black text-stone-400 uppercase tracking-widest"
             >
@@ -104,9 +114,9 @@ export const RescueProtocolView: React.FC<Props> = ({ plant, homeProfile, onClos
 
       <div className="p-6 border-t border-stone-100 bg-stone-50/50">
         <p className="text-[10px] text-stone-400 font-medium leading-relaxed italic text-center">
-          "Plans adapt to {homeProfile.seasonMode} dormancy/growth cycles and your local {homeProfile.humidity} humidity."
+          &quot;Plans adapt to {homeProfile.seasonMode} dormancy/growth cycles and your local {homeProfile.humidity} humidity.&quot;
         </p>
       </div>
     </div>
-  );
-};
+  )
+}

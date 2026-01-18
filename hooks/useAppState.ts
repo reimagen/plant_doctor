@@ -1,100 +1,103 @@
+'use client'
 
-import { useState, useEffect, useCallback } from 'react';
-import { Plant, HomeProfile } from '../types';
-import { StorageService } from '../lib/storage-service';
-import { getCurrentSeason } from '../lib/season';
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { Plant, HomeProfile } from '@/types'
+import { StorageService } from '@/lib/storage-service'
+import { getCurrentSeason } from '@/lib/season'
+import { DEFAULT_HOME_PROFILE } from '@/lib/constants'
 
 export const useAppState = () => {
-  const [view, setView] = useState<'doctor' | 'inventory' | 'settings'>('inventory');
-  const [plants, setPlants] = useState<Plant[]>(StorageService.getPlants());
-  const [homeProfile, setHomeProfile] = useState<HomeProfile>(() => {
-    const saved = StorageService.getHomeProfile();
-    // Use saved hemisphere to determine season, defaulting to Northern if not set (legacy)
-    const hemisphere = saved.hemisphere || 'Northern';
-    return { ...saved, hemisphere, seasonMode: getCurrentSeason(hemisphere) };
-  });
-  const [rehabTarget, setRehabTarget] = useState<string | null>(null);
+  const router = useRouter()
+  const [plants, setPlants] = useState<Plant[]>([])
+  const [homeProfile, setHomeProfile] = useState<HomeProfile>(DEFAULT_HOME_PROFILE)
+  const [rehabTarget, setRehabTarget] = useState<string | null>(null)
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Hydrate from localStorage on mount
+  useEffect(() => {
+    const savedPlants = StorageService.getPlants()
+    const savedProfile = StorageService.getHomeProfile()
+    const hemisphere = savedProfile.hemisphere || 'Northern'
+    const profileWithSeason = { ...savedProfile, hemisphere, seasonMode: getCurrentSeason(hemisphere) }
+
+    setPlants(savedPlants)
+    setHomeProfile(profileWithSeason)
+    setIsHydrated(true)
+  }, [])
 
   const updateHomeProfile = useCallback((profile: HomeProfile) => {
-    // If hemisphere changed, recalculate the season
-    const correctSeason = getCurrentSeason(profile.hemisphere);
-    setHomeProfile({ ...profile, seasonMode: correctSeason });
-  }, []);
+    const correctSeason = getCurrentSeason(profile.hemisphere)
+    setHomeProfile({ ...profile, seasonMode: correctSeason })
+  }, [])
 
   // Persistence
   useEffect(() => {
-    StorageService.savePlants(plants);
-  }, [plants]);
+    if (isHydrated) {
+      StorageService.savePlants(plants)
+    }
+  }, [plants, isHydrated])
 
   useEffect(() => {
-    StorageService.saveHomeProfile(homeProfile);
-  }, [homeProfile]);
+    if (isHydrated) {
+      StorageService.saveHomeProfile(homeProfile)
+    }
+  }, [homeProfile, isHydrated])
 
   // Health Simulation: Check-in logic
   useEffect(() => {
     const timer = setInterval(() => {
       setPlants(prev => prev.map(p => {
         if (p.status === 'warning') {
-          const lastWatered = new Date(p.lastWateredAt).getTime();
-          const dayInMs = 24 * 60 * 60 * 1000;
+          const lastWatered = new Date(p.lastWateredAt).getTime()
+          const dayInMs = 24 * 60 * 60 * 1000
           if (Date.now() - lastWatered > dayInMs) {
-            return { ...p, needsCheckIn: true };
+            return { ...p, needsCheckIn: true }
           }
         }
-        return p;
-      }));
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
+        return p
+      }))
+    }, 60000)
+    return () => clearInterval(timer)
+  }, [])
 
   const addPlant = useCallback((newPlant: Plant) => {
     setPlants(prev => {
-      // Check if this plant (by ID or species in same location) already exists
-      const exists = prev.find(p => p.id === newPlant.id || (p.species === newPlant.species && p.location === newPlant.location));
+      const exists = prev.find(p => p.id === newPlant.id || (p.species === newPlant.species && p.location === newPlant.location))
 
       if (exists) {
-        // Just update metadata if it exists, don't change status from active to pending
-        return prev.map(p => p.id === exists.id ? { ...p, ...newPlant, status: p.status } : p);
+        return prev.map(p => p.id === exists.id ? { ...p, ...newPlant, status: p.status } : p)
       }
 
-      // CRITICAL: We do NOT setView here. Detection happens in the background.
-      // Newly detected plants are ALWAYS 'pending' until the user "Adopts" them.
-      return [{ ...newPlant, status: 'pending' }, ...prev];
-    });
-  }, []);
+      return [{ ...newPlant, status: 'pending' }, ...prev]
+    })
+  }, [])
 
   const updatePlant = useCallback((id: string, updates: Partial<Plant>) => {
-    setPlants(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-  }, []);
+    setPlants(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p))
+  }, [])
 
   const removePlant = useCallback((id: string) => {
-    setPlants(prev => prev.filter(p => p.id !== id));
-  }, []);
+    setPlants(prev => prev.filter(p => p.id !== id))
+  }, [])
 
   const waterPlant = useCallback((id: string) => {
     setPlants(prev => prev.map(p => {
-      if (p.id !== id) return p;
-      return { ...p, lastWateredAt: new Date().toISOString(), status: 'healthy', needsCheckIn: false };
-    }));
-  }, []);
+      if (p.id !== id) return p
+      return { ...p, lastWateredAt: new Date().toISOString(), status: 'healthy', needsCheckIn: false }
+    }))
+  }, [])
 
   const adoptPlant = useCallback((id: string) => {
-    setPlants(prev => prev.map(p => p.id === id ? { ...p, status: 'healthy', lastWateredAt: new Date().toISOString() } : p));
-  }, []);
+    setPlants(prev => prev.map(p => p.id === id ? { ...p, status: 'healthy', lastWateredAt: new Date().toISOString() } : p))
+  }, [])
 
   const handleOpenRehab = useCallback((id: string) => {
-    setRehabTarget(id);
-    setView('doctor');
-  }, []);
-
-  const handleSetView = useCallback((newView: 'doctor' | 'inventory' | 'settings') => {
-    if (newView !== 'doctor') setRehabTarget(null);
-    setView(newView);
-  }, []);
+    setRehabTarget(id)
+    router.push('/doctor')
+  }, [router])
 
   return {
-    view,
-    setView: handleSetView,
     plants,
     homeProfile,
     setHomeProfile: updateHomeProfile,
@@ -104,6 +107,7 @@ export const useAppState = () => {
     removePlant,
     waterPlant,
     adoptPlant,
-    handleOpenRehab
-  };
-};
+    handleOpenRehab,
+    isHydrated
+  }
+}
