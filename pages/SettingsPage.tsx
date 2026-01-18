@@ -25,7 +25,7 @@ export const SettingsPage: React.FC<Props> = ({ profile, onChange }) => {
             <h3 className="font-bold text-stone-800">Heated Home</h3>
             <p className="text-xs text-stone-400">Dry air from radiators/AC</p>
           </div>
-          <button 
+          <button
             onClick={() => update('heatedHome', !profile.heatedHome)}
             className={`w-14 h-8 rounded-full transition-colors relative ${profile.heatedHome ? 'bg-green-500' : 'bg-stone-200'}`}
           >
@@ -49,17 +49,25 @@ export const SettingsPage: React.FC<Props> = ({ profile, onChange }) => {
         </div>
 
         <div>
-          <h3 className="font-bold text-stone-800 mb-4">Seasonal Mode</h3>
+          <h3 className="font-bold text-stone-800 mb-4">Hemisphere</h3>
           <div className="grid grid-cols-2 gap-2">
-            {(['Winter', 'Spring', 'Summer', 'Fall'] as const).map(v => (
+            {(['Northern', 'Southern'] as const).map(v => (
               <button
                 key={v}
-                onClick={() => update('seasonMode', v)}
-                className={`py-4 rounded-2xl text-xs font-black border transition-all ${profile.seasonMode === v ? 'bg-green-600 text-white border-green-600' : 'bg-white text-stone-500 border-stone-100'}`}
+                onClick={() => update('hemisphere', v)}
+                className={`py-4 rounded-2xl text-xs font-black border transition-all ${profile.hemisphere === v ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-100'}`}
               >
                 {v}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="font-bold text-stone-800 mb-4">Seasonal Mode</h3>
+          <div className="w-full py-4 bg-green-50 border border-green-100 rounded-2xl flex items-center justify-between px-6">
+            <span className="font-black text-green-800 text-lg">{profile.seasonMode}</span>
+            <span className="text-xs font-bold text-green-600 uppercase tracking-wider bg-white px-3 py-1 rounded-full">Auto-Detected</span>
           </div>
         </div>
 

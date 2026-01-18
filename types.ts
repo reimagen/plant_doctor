@@ -4,6 +4,7 @@ export interface HomeProfile {
   humidity: 'dry' | 'normal' | 'humid';
   temp: 'cool' | 'normal' | 'warm';
   light: 'low' | 'medium' | 'bright';
+  hemisphere: 'Northern' | 'Southern';
   seasonMode: 'Winter' | 'Spring' | 'Summer' | 'Fall';
 }
 
@@ -21,10 +22,10 @@ export interface Plant {
   lastWateredAt: string;
   cadenceDays: number;
   status: 'pending' | 'healthy' | 'warning' | 'critical';
-  needsCheckIn?: boolean; 
-  careGuide?: string[]; 
-  notes?: string[];     
-  rescuePlan?: string[]; 
+  needsCheckIn?: boolean;
+  careGuide?: string[];
+  notes?: string[];
+  rescuePlan?: string[];
   lightIntensity?: IntensityLevel;
   lightQuality?: QualityLevel;
   nearWindow?: boolean;

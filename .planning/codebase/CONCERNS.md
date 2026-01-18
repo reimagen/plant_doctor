@@ -4,11 +4,11 @@
 
 ## Tech Debt
 
-**Deprecated Web Audio API Usage:**
-- Issue: Uses deprecated `ScriptProcessorNode` for audio processing instead of `AudioWorklet`
-- Files: `hooks/usePlantDoctor.ts` (lines 97-106), `hooks/useRehabSpecialist.ts` (lines 95-106)
-- Impact: ScriptProcessorNode runs on main thread, causing potential audio glitches and UI jank. Will be removed from browsers eventually.
-- Fix approach: Migrate to AudioWorkletNode with a separate AudioWorklet processor file
+~~**Deprecated Web Audio API Usage:**~~
+~~- Issue: Uses deprecated `ScriptProcessorNode` for audio processing instead of `AudioWorklet`~~
+~~- Files: `hooks/usePlantDoctor.ts` (lines 97-106), `hooks/useRehabSpecialist.ts` (lines 95-106)~~
+~~- Impact: ScriptProcessorNode runs on main thread, causing potential audio glitches and UI jank. Will be removed from browsers eventually.~~
+~~- Fix approach: Migrate to AudioWorkletNode with a separate AudioWorklet processor file~~
 
 **Weak Type Safety with `any`:**
 - Issue: Multiple uses of `any` type bypass TypeScript's safety guarantees
@@ -57,11 +57,11 @@
   - Use Gemini's client-side key restrictions (domain locking, rate limiting)
   - Consider Google's recommended client-side token flow
 
-**Missing .env from .gitignore:**
-- Risk: `.env` files containing API keys could be accidentally committed
-- Files: `.gitignore` - no `.env` pattern present
-- Current mitigation: No `.env` file exists yet
-- Recommendations: Add `.env*` and `!.env.example` patterns to `.gitignore` before creating env files
+~~**Missing .env from .gitignore:**~~
+~~- Risk: `.env` files containing API keys could be accidentally committed~~
+~~- Files: `.gitignore` - no `.env` pattern present~~
+~~- Current mitigation: No `.env` file exists yet~~
+~~- Recommendations: Add `.env*` and `!.env.example` patterns to `.gitignore` before creating env files~~
 
 **Native Confirm Dialog for Destructive Actions:**
 - Risk: `confirm()` is blockable by browsers and provides no styling/branding
@@ -123,10 +123,10 @@
 
 ## Dependencies at Risk
 
-**No Lockfile Present:**
-- Risk: Dependencies not locked - builds are not reproducible; potential for silent breaking changes
-- Impact: `npm install` can pull different versions across environments
-- Migration plan: Run `npm install` to generate package-lock.json and commit it
+~~**No Lockfile Present:**~~
+~~- Risk: Dependencies not locked - builds are not reproducible; potential for silent breaking changes~~
+~~- Impact: `npm install` can pull different versions across environments~~
+~~- Migration plan: Run `npm install` to generate package-lock.json and commit it~~
 
 **Google GenAI SDK:**
 - Risk: Using preview/beta Gemini model (`gemini-2.5-flash-native-audio-preview-12-2025`)

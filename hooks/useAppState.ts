@@ -2,12 +2,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plant, HomeProfile } from '../types';
 import { StorageService } from '../lib/storage-service';
+import { getCurrentSeason } from '../lib/season';
 
 export const useAppState = () => {
   const [view, setView] = useState<'doctor' | 'inventory' | 'settings'>('inventory');
   const [plants, setPlants] = useState<Plant[]>(StorageService.getPlants());
-  const [homeProfile, setHomeProfile] = useState<HomeProfile>(StorageService.getHomeProfile());
+  const [homeProfile, setHomeProfile] = useState<HomeProfile>(() => {
+    const saved = StorageService.getHomeProfile();
+    // Use saved hemisphere to determine season, defaulting to Northern if not set (legacy)
+    const hemisphere = saved.hemisphere || 'Northern';
+    return { ...saved, hemisphere, seasonMode: getCurrentSeason(hemisphere) };
+  });
   const [rehabTarget, setRehabTarget] = useState<string | null>(null);
+
+  const updateHomeProfile = useCallback((profile: HomeProfile) => {
+    // If hemisphere changed, recalculate the season
+    const correctSeason = getCurrentSeason(profile.hemisphere);
+    setHomeProfile({ ...profile, seasonMode: correctSeason });
+  }, []);
 
   // Persistence
   useEffect(() => {
@@ -31,7 +43,7 @@ export const useAppState = () => {
         }
         return p;
       }));
-    }, 60000); 
+    }, 60000);
     return () => clearInterval(timer);
   }, []);
 
@@ -39,12 +51,12 @@ export const useAppState = () => {
     setPlants(prev => {
       // Check if this plant (by ID or species in same location) already exists
       const exists = prev.find(p => p.id === newPlant.id || (p.species === newPlant.species && p.location === newPlant.location));
-      
+
       if (exists) {
         // Just update metadata if it exists, don't change status from active to pending
         return prev.map(p => p.id === exists.id ? { ...p, ...newPlant, status: p.status } : p);
       }
-      
+
       // CRITICAL: We do NOT setView here. Detection happens in the background.
       // Newly detected plants are ALWAYS 'pending' until the user "Adopts" them.
       return [{ ...newPlant, status: 'pending' }, ...prev];
@@ -85,7 +97,7 @@ export const useAppState = () => {
     setView: handleSetView,
     plants,
     homeProfile,
-    setHomeProfile,
+    setHomeProfile: updateHomeProfile,
     rehabTarget,
     addPlant,
     updatePlant,

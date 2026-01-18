@@ -7,6 +7,7 @@ export const DEFAULT_HOME_PROFILE = {
   temp: 'normal' as const,
   light: 'medium' as const,
   seasonMode: 'Spring' as const,
+  hemisphere: 'Northern' as const,
 };
 
 export const Icons = {
