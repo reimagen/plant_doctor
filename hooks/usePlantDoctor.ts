@@ -19,9 +19,13 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
   const intervalRef = useRef<number | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const toolCallLimiterRef = useRef(new ToolCallRateLimiter(15, 60000))
+  const isConnectingRef = useRef(false) // Guard against multiple connection attempts
 
   const onPlantDetectedRef = useRef(onPlantDetected)
   onPlantDetectedRef.current = onPlantDetected
+
+  const homeProfileRef = useRef(homeProfile)
+  homeProfileRef.current = homeProfile
 
   const proposePlantFunction: FunctionDeclaration = {
     name: 'propose_plant_to_inventory',
@@ -47,9 +51,17 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
   }
 
   const stopCall = useCallback(async () => {
-    if (!isCalling) return
+    // Use ref check to avoid depending on isCalling state
+    if (!sessionRef.current && !isConnectingRef.current) return
+
+    console.log('[usePlantDoctor] stopCall invoked');
+    isConnectingRef.current = false
     setIsCalling(false)
-    if (intervalRef.current) clearInterval(intervalRef.current)
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
     if (workletRef.current) {
       workletRef.current.port.onmessage = null
       workletRef.current.disconnect()
@@ -64,15 +76,23 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
     await audioServiceRef.current.close()
     if (audioContextRef.current?.state !== 'closed') {
       await audioContextRef.current?.close()
+      audioContextRef.current = null
     }
-  }, [isCalling])
+  }, []) // No dependencies - uses refs only
 
-  const startCall = async (
+  const startCall = useCallback(async (
     stream: MediaStream,
     videoRef: RefObject<HTMLVideoElement | null>,
     canvasRef: RefObject<HTMLCanvasElement | null>
   ) => {
-    if (isCalling) return
+    // Guard against multiple simultaneous connection attempts
+    if (isConnectingRef.current || sessionRef.current) {
+      console.log('[usePlantDoctor] startCall blocked - already connecting or connected');
+      return
+    }
+
+    console.log('[usePlantDoctor] startCall invoked');
+    isConnectingRef.current = true
     setIsCalling(true)
     setDiscoveryLog([])
 
@@ -91,7 +111,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
 
       const session = new GeminiLiveSession({
         apiKey,
-        model: 'gemini-2.5-flash-preview-native-audio-dialog',
+        model: 'gemini-2.0-flash-exp',
         systemInstruction: `You are the Plant Doctor performing a "Jungle Inventory" - PLANT-ONLY MODE.
 
 CRITICAL RULES:
@@ -106,7 +126,7 @@ INVENTORY MODE:
 - Be conversational and encouraging
 - Do NOT stop the session after one plant - keep going!
 
-Environment Context: ${JSON.stringify(homeProfile)}
+Environment Context: ${JSON.stringify(homeProfileRef.current)}
 
 Output Format: Always call propose_plant_to_inventory with:
 - commonName: the plant's common name
@@ -135,7 +155,6 @@ Output Format: Always call propose_plant_to_inventory with:
             muteGainRef.current = muteGain
             worklet.port.onmessage = (event) => {
               if (!sessionRef.current?.session) return
-              console.log(`[MainThread] Received PCM packet from worklet, length: ${event.data.length}`);
               const pcm = GeminiLiveSession.encodeAudio(event.data as Float32Array)
               sessionRef.current.sendMedia(pcm, 'audio/pcm;rate=' + audioCtx.sampleRate)
             }
@@ -230,10 +249,13 @@ Output Format: Always call propose_plant_to_inventory with:
 
       sessionRef.current = session
       await session.connect()
+      console.log('[usePlantDoctor] Connection established successfully');
     } catch (e) {
+      console.error('[usePlantDoctor] startCall error:', e);
+      isConnectingRef.current = false
       stopCall()
     }
-  }
+  }, [stopCall]) // stopCall is stable (no deps)
 
   return { isCalling, lastDetectedName, discoveryLog, startCall, stopCall }
 }

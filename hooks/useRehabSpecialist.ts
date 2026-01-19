@@ -18,6 +18,13 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
   const intervalRef = useRef<number | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const toolCallLimiterRef = useRef(new ToolCallRateLimiter(10, 60000))
+  const isConnectingRef = useRef(false) // Guard against multiple connection attempts
+
+  const homeProfileRef = useRef(homeProfile)
+  homeProfileRef.current = homeProfile
+
+  const onUpdateRef = useRef(onUpdate)
+  onUpdateRef.current = onUpdate
 
   const verifyRehabFunction: FunctionDeclaration = {
     name: 'verify_rehab_success',
@@ -49,9 +56,17 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
   }
 
   const stopCall = useCallback(async () => {
-    if (!isCalling) return
+    // Use ref check to avoid depending on isCalling state
+    if (!sessionRef.current && !isConnectingRef.current) return
+
+    console.log('[useRehabSpecialist] stopCall invoked');
+    isConnectingRef.current = false
     setIsCalling(false)
-    if (intervalRef.current) clearInterval(intervalRef.current)
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
     if (workletRef.current) {
       workletRef.current.port.onmessage = null
       workletRef.current.disconnect()
@@ -66,16 +81,24 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
     await audioServiceRef.current.close()
     if (audioContextRef.current?.state !== 'closed') {
       await audioContextRef.current?.close()
+      audioContextRef.current = null
     }
-  }, [isCalling])
+  }, []) // No dependencies - uses refs only
 
-  const startRehabCall = async (
+  const startRehabCall = useCallback(async (
     stream: MediaStream,
     plant: Plant,
     videoRef: React.RefObject<HTMLVideoElement | null>,
     canvasRef: React.RefObject<HTMLCanvasElement | null>
   ) => {
-    if (isCalling) return
+    // Guard against multiple simultaneous connection attempts
+    if (isConnectingRef.current || sessionRef.current) {
+      console.log('[useRehabSpecialist] startRehabCall blocked - already connecting or connected');
+      return
+    }
+
+    console.log('[useRehabSpecialist] startRehabCall invoked');
+    isConnectingRef.current = true
     setIsCalling(true)
 
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
@@ -115,11 +138,11 @@ Instructions:
 - Ask clarifying questions about the plant's appearance and care activities
 - Provide encouragement and plant-specific guidance
 
-Home Environment: ${JSON.stringify(homeProfile)}`
+Home Environment: ${JSON.stringify(homeProfileRef.current)}`
 
       const session = new GeminiLiveSession({
         apiKey,
-        model: 'gemini-2.5-flash-preview-native-audio-dialog',
+        model: 'gemini-2.0-flash-exp',
         systemInstruction,
         tools: [{ functionDeclarations: [verifyRehabFunction, markRescueTaskCompleteFunction] }],
         callbacks: {
@@ -136,7 +159,6 @@ Home Environment: ${JSON.stringify(homeProfile)}`
 
             worklet.port.onmessage = (event) => {
               if (!session.session) return
-              console.log(`[MainThread] Received PCM packet from worklet, length: ${event.data.length}`);
               const pcm = GeminiLiveSession.encodeAudio(event.data as Float32Array)
               session.sendMedia(pcm, 'audio/pcm;rate=' + audioCtx.sampleRate)
             }
@@ -189,7 +211,7 @@ Home Environment: ${JSON.stringify(homeProfile)}`
 
                 if (fc.name === 'verify_rehab_success') {
                   const args = fc.args as Record<string, unknown>
-                  onUpdate(plant.id, {
+                  onUpdateRef.current(plant.id, {
                     status: args.newStatus as 'healthy' | 'warning',
                     needsCheckIn: !(args.success as boolean),
                     notes: [
@@ -208,7 +230,7 @@ Home Environment: ${JSON.stringify(homeProfile)}`
                                      task.description.toLowerCase().includes(taskDescription.toLowerCase())
                     return taskMatch ? { ...task, completed: true } : task
                   })
-                  onUpdate(plant.id, { rescuePlanTasks: updatedTasks });
+                  onUpdateRef.current(plant.id, { rescuePlanTasks: updatedTasks });
                   session.sendToolResponse(fc.id!, fc.name!, {
                     success: true,
                     message: args.confirmationMessage || "Great! I've recorded that task as complete."
@@ -227,12 +249,14 @@ Home Environment: ${JSON.stringify(homeProfile)}`
 
       sessionRef.current = session
       await session.connect()
+      console.log('[useRehabSpecialist] Connection established successfully');
 
     } catch (e) {
-      console.error('Rehab Start Failed:', e)
+      console.error('[useRehabSpecialist] startRehabCall error:', e)
+      isConnectingRef.current = false
       stopCall()
     }
-  }
+  }, [stopCall]) // stopCall is stable (no deps)
 
   return { isCalling, lastVerifiedId, startRehabCall, stopCall }
 }

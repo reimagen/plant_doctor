@@ -18,6 +18,7 @@ export class GeminiLiveSession {
   public session: any = null
   private config: GeminiLiveConfig
   private isClosing: boolean = false
+  private isClosed: boolean = false
 
   constructor(config: GeminiLiveConfig) {
     this.config = config
@@ -25,10 +26,16 @@ export class GeminiLiveSession {
 
   async connect() {
     this.isClosing = false
-    const ai = new GoogleGenAI({ apiKey: this.config.apiKey })
+    this.isClosed = false
+    const ai = new GoogleGenAI({ apiKey: this.config.apiKey, apiVersion: 'v1beta' })
 
     try {
       console.log('[GeminiLiveSession] Attempting to connect to Gemini API...');
+
+      // Track if WebSocket opened so we can fire onOpen after session is ready
+      let wsOpened = false
+      let closeEvent: (() => void) | null = null;
+
       const sessionPromise = ai.live.connect({
         model: this.config.model,
         config: {
@@ -39,13 +46,22 @@ export class GeminiLiveSession {
         callbacks: {
           onopen: () => {
             console.log('[GeminiLiveSession] WebSocket connection opened successfully!');
-            if (this.isClosing) return
-            this.config.callbacks.onOpen?.()
+            wsOpened = true
+            // Don't fire onOpen yet - wait until session is assigned
           },
-          onclose: () => {
-            console.log('[GeminiLiveSession] WebSocket connection closed.');
-            this.session = null
-            this.config.callbacks.onClose?.()
+          onclose: (e: CloseEvent) => {
+            console.log('[GeminiLiveSession] WebSocket connection closed. Code:', e.code, 'Reason:', e.reason, 'Clean:', e.wasClean);
+            this.isClosed = true
+            // If session not yet assigned, defer the close callback
+            if (!this.session) {
+              closeEvent = () => {
+                this.session = null
+                this.config.callbacks.onClose?.()
+              }
+            } else {
+              this.session = null
+              this.config.callbacks.onClose?.()
+            }
           },
           onerror: (e) => {
             console.error('[GeminiLiveSession] WebSocket error:', e);
@@ -60,7 +76,21 @@ export class GeminiLiveSession {
       })
 
       this.session = await sessionPromise
-      console.log('[GeminiLiveSession] Session established.');
+      console.log('[GeminiLiveSession] Session established, this.session is now set.');
+
+      // If WebSocket closed before we got here, fire the deferred close
+      if (closeEvent) {
+        console.log('[GeminiLiveSession] WebSocket closed during connect, firing deferred close.');
+        (closeEvent as () => void)()
+        return this.session
+      }
+
+      // Now that session is assigned, fire onOpen callback
+      if (wsOpened && !this.isClosing) {
+        console.log('[GeminiLiveSession] Firing onOpen callback now that session is ready.');
+        this.config.callbacks.onOpen?.()
+      }
+
       return this.session
     } catch (err) {
       console.error('[GeminiLiveSession] Error during connection attempt:', err);
@@ -70,31 +100,35 @@ export class GeminiLiveSession {
   }
 
   sendInitialGreet(text: string) {
-    if (this.session && !this.isClosing) {
+    console.log('[GeminiLiveSession] sendInitialGreet called, session:', !!this.session, 'isClosing:', this.isClosing, 'isClosed:', this.isClosed);
+    if (this.session && !this.isClosing && !this.isClosed) {
       try {
         this.session.sendRealtimeInput({
           parts: [{ text }]
         })
+        console.log('[GeminiLiveSession] Initial greet sent successfully');
       } catch (e) {
-        console.warn('Failed to send initial greet', e)
+        console.warn('[GeminiLiveSession] Failed to send initial greet:', e)
       }
+    } else {
+      console.warn('[GeminiLiveSession] Cannot send greet - session not ready or closing');
     }
   }
 
   sendMedia(data: string, mimeType: string) {
-    if (this.session && !this.isClosing) {
+    if (this.session && !this.isClosing && !this.isClosed) {
       try {
         this.session.sendRealtimeInput({
           media: { data, mimeType }
         })
       } catch (e) {
-        console.warn('Failed to send media', e)
+        console.warn('[GeminiLiveSession] Failed to send media:', e)
       }
     }
   }
 
   sendToolResponse(id: string, name: string, response: unknown) {
-    if (this.session && !this.isClosing) {
+    if (this.session && !this.isClosing && !this.isClosed) {
       try {
         this.session.sendToolResponse({
           functionResponses: { id, name, response }
@@ -107,6 +141,7 @@ export class GeminiLiveSession {
 
   close() {
     this.isClosing = true
+    this.isClosed = true
     if (this.session) {
       this.session = null
     }

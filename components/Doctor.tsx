@@ -47,6 +47,7 @@ export const Doctor: React.FC<Props> = ({
   }, [rehabTargetId, plants])
 
   // Effect to handle starting and stopping calls based on stream presence
+  // Note: startCall/stopCall are now stable (memoized with no deps), so they won't trigger re-runs
   useEffect(() => {
     if (stream) {
       // Assign stream to video element
@@ -55,10 +56,10 @@ export const Doctor: React.FC<Props> = ({
       }
       setIsAudioOnly(stream.getVideoTracks().length === 0)
 
-      // Start the appropriate call
-      if (rehabTargetId && rehabPlant && !isRehabCalling) {
+      // Start the appropriate call (guards inside hooks prevent duplicate calls)
+      if (rehabTargetId && rehabPlant) {
         startRehabCall(stream, rehabPlant, videoRef, canvasRef)
-      } else if (!rehabTargetId && !isDiscoveryCalling) {
+      } else if (!rehabTargetId) {
         startDiscoveryCall(stream, videoRef, canvasRef)
       }
     } else {
@@ -66,14 +67,10 @@ export const Doctor: React.FC<Props> = ({
       if (videoRef.current) {
         videoRef.current.srcObject = null
       }
-      if (isDiscoveryCalling) {
-        stopDiscoveryCall()
-      }
-      if (isRehabCalling) {
-        stopRehabCall()
-      }
+      stopDiscoveryCall()
+      stopRehabCall()
     }
-  }, [stream, rehabTargetId, rehabPlant, startDiscoveryCall, stopDiscoveryCall, startRehabCall, stopRehabCall, isDiscoveryCalling, isRehabCalling])
+  }, [stream, rehabTargetId, rehabPlant, startDiscoveryCall, stopDiscoveryCall, startRehabCall, stopRehabCall])
 
   return (
     <div className="relative h-screen bg-black overflow-hidden flex flex-col font-sans">

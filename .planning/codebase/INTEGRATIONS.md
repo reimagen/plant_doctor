@@ -19,13 +19,15 @@
    - API Key: `GEMINI_API_KEY` (server-only, never exposed to client)
 
 2. **Gemini Live API (Client-Side)**
-   - Model: `gemini-2.5-flash-native-audio-dialog`
+   - Model: `gemini-2.0-flash-exp`
+   - API Version: `v1beta`
    - Features: Bidirectional audio, video frame streaming, function calling
    - Implementation: `lib/gemini-live.ts` (`GeminiLiveSession` class)
    - Voice: Kore (prebuilt voice config)
    - Audio formats: PCM 16kHz input, 24kHz output
    - API Key: `NEXT_PUBLIC_GEMINI_API_KEY` (client-side, domain-restricted)
    - Note: Cannot be proxied through API routes (WebSocket connection)
+   - Note: Model must support `bidiGenerateContent` for Live API
 
    **Guardrails (Added 2026-01-18):**
    - System prompt enforces "PLANT-ONLY FOCUS" mode with explicit CRITICAL RULES
