@@ -183,6 +183,8 @@
 
 - [x] **Code cleanup**
   - [x] Deleted dead code: `components/PlantEditModal.tsx` (replaced by PlantDetailPage in Phase 3.5)
+  - [x] Refactored Manager.tsx to `components/plant-details` and `hooks/useCareguide.ts` and `hooks/useRescuePlant.ts`. 
+  - [ ] Open item: reorganize Components folder to match new file structure.
 
 ## Known Issues (Unresolved)
 
