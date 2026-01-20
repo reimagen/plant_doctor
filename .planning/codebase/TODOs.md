@@ -145,20 +145,23 @@
   - [x] Updated close event logging to show code, reason, and wasClean for debugging.
   - [x] Removed verbose PCM packet logging from both hooks.
 
-### Phase 3.5: Change PlantEditModal to individual pages for each plant
-  - [ ] Create dynamic route `/plants/[id]/page.tsx` for individual plant pages
-  - [ ] Move PlantEditModal content and logic to new plant detail pages
-  - [ ] Update Navigation to link to `/plants/[id]` instead of modal
-  - [ ] Migrate modal state management to page routing
-  - [ ] Remove PlantEditModal component usage from InventoryPage
+### Phase 3.5: Change PlantEditModal to individual pages for each plant ✅
+  - [x] Create dynamic route `/plants/[id]/page.tsx` for individual plant pages
+  - [x] Move PlantEditModal content and logic to new plant detail pages
+  - [x] Update InventoryPage to link to `/plants/[id]` instead of modal
+  - [x] Migrate modal state management to page routing
+  - [x] Remove PlantEditModal component usage from InventoryPage
 
-### Phase 4: Retire useRehabSpecialist (Planned)
-- [ ] Validate `useRehabSpecialist` is no longer needed
-  - [ ] Review current usage of `useRehabSpecialist`
-  - [ ] Test passing plantID through context instead of rehab state
-  - [ ] Verify Gemini API calls work with plantID from router params
-  - [ ] Check for missing functionality without rehab specialist
-  - [ ] Remove or refactor `useRehabSpecialist` if confirmed unnecessary
+### Phase 4: Route-based Rehab Mode ✅
+- [x] Refactored rehab mode to use URL params instead of state
+  - [x] Review current usage of `useRehabSpecialist`
+  - [x] Changed plantID passing from state to URL search params (`/doctor?plantId=xxx`)
+  - [x] DoctorPage now reads plantId from `useSearchParams()`
+  - [x] Added Suspense boundary for useSearchParams compatibility
+  - [x] Removed `rehabTarget` state and `handleOpenRehab` from useAppState
+  - [x] Added "Start Rehab Call" buttons (audio/video) to PlantDetailPage
+  - [x] Updated InventoryPage onCheckIn to navigate directly to `/doctor?plantId=xxx`
+  - Note: `useRehabSpecialist` hook is still used for rehab-specific Gemini session logic
 
 ### Phase 5: Livestream Notifications + Timeline Overlay
 - [ ] Audit live notifications for livestream with timeline overlay

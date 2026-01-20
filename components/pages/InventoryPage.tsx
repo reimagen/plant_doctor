@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plant, HomeProfile } from '@/types'
 import { PlantCard } from '@/components/PlantCard'
-import { PlantEditModal } from '@/components/PlantEditModal'
 import { RescueProtocolView } from '@/components/RescueProtocolView'
 
 interface Props {
@@ -13,13 +13,12 @@ interface Props {
   onAdopt: (id: string) => void
   onDelete: (id: string) => void
   onUpdate: (id: string, updates: Partial<Plant>) => void
-  onOpenRehab: (id: string) => void
 }
 
 type SortOption = 'urgency' | 'watering' | 'name'
 
-export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, onAdopt, onDelete, onUpdate, onOpenRehab }) => {
-  const [selectedPlantId, setSelectedPlantId] = useState<string | null>(null)
+export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, onAdopt, onDelete, onUpdate }) => {
+  const router = useRouter()
   const [rescuePlantId, setRescuePlantId] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>('urgency')
 
@@ -59,7 +58,6 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
     })
   }, [junglePlantsRaw, sortBy])
 
-  const selectedPlant = plants.find(p => p.id === selectedPlantId)
   const rescuePlant = plants.find(p => p.id === rescuePlantId)
 
   return (
@@ -77,7 +75,7 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
           </div>
           <div className="grid gap-4">
             {pendingPlants.map((plant) => (
-              <div key={plant.id} onClick={() => setSelectedPlantId(plant.id)} className="cursor-pointer">
+              <div key={plant.id} onClick={() => router.push(`/plants/${plant.id}`)} className="cursor-pointer">
                 <PlantCard
                   plant={plant}
                   onWater={onWater}
@@ -127,12 +125,12 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
         ) : (
           <div className="grid gap-6">
             {sortedJunglePlants.map((plant) => (
-              <div key={plant.id} onClick={() => setSelectedPlantId(plant.id)} className="cursor-pointer">
+              <div key={plant.id} onClick={() => router.push(`/plants/${plant.id}`)} className="cursor-pointer">
                 <PlantCard
                   plant={plant}
                   onWater={onWater}
                   onDelete={onDelete}
-                  onCheckIn={() => onOpenRehab(plant.id)}
+                  onCheckIn={() => router.push(`/doctor?plantId=${plant.id}`)}
                   onRescue={(id) => setRescuePlantId(id)}
                 />
               </div>
@@ -140,16 +138,6 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
           </div>
         )}
       </section>
-
-      {selectedPlant && (
-        <PlantEditModal
-          plant={selectedPlant}
-          homeProfile={homeProfile}
-          onClose={() => setSelectedPlantId(null)}
-          onUpdate={onUpdate}
-          onDelete={onDelete}
-        />
-      )}
 
       {rescuePlant && (
         <RescueProtocolView

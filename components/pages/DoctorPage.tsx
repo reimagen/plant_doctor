@@ -1,5 +1,6 @@
 'use client'
 
+import { useSearchParams } from 'next/navigation'
 import { HomeProfile, Plant } from '@/types'
 import { Doctor } from '@/components/Doctor'
 import { Manager } from '@/components/Manager'
@@ -10,22 +11,22 @@ interface Props {
   onAutoDetect: (plant: Plant) => void
   onUpdatePlant: (id: string, updates: Partial<Plant>) => void
   plants: Plant[]
-  rehabTargetId?: string | null
 }
 
 /**
  * DoctorPage - Orchestrator page for livestream modes
  * Coordinates the Doctor component (livestream UI) with state management
- * Future: Will also coordinate with Manager component for plant settings
+ * Reads plantId from URL search params for rehab mode
  */
 export const DoctorPage: React.FC<Props> = ({
   stream,
   homeProfile,
   onAutoDetect,
   onUpdatePlant,
-  plants,
-  rehabTargetId
+  plants
 }) => {
+  const searchParams = useSearchParams()
+  const rehabTargetId = searchParams.get('plantId')
   const rehabPlant = rehabTargetId ? plants.find(plant => plant.id === rehabTargetId) : null
 
   return (

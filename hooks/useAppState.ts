@@ -1,17 +1,14 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { Plant, HomeProfile } from '@/types'
 import { StorageService } from '@/lib/storage-service'
 import { getCurrentSeason } from '@/lib/season'
 import { DEFAULT_HOME_PROFILE } from '@/lib/constants'
 
 export const useAppState = () => {
-  const router = useRouter()
   const [plants, setPlants] = useState<Plant[]>([])
   const [homeProfile, setHomeProfile] = useState<HomeProfile>(DEFAULT_HOME_PROFILE)
-  const [rehabTarget, setRehabTarget] = useState<string | null>(null)
   const [isHydrated, setIsHydrated] = useState(false)
 
   // Hydrate from localStorage on mount
@@ -92,22 +89,15 @@ export const useAppState = () => {
     setPlants(prev => prev.map(p => p.id === id ? { ...p, status: 'healthy', lastWateredAt: new Date().toISOString() } : p))
   }, [])
 
-  const handleOpenRehab = useCallback((id: string) => {
-    setRehabTarget(id)
-    router.push('/doctor')
-  }, [router])
-
   return {
     plants,
     homeProfile,
     setHomeProfile: updateHomeProfile,
-    rehabTarget,
     addPlant,
     updatePlant,
     removePlant,
     waterPlant,
     adoptPlant,
-    handleOpenRehab,
     isHydrated
   }
 }
