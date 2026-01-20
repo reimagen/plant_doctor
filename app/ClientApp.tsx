@@ -45,6 +45,17 @@ export function ClientApp() {
   return (
     <div className="min-h-screen bg-stone-50 font-sans">
       <main className="max-w-xl mx-auto pb-24">
+        {currentView() === 'inventory' && (
+          <InventoryPage
+            plants={state.plants}
+            homeProfile={state.homeProfile}
+            onWater={state.waterPlant}
+            onAdopt={state.adoptPlant}
+            onDelete={state.removePlant}
+            onUpdate={state.updatePlant}
+            onOpenRehab={state.handleOpenRehab}
+          />
+        )}
         {currentView() === 'doctor' && (
           <DoctorPage
             stream={stream}
@@ -55,7 +66,12 @@ export function ClientApp() {
             rehabTargetId={state.rehabTarget}
           />
         )}
-        {/* ... (rest of the views) */}
+        {currentView() === 'settings' && (
+          <SettingsPage
+            profile={state.homeProfile}
+            onChange={state.setHomeProfile}
+          />
+        )}
       </main>
 
       <Navigation
