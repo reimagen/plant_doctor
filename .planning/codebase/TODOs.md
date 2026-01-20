@@ -163,6 +163,52 @@
   - [x] Updated InventoryPage onCheckIn to navigate directly to `/doctor?plantId=xxx`
   - Note: `useRehabSpecialist` hook is still used for rehab-specific Gemini session logic
 
+### Phase 4.5: Livestream UX Polish & Bug Fixes ✅
+- [x] **Refactor livestream controls from navbar to Doctor page**
+  - [x] Added explicit stream mode tracking (`'video' | 'audio' | null`)
+  - [x] Simplified Navigation component to pure navigation links (removed Doctor/Listen/Stop action buttons)
+  - [x] Moved start/stop controls to Doctor page (camera/microphone/stop buttons centered above navbar)
+  - [x] Updated PlantDetailPage to use new mode signature
+  - [x] Prevention of race conditions: guards at UI, ClientApp, hook, and session levels
+
+- [x] **Fix audio-only state display**
+  - [x] Fixed lingering "Audio Stream Active" message when stream stopped (added `setIsAudioOnly(false)`)
+  - [x] Made "Inventory Sweep" header only visible during video calls, hidden in audio mode
+
+- [x] **Audio vs Video mode differentiation**
+  - [x] Created separate system instructions for video (inventory cataloging) vs audio (Q&A) modes
+  - [x] Video greeting: "I'm ready for the grand tour! Show me your plants one by one..."
+  - [x] Audio greeting: "What questions can I answer about your plants today?"
+  - [x] Audio mode rejects plant cataloging requests with helpful message to switch to video
+
+- [x] **Code cleanup**
+  - [x] Deleted dead code: `components/PlantEditModal.tsx` (replaced by PlantDetailPage in Phase 3.5)
+
+## Known Issues (Unresolved)
+
+### Navigation State Loss Bug ⚠️
+- **Status:** UNRESOLVED - Still occurs despite attempted fixes
+- **Problem:** When a user starts an audio/video stream on the Doctor page, then navigates to another page (e.g., Jungle), and returns to the Doctor page, the Stop button does not appear. The user sees the welcome message and start buttons instead, even though the stream is still active in the background.
+- **Symptoms:**
+  - Audio is still being processed (AudioWorklet continues logging)
+  - Gemini session is still connected
+  - But UI shows inactive state instead of Stop button
+  - User cannot manually end the call from Doctor page
+- **Attempted fixes (did not work):**
+  - Changed `isActive` check to `stream !== null || streamMode !== null`
+  - Removed conditional rendering, used CSS hidden/block instead
+  - Changed Suspense `fallback={<div>}` to `fallback={null}`
+  - Added refs to persist stream/streamMode across renders
+- **Root cause (suspected):**
+  - When navigating away, `stream` from `useMediaStream` hook is being reset to `null`
+  - Even though `streamMode` persists in ClientApp state, the UI uses both `stream` and `streamMode` for the active check
+  - The `useMediaStream` hook may be resetting on route change or component lifecycle
+  - Need to investigate why the MediaStream reference is lost during navigation while Gemini session remains active
+- **Next steps:**
+  - Debug why `stream` prop from `useMediaStream` becomes null during navigation
+  - Consider persisting MediaStream in a ref or context that survives navigation
+  - Investigate if the issue is with how Next.js handles page navigation vs component lifecycle
+
 ### Phase 5: Livestream Notifications + Timeline Overlay
 - [ ] Audit live notifications for livestream with timeline overlay
   - **Current State:** Toast notifications on right side showing plant detections (discovery log)

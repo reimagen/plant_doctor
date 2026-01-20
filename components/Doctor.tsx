@@ -46,6 +46,13 @@ export const Doctor: React.FC<Props> = ({
     return rehabTargetId ? plants.find(p => p.id === rehabTargetId) : null
   }, [rehabTargetId, plants])
 
+  // Effect to sync stream to video element (runs on mount and when stream changes)
+  useEffect(() => {
+    if (stream && videoRef.current && !videoRef.current.srcObject) {
+      videoRef.current.srcObject = stream
+    }
+  }, [stream])
+
   // Effect to handle starting and stopping calls based on stream presence
   // Note: startCall/stopCall are now stable (memoized with no deps), so they won't trigger re-runs
   useEffect(() => {
@@ -67,6 +74,7 @@ export const Doctor: React.FC<Props> = ({
       if (videoRef.current) {
         videoRef.current.srcObject = null
       }
+      setIsAudioOnly(false)
       stopDiscoveryCall()
       stopRehabCall()
     }
@@ -118,23 +126,25 @@ export const Doctor: React.FC<Props> = ({
       )}
 
       <div className="absolute inset-0 z-10 flex flex-col justify-between p-8 pointer-events-none">
-        <header className="flex justify-between items-start pt-4">
-          <div className="bg-black/40 backdrop-blur-xl px-5 py-3 rounded-[24px] border border-white/10">
-            <h2 className="text-white font-black text-[10px] uppercase tracking-[0.2em] mb-1">
-              {activeMode === 'rehab' ? `Target: ${rehabPlant?.name || 'Plant'}` : 'Inventory Sweep'}
-            </h2>
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-1.5 h-1.5 rounded-full ${
-                  isCalling ? 'bg-green-400 animate-pulse' : 'bg-white/20'
-                }`}
-              />
-              <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">
-                {isCalling ? 'Analyzing Stream...' : 'Camera Standby'}
-              </p>
+        {!isAudioOnly && isCalling && (
+          <header className="flex justify-between items-start pt-4">
+            <div className="bg-black/40 backdrop-blur-xl px-5 py-3 rounded-[24px] border border-white/10">
+              <h2 className="text-white font-black text-[10px] uppercase tracking-[0.2em] mb-1">
+                {activeMode === 'rehab' ? `Target: ${rehabPlant?.name || 'Plant'}` : 'Inventory Sweep'}
+              </h2>
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    isCalling ? 'bg-green-400 animate-pulse' : 'bg-white/20'
+                  }`}
+                />
+                <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">
+                  {isCalling ? 'Analyzing Stream...' : 'Camera Standby'}
+                </p>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
+        )}
         <footer className="space-y-6 pb-24 pointer-events-auto flex flex-col items-center">
           {/* The main call button is now in the central Navigation component */}
         </footer>

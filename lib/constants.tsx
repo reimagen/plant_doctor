@@ -33,6 +33,24 @@ export const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
   ),
+  Pencil: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 3.487 3.651 3.651M4.5 19.5l4.918-1.23a2 2 0 0 0 .968-.54l9.733-9.733a2.25 2.25 0 0 0 0-3.182l-.116-.116a2.25 2.25 0 0 0-3.182 0L7.088 14.43a2 2 0 0 0-.54.968L5.318 20.318a.5.5 0 0 0 .606.606Z" />
+    </svg>
+  ),
+  LiveBadge: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-6 h-6">
+      <rect x="3" y="6.5" width="18" height="11" rx="5.5" fill="currentColor" opacity="0.15" />
+      <rect x="3" y="6.5" width="18" height="11" rx="5.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <circle cx="8" cy="12" r="2" fill="currentColor" />
+      <path d="M12 14.5v-5l4.5 2.5-4.5 2.5z" fill="currentColor" />
+    </svg>
+  ),
+  Phone: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0-1.5 1.5-2.25 3-1.5l3.75 1.875a2.25 2.25 0 0 1 1.125 2.625l-.75 2.625a.75.75 0 0 0 .187.75l4.688 4.688a.75.75 0 0 0 .75.187l2.625-.75a2.25 2.25 0 0 1 2.625 1.125L20.5 19.5c.75 1.5 0 3-1.5 3h-1.5c-8.284 0-15-6.716-15-15v-1.5Z" />
+    </svg>
+  ),
   ChevronLeft: () => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />

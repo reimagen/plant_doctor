@@ -142,6 +142,22 @@ export const Manager: React.FC<Props> = ({
     }
   }
 
+  useEffect(() => {
+    const needsRescuePlan =
+      (isOverdue || plant.status === 'warning' || plant.status === 'critical') &&
+      (!plant.rescuePlanTasks || plant.rescuePlanTasks.length === 0)
+
+    if (!isRescueGenerating && plant.species && needsRescuePlan) {
+      handleGenerateRescuePlan()
+    }
+  }, [
+    isOverdue,
+    plant.status,
+    plant.species,
+    plant.rescuePlanTasks,
+    isRescueGenerating,
+  ])
+
   // Mark rescue task as complete/incomplete
   const handleTaskComplete = (taskId: string, completed: boolean) => {
     const updatedTasks = (plant.rescuePlanTasks || []).map(task =>
@@ -179,19 +195,6 @@ export const Manager: React.FC<Props> = ({
             Next: {nextDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
           </p>
         </div>
-      </section>
-
-      {/* Plant Identity */}
-      <section>
-        <label className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] mb-2 block">
-          Nickname
-        </label>
-        <input
-          value={plant.name}
-          onChange={e => onUpdate(plant.id, { name: e.target.value })}
-          className="w-full bg-stone-50 border border-stone-100 rounded-2xl px-5 py-3 font-bold text-stone-700 focus:outline-none focus:ring-2 focus:ring-green-100"
-          placeholder="Give it a name..."
-        />
       </section>
 
       {/* Rescue Plan - shown if plant is unhealthy */}

@@ -15,7 +15,7 @@ interface Props {
   onUpdate: (id: string, updates: Partial<Plant>) => void
 }
 
-type SortOption = 'urgency' | 'watering' | 'name'
+type SortOption = 'urgency' | 'watering schedule' | 'name'
 
 export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, onAdopt, onDelete, onUpdate }) => {
   const router = useRouter()
@@ -41,7 +41,7 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
         return (a.name || a.species).localeCompare(b.name || b.species)
       }
 
-      if (sortBy === 'watering') {
+      if (sortBy === 'watering schedule') {
         const getNext = (p: Plant) => {
           const d = new Date(p.lastWateredAt)
           d.setDate(d.getDate() + p.cadenceDays)
@@ -90,27 +90,26 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
 
       <section>
         <div className="flex flex-col gap-4 mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-end">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 bg-green-500 rounded-full" />
               <h2 className="text-xs font-black text-stone-400 uppercase tracking-widest">The Jungle</h2>
             </div>
-            <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Sort by:</span>
           </div>
 
           {/* Sorting Bar */}
+          <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Sort by:</span>
           <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-            {(['urgency', 'watering', 'name'] as const).map((option) => (
+            {(['urgency', 'watering schedule', 'name'] as const).map((option) => (
               <button
                 key={option}
                 onClick={() => setSortBy(option)}
-                className={`flex-shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-                  sortBy === option
-                    ? 'bg-stone-800 text-white shadow-lg shadow-stone-200'
-                    : 'bg-white text-stone-400 border border-stone-100 hover:bg-stone-50'
-                }`}
+                className={`flex-shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === option
+                  ? 'bg-stone-800 text-white shadow-lg shadow-stone-200'
+                  : 'bg-white text-stone-400 border border-stone-100 hover:bg-stone-50'
+                  }`}
               >
-                {option === 'urgency' ? 'Urgency' : option === 'watering' ? 'Watering' : 'Name'}
+                {option === 'urgency' ? 'Urgency' : option === 'watering schedule' ? 'Watering Schedule' : 'Name'}
               </button>
             ))}
           </div>

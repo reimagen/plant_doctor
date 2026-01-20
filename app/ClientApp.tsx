@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, Suspense } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { useState, useRef, useEffect, Suspense } from 'react'
+import { usePathname } from 'next/navigation'
 import { Navigation } from '@/components/Navigation'
 import { useAppState } from '@/hooks/useAppState'
 import { useMediaStream } from '@/hooks/useMediaStream'
@@ -12,21 +12,36 @@ import { PlantDetailPage } from '@/components/pages/PlantDetailPage'
 
 export function ClientApp() {
   const pathname = usePathname()
-  const router = useRouter()
   const state = useAppState()
   const { stream, start, stop } = useMediaStream()
   const [isConnecting, setIsConnecting] = useState(false)
+  const [streamMode, setStreamMode] = useState<'video' | 'audio' | null>(null)
 
-  const handleStartStream = async (video: boolean) => {
-    if (isConnecting || stream) return
+  // Use refs to persist state across re-renders and navigation
+  const streamRef = useRef<MediaStream | null>(null)
+  const streamModeRef = useRef<'video' | 'audio' | null>(null)
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    streamRef.current = stream
+  }, [stream])
+
+  useEffect(() => {
+    streamModeRef.current = streamMode
+  }, [streamMode])
+
+  const handleStartStream = async (mode: 'video' | 'audio') => {
+    // Guard: prevent if already connecting, stream active, or mode already claimed
+    if (isConnecting || stream || streamMode !== null) return
+
     setIsConnecting(true)
+    setStreamMode(mode)
     try {
-      await start(video)
-      if (pathname !== '/doctor') {
-        router.push('/doctor')
-      }
+      await start(mode === 'video')
+      // Navigation to /doctor happens on the Doctor page now, not here
     } catch (error) {
-      console.error(`Failed to start ${video ? 'video' : 'audio'} stream:`, error)
+      console.error(`Failed to start ${mode} stream:`, error)
+      setStreamMode(null) // Release mode claim on error
     } finally {
       setIsConnecting(false)
     }
@@ -34,6 +49,7 @@ export function ClientApp() {
 
   const handleStopStream = () => {
     stop()
+    setStreamMode(null)
     setIsConnecting(false)
   }
 
@@ -58,7 +74,7 @@ export function ClientApp() {
   return (
     <div className="min-h-screen bg-stone-50 font-sans">
       <main className="max-w-xl mx-auto pb-24">
-        {currentView() === 'inventory' && (
+        <div className={currentView() === 'inventory' ? 'block' : 'hidden'}>
           <InventoryPage
             plants={state.plants}
             homeProfile={state.homeProfile}
@@ -67,41 +83,47 @@ export function ClientApp() {
             onDelete={state.removePlant}
             onUpdate={state.updatePlant}
           />
-        )}
-        {currentView() === 'doctor' && (
-          <Suspense fallback={<div className="min-h-screen bg-black" />}>
+        </div>
+
+        {/* Doctor page is always mounted to preserve stream state and Gemini sessions */}
+        {/* Suspense is needed for useSearchParams(), but we use a minimal fallback to avoid state loss */}
+        <Suspense fallback={null}>
+          <div className={currentView() === 'doctor' ? 'block' : 'hidden'}>
             <DoctorPage
               stream={stream}
+              streamMode={streamMode}
+              isConnecting={isConnecting}
               homeProfile={state.homeProfile}
               onAutoDetect={state.addPlant}
               onUpdatePlant={state.updatePlant}
+              onStartStream={handleStartStream}
+              onStopStream={handleStopStream}
               plants={state.plants}
             />
-          </Suspense>
-        )}
-        {currentView() === 'settings' && (
+          </div>
+        </Suspense>
+
+        <div className={currentView() === 'settings' ? 'block' : 'hidden'}>
           <SettingsPage
             profile={state.homeProfile}
             onChange={state.setHomeProfile}
           />
-        )}
-        {currentView() === 'plant-detail' && selectedPlant && (
-          <PlantDetailPage
-            plant={selectedPlant}
-            homeProfile={state.homeProfile}
-            onUpdate={state.updatePlant}
-            onDelete={state.removePlant}
-            onStartStream={handleStartStream}
-          />
-        )}
+        </div>
+
+        <div className={currentView() === 'plant-detail' && selectedPlant ? 'block' : 'hidden'}>
+          {selectedPlant && (
+            <PlantDetailPage
+              plant={selectedPlant}
+              homeProfile={state.homeProfile}
+              onUpdate={state.updatePlant}
+              onDelete={state.removePlant}
+              onStartStream={handleStartStream}
+            />
+          )}
+        </div>
       </main>
 
-      <Navigation
-        stream={stream}
-        isConnecting={isConnecting}
-        onStart={handleStartStream}
-        onStop={handleStopStream}
-      />
+      <Navigation />
     </div>
   )
 }
