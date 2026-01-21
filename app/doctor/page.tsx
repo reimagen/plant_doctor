@@ -1,5 +1,7 @@
-import { ClientApp } from '../ClientApp'
-
+/**
+ * Doctor page route - rendering is handled by ClientApp in root layout
+ * This file exists for Next.js routing but returns null since ClientApp manages all content
+ */
 export default function DoctorPage() {
-  return <ClientApp />
+  return null
 }

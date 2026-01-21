@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, Suspense } from 'react'
+import { useState, Suspense } from 'react'
 import { usePathname } from 'next/navigation'
 import { Navigation } from '@/components/Navigation'
 import { useAppState } from '@/hooks/useAppState'
@@ -13,22 +13,10 @@ import { PlantDetailPage } from '@/components/pages/PlantDetailPage'
 export function ClientApp() {
   const pathname = usePathname()
   const state = useAppState()
-  const { stream, start, stop } = useMediaStream()
+  const { start, stop } = useMediaStream()
+  const [stream, setStream] = useState<MediaStream | null>(null)
   const [isConnecting, setIsConnecting] = useState(false)
   const [streamMode, setStreamMode] = useState<'video' | 'audio' | null>(null)
-
-  // Use refs to persist state across re-renders and navigation
-  const streamRef = useRef<MediaStream | null>(null)
-  const streamModeRef = useRef<'video' | 'audio' | null>(null)
-
-  // Keep refs in sync with state
-  useEffect(() => {
-    streamRef.current = stream
-  }, [stream])
-
-  useEffect(() => {
-    streamModeRef.current = streamMode
-  }, [streamMode])
 
   const handleStartStream = async (mode: 'video' | 'audio') => {
     // Guard: prevent if already connecting, stream active, or mode already claimed
@@ -37,7 +25,8 @@ export function ClientApp() {
     setIsConnecting(true)
     setStreamMode(mode)
     try {
-      await start(mode === 'video')
+      const newStream = await start(mode === 'video')
+      setStream(newStream)
       // Navigation to /doctor happens on the Doctor page now, not here
     } catch (error) {
       console.error(`Failed to start ${mode} stream:`, error)
@@ -49,6 +38,7 @@ export function ClientApp() {
 
   const handleStopStream = () => {
     stop()
+    setStream(null)
     setStreamMode(null)
     setIsConnecting(false)
   }

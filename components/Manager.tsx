@@ -47,7 +47,7 @@ export const Manager: React.FC<Props> = ({
     error: rescueError,
     generateRescuePlan,
     handleTaskComplete,
-  } = useRescuePlan(plant, homeProfile, onUpdate, isOverdue)
+  } = useRescuePlan(plant, homeProfile, onUpdate)
 
   const handleDelete = () => {
     if (confirm(`Remove ${plant.name || plant.species} from your jungle?`)) {
@@ -65,7 +65,7 @@ export const Manager: React.FC<Props> = ({
         onUpdate={onUpdate}
       />
 
-      {(isOverdue || plant.status === 'warning' || plant.status === 'critical') && (
+      {(plant.status === 'warning' || plant.status === 'critical' || (plant.rescuePlan && plant.rescuePlan.length > 0)) && (
         <RescuePlanSection
           plant={plant}
           isRescueGenerating={isRescueGenerating}

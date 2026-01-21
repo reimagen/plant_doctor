@@ -16,6 +16,10 @@ export interface RescueTask {
   id: string;
   description: string;
   completed: boolean;
+  phase?: 'phase-1' | 'phase-2' | 'phase-3';
+  duration?: string;
+  sequencing?: number;
+  successCriteria?: string;
 }
 
 export interface Plant {

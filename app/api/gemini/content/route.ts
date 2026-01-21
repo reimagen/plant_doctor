@@ -111,7 +111,7 @@ async function generateCareGuide(plant: Plant, homeProfile: HomeProfile): Promis
   }
 }
 
-async function generateRescuePlan(plant: Plant, homeProfile: HomeProfile): Promise<string[]> {
+async function generateRescuePlan(plant: Plant, homeProfile: HomeProfile): Promise<any[]> {
   try {
     const lastDate = new Date(plant.lastWateredAt)
     const nextDate = new Date(lastDate)
@@ -135,7 +135,12 @@ async function generateRescuePlan(plant: Plant, homeProfile: HomeProfile): Promi
 
       CRITICAL INSTRUCTION: If the condition is DEHYDRATED, do NOT mention root rot; focus on gradual rehydration.
       If the condition is PHYSICAL DISTRESS but NOT overdue, consider overwatering/root rot.
-      Generate a 3-step 'Rescue Protocol' (concise strings).`,
+
+      Generate a 3-5 step 'Rescue Protocol' organized into phases:
+      - phase-1: Immediate first aid (water, prune damaged leaves, increase humidity)
+      - phase-2: Recovery support (relocation, observation, adjustments after 1-2 days)
+      - phase-3: Ongoing maintenance (daily/weekly monitoring for 2+ weeks)
+      Return structured steps with phase, duration, and success criteria.`,
       config: {
         responseMimeType: 'application/json',
         responseSchema: {
@@ -143,7 +148,17 @@ async function generateRescuePlan(plant: Plant, homeProfile: HomeProfile): Promi
           properties: {
             steps: {
               type: Type.ARRAY,
-              items: { type: Type.STRING }
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  action: { type: Type.STRING },
+                  phase: { type: Type.STRING, enum: ['phase-1', 'phase-2', 'phase-3'] },
+                  duration: { type: Type.STRING },
+                  sequencing: { type: Type.NUMBER },
+                  successCriteria: { type: Type.STRING }
+                },
+                required: ['action', 'phase']
+              }
             }
           },
           required: ['steps']
@@ -153,10 +168,17 @@ async function generateRescuePlan(plant: Plant, homeProfile: HomeProfile): Promi
 
     try {
       const data = JSON.parse(response.text || '{"steps":[]}')
+      // Return structured steps or fallback to simple string format
       return data.steps
     } catch (parseError) {
       console.warn(`[PARSE_ERROR] rescue-plan response parsing failed for ${plant.species}:`, parseError)
-      return ['Check soil moisture immediately', 'Remove any dead or yellowing leaves', 'Adjust light exposure']
+      // Fallback to structured step format
+      return [
+        { action: 'Check soil moisture and water if dry', phase: 'phase-1', duration: '5 min', sequencing: 1, successCriteria: 'Soil moist and assessed' },
+        { action: 'Remove any dead or yellowing leaves', phase: 'phase-1', duration: '10 min', sequencing: 2, successCriteria: 'Damaged foliage removed' },
+        { action: 'Adjust light exposure to bright indirect', phase: 'phase-2', duration: '5 min', sequencing: 3, successCriteria: 'Plant in appropriate light' },
+        { action: 'Monitor soil moisture and growth daily', phase: 'phase-3', duration: '2 weeks', sequencing: 4, successCriteria: 'Plant shows new growth, no yellowing' }
+      ]
     }
   } catch (error) {
     console.error(`[GENERATION_ERROR] Failed to generate rescue plan for ${plant.species}:`, error)

@@ -42,14 +42,27 @@ export const useAppState = () => {
   }, [homeProfile, isHydrated])
 
   // Health Simulation: Check-in logic
+  // Show "Check-up Due" when plant is in warning status AND water is due within 24 hours (daysDiff <= 1)
   useEffect(() => {
     const timer = setInterval(() => {
       setPlants(prev => prev.map(p => {
         if (p.status === 'warning') {
-          const lastWatered = new Date(p.lastWateredAt).getTime()
-          const dayInMs = 24 * 60 * 60 * 1000
-          if (Date.now() - lastWatered > dayInMs) {
+          // Calculate next watering date
+          const lastDate = new Date(p.lastWateredAt)
+          const nextDate = new Date(lastDate)
+          nextDate.setDate(lastDate.getDate() + (p.cadenceDays || 7))
+
+          // Calculate days until next watering
+          const now = new Date()
+          nextDate.setHours(0, 0, 0, 0)
+          now.setHours(0, 0, 0, 0)
+          const daysDiff = Math.ceil((nextDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+          // Set needsCheckIn when water is due within 24 hours
+          if (daysDiff <= 1) {
             return { ...p, needsCheckIn: true }
+          } else {
+            return { ...p, needsCheckIn: false }
           }
         }
         return p
@@ -86,8 +99,57 @@ export const useAppState = () => {
   }, [])
 
   const adoptPlant = useCallback((id: string) => {
-    setPlants(prev => prev.map(p => p.id === id ? { ...p, status: 'healthy', lastWateredAt: new Date().toISOString() } : p))
-  }, [])
+    // Immediately update the plant's status for instant UI feedback,
+    // then asynchronously fetch the care guide in a fire-and-forget manner.
+    setPlants(prevPlants => {
+      const plantToAdopt = prevPlants.find(p => p.id === id)
+      if (!plantToAdopt) {
+        console.error("Plant to adopt not found, cannot generate care guide.");
+        return prevPlants;
+      }
+
+      // Define the async operation
+      const fetchCareGuide = async () => {
+        try {
+          const response = await fetch('/api/gemini/content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'care-guide',
+              plant: plantToAdopt,
+              homeProfile: homeProfile, // From useCallback dependency
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`API error generating care guide: ${response.status}`);
+          }
+
+          const data = await response.json();
+          if (data.tips && data.tips.length > 0) {
+            // Update the state again with the new care guide
+            setPlants(currentPlants =>
+              currentPlants.map(p =>
+                p.id === id ? { ...p, careGuide: data.tips } : p
+              )
+            );
+          } else if (data.error) {
+            console.error(`Care guide generation API error: ${data.error}`);
+          }
+        } catch (e) {
+          console.error('Failed to generate care guide on adoption:', e);
+        }
+      };
+
+      // Trigger the async operation
+      fetchCareGuide();
+
+      // Return the immediately updated list
+      return prevPlants.map(p =>
+        p.id === id ? { ...p, status: 'healthy', lastWateredAt: new Date().toISOString() } : p
+      );
+    });
+  }, [homeProfile]);
 
   return {
     plants,

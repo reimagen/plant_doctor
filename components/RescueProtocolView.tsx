@@ -9,9 +9,10 @@ interface Props {
   homeProfile: HomeProfile
   onClose: () => void
   onUpdate: (id: string, updates: Partial<Plant>) => void
+  onCommit?: (plantId: string) => void
 }
 
-export const RescueProtocolView: React.FC<Props> = ({ plant, homeProfile, onClose, onUpdate }) => {
+export const RescueProtocolView: React.FC<Props> = ({ plant, homeProfile, onClose, onUpdate, onCommit }) => {
   const [isRescuing, setIsRescuing] = useState(false)
 
   const lastDate = new Date(plant.lastWateredAt)
@@ -102,19 +103,21 @@ export const RescueProtocolView: React.FC<Props> = ({ plant, homeProfile, onClos
                 <p className="text-xs font-bold text-stone-700 leading-relaxed">{step}</p>
               </div>
             ))}
-            <button
-              onClick={handleRescueTrigger}
-              className="w-full py-4 text-[10px] font-black text-stone-400 uppercase tracking-widest"
-            >
-              Regenerate Plan
-            </button>
           </section>
         )}
       </div>
 
-      <div className="p-6 border-t border-stone-100 bg-stone-50/50">
+      <div className="p-6 border-t border-stone-100 bg-stone-50/50 space-y-4">
+        {plant.rescuePlan && plant.rescuePlan.length > 0 && (
+          <button
+            onClick={() => onCommit?.(plant.id) || onClose()}
+            className="w-full py-4 bg-green-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-100 active:scale-95 transition-all"
+          >
+            Commit to Plan
+          </button>
+        )}
         <p className="text-[10px] text-stone-400 font-medium leading-relaxed italic text-center">
-          &quot;Plans adapt to {homeProfile.seasonMode} dormancy/growth cycles and your local {homeProfile.humidity} humidity.&quot;
+          Plans adapt to {homeProfile.seasonMode} dormancy/growth cycles and your local {homeProfile.humidity} humidity.
         </p>
       </div>
     </div>

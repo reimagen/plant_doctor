@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plant, HomeProfile } from '@/types'
 import { Icons } from '@/lib/constants'
 import { Manager } from '@/components/Manager'
+import { PlantStatusBadge } from '@/components/PlantStatusBadge'
 
 interface Props {
   plant: Plant
@@ -18,10 +19,6 @@ export const PlantDetailPage: React.FC<Props> = ({ plant, homeProfile, onUpdate,
   const router = useRouter()
   const [isEditingName, setIsEditingName] = useState(false)
   const [nickname, setNickname] = useState(plant.name || '')
-
-  const lastDate = new Date(plant.lastWateredAt)
-  const nextDateMs = lastDate.getTime() + plant.cadenceDays * 24 * 60 * 60 * 1000
-  const isOverdue = nextDateMs < Date.now()
 
   useEffect(() => {
     setNickname(plant.name || '')
@@ -81,11 +78,8 @@ export const PlantDetailPage: React.FC<Props> = ({ plant, homeProfile, onUpdate,
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`w-2 h-2 rounded-full ${isOverdue ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
-              <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${isOverdue ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
-                {isOverdue ? 'Urgent Care' : 'Stable'}
-              </span>
+            <div className="mb-1">
+              <PlantStatusBadge plant={plant} size="sm" />
             </div>
 
             <div className="flex items-center gap-2">

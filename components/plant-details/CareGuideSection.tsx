@@ -10,7 +10,7 @@ export const CareGuideSection: React.FC<Props> = ({ careGuide, isGenerating, onG
   <section>
     <div className="flex items-center justify-between mb-4">
       <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest">
-        AI Expert Tips
+        Care Guide
       </label>
       <button
         onClick={onGenerate}

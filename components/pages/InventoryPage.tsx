@@ -33,12 +33,24 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
         const score = (p: Plant) => {
           if (p.status === 'critical') return 0
           if (p.status === 'warning') return 1
-          if (p.needsCheckIn) return 2
-          return 3
+          // Check if healthy plant is overdue
+          const lastDate = new Date(p.lastWateredAt)
+          const nextDate = new Date(lastDate)
+          nextDate.setDate(lastDate.getDate() + p.cadenceDays)
+          const isOverdue = nextDate.getTime() < Date.now()
+          if (isOverdue) return 2
+          if (p.needsCheckIn) return 3
+          return 4 // Healthy and not overdue
         }
         const res = score(a) - score(b)
         if (res !== 0) return res
-        return (a.name || a.species).localeCompare(b.name || b.species)
+        // Tiebreaker: sort by days until watering (closest first)
+        const getNext = (p: Plant) => {
+          const d = new Date(p.lastWateredAt)
+          d.setDate(d.getDate() + p.cadenceDays)
+          return d.getTime()
+        }
+        return getNext(a) - getNext(b)
       }
 
       if (sortBy === 'watering schedule') {
@@ -69,7 +81,7 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
 
       {pendingPlants.length > 0 && (
         <section className="mb-12">
-          <div className="flex items-center gap-2 mb-6">
+          <div className="flex items-center justify-end gap-2 mb-6">
             <span className="w-2 h-2 bg-orange-500 rounded-full" />
             <h2 className="text-xs font-black text-stone-400 uppercase tracking-widest">Pending Adoption ({pendingPlants.length})</h2>
           </div>
@@ -144,6 +156,10 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
           homeProfile={homeProfile}
           onClose={() => setRescuePlantId(null)}
           onUpdate={onUpdate}
+          onCommit={(plantId) => {
+            setRescuePlantId(null)
+            router.push(`/plants/${plantId}`)
+          }}
         />
       )}
     </div>

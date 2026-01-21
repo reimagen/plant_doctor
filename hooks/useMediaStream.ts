@@ -1,9 +1,13 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 
+/**
+ * useMediaStream - Utility hook for managing media stream acquisition and cleanup
+ * Returns imperative start/stop functions without managing state
+ * State management is handled by the consumer (e.g., ClientApp)
+ */
 export const useMediaStream = () => {
-  const [stream, setStream] = useState<MediaStream | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
 
   const start = useCallback(async (videoMode: boolean = true) => {
@@ -13,7 +17,6 @@ export const useMediaStream = () => {
         video: videoMode ? { facingMode: 'environment' } : false
       })
       streamRef.current = newStream
-      setStream(newStream)
       return newStream
     } catch (err) {
       console.error('Hardware access denied:', err)
@@ -28,9 +31,8 @@ export const useMediaStream = () => {
         track.enabled = false
       })
       streamRef.current = null
-      setStream(null)
     }
   }, [])
 
-  return { stream, start, stop }
+  return { start, stop }
 }

@@ -186,32 +186,105 @@
   - [x] Refactored Manager.tsx to `components/plant-details` and `hooks/useCareguide.ts` and `hooks/useRescuePlant.ts`. 
   - [ ] Open item: reorganize Components folder to match new file structure.
 
-## Known Issues (Unresolved)
+### Navigation State Loss Bug ✅ RESOLVED
+- **Status:** FIXED
+- **Root Cause:** Each route page was rendering its own instance of `ClientApp` component, creating separate state for each route. When navigating between routes, the state was lost because a new `ClientApp` instance was created.
+- **Solution Implemented:**
+  - Moved `ClientApp` from individual route pages to `app/layout.tsx` (root layout)
+  - Updated all route pages (`/`, `/doctor`, `/settings`, `/plants/[id]`) to return `null`
+  - Now there is a single persistent `ClientApp` instance across all routes
+  - Stream state (`stream`, `streamMode`, `isConnecting`) survives all navigation
+  - MediaStream reference and UI state remain in sync
+- **Files Changed:**
+  - `app/layout.tsx` - Moved ClientApp to root layout
+  - `app/page.tsx` - Changed to return null
+  - `app/doctor/page.tsx` - Changed to return null
+  - `app/settings/page.tsx` - Changed to return null
+  - `app/plants/[id]/page.tsx` - Changed to return null
+  - `hooks/useMediaStream.ts` - Refactored to utility-only (no state)
+  - `app/ClientApp.tsx` - Now manages stream state directly
+- **Verification:** Tested navigation between routes while stream active - Stop button persists and call can be terminated from any route
 
-### Navigation State Loss Bug ⚠️
-- **Status:** UNRESOLVED - Still occurs despite attempted fixes
-- **Problem:** When a user starts an audio/video stream on the Doctor page, then navigates to another page (e.g., Jungle), and returns to the Doctor page, the Stop button does not appear. The user sees the welcome message and start buttons instead, even though the stream is still active in the background.
-- **Symptoms:**
-  - Audio is still being processed (AudioWorklet continues logging)
-  - Gemini session is still connected
-  - But UI shows inactive state instead of Stop button
-  - User cannot manually end the call from Doctor page
-- **Attempted fixes (did not work):**
-  - Changed `isActive` check to `stream !== null || streamMode !== null`
-  - Removed conditional rendering, used CSS hidden/block instead
-  - Changed Suspense `fallback={<div>}` to `fallback={null}`
-  - Added refs to persist stream/streamMode across renders
-- **Root cause (suspected):**
-  - When navigating away, `stream` from `useMediaStream` hook is being reset to `null`
-  - Even though `streamMode` persists in ClientApp state, the UI uses both `stream` and `streamMode` for the active check
-  - The `useMediaStream` hook may be resetting on route change or component lifecycle
-  - Need to investigate why the MediaStream reference is lost during navigation while Gemini session remains active
-- **Next steps:**
-  - Debug why `stream` prop from `useMediaStream` becomes null during navigation
-  - Consider persisting MediaStream in a ref or context that survives navigation
-  - Investigate if the issue is with how Next.js handles page navigation vs component lifecycle
+## Session Summary: Plant Card & Rescue Protocol UX Improvements
+
+### Completed Improvements
+- [x] **Plant Card Redesign**
+  - Removed camera icon from plant cards (redundant with plant detail buttons)
+  - Removed "Hydrated" button for healthy plants (no action needed)
+  - Cleaned up action buttons to only show contextual CTAs
+
+- [x] **Unified Plant Status Logic**
+  - Created `PlantStatusBadge.tsx` component as single source of truth for status display
+  - Both PlantCard and PlantDetailPage now use same component
+  - Eliminated inconsistent status displays between views
+
+- [x] **Rescue Plan Structured Metadata**
+  - Updated `RescueTask` type to include: `phase`, `duration`, `sequencing`, `successCriteria`
+  - Updated API to request 3-5 steps organized into phases (phase-1, phase-2, phase-3)
+  - Changed from hardcoded "day-2" timing to flexible phase system
+
+- [x] **RescueTimeline Component Redesign**
+  - Tasks now grouped by phase with descriptive headers
+  - Each phase shows title, description, and completion progress
+  - Visual separation with phase-colored backgrounds (red/amber/blue)
+  - Removed redundant phase badge from individual tasks
+
+- [x] **Rescue Plan Auto-Updates**
+  - Detect watering tasks (phase-1) and auto-update `lastWateredAt` when completed
+  - Auto-flip status from critical → warning when first task is completed
+  - Eliminated need for manual date entry
+
+- [x] **Auto-Generation Fix**
+  - Changed rescue plan auto-generation to critical plants only
+  - Warning plants only show routine checkup buttons, not rescue protocol
+  - Eliminated confusing dual-status on warning plants (checkup-due + rescue)
+
+- [x] **Button Priority & State Management**
+  - Reordered button checks: emergency states (rescue) → checkup states → water states
+  - Added "Complete First Rescue Step" button for plans with no completed tasks (red, urgent)
+  - Added "Checkup in Xd" button for monitoring plants (light amber, heads-up)
+  - Fixed inconsistent button showing for critical plants
+
+- [x] **Urgency Sorting**
+  - Updated urgency score to include overdue plants (score 2)
+  - Overdue healthy plants now sort above non-urgent plants
+  - Tiebreaker: sort by days until next watering
+
+- [x] **Removed Confusing UX**
+  - Removed "Regenerate Plan" button (single path: Generate → Commit)
+  - Changed "Save Plan" to "Commit to Plan" (more intentional language)
+  - Removed quotation marks from phase description text
+
+### Files Modified
+- `components/PlantCard.tsx` - Refactored buttons, integrated PlantStatusBadge
+- `components/PlantStatusBadge.tsx` - New component for unified status logic
+- `components/pages/PlantDetailPage.tsx` - Updated to use PlantStatusBadge
+- `components/pages/InventoryPage.tsx` - Fixed urgency sorting logic
+- `components/plant-details/RescueTimeline.tsx` - Phase grouping and descriptions
+- `components/RescueProtocolView.tsx` - Removed regenerate button, added onCommit prop
+- `hooks/useRescuePlan.ts` - Auto-generation for critical only, watering task detection
+- `types/index.ts` - Extended RescueTask interface with metadata
+- `app/api/gemini/content/route.ts` - Updated API to request structured rescue steps
+- `lib/test-data.ts` - Updated Ruby's rescue plan with full structured metadata
+
+### Phase Flow Now Clear
+1. **Critical plant** → "Begin Rescue Protocol" → Generate plan → "Commit to Plan"
+2. **Commit plan** → "Complete First Rescue Step" button (red, urgent)
+3. **Complete first task** → Status auto-flips to warning, shows "Monitoring"
+4. **Follow phases** → Phase 1 (first aid), Phase 2 (recovery), Phase 3 (monitor)
+5. **Watering tasks** → Auto-update lastWateredAt, no manual entry needed
+
+### UX Improvements
+- [x] Right-aligned "Pending Adoption" section in InventoryPage.
+- [x] Changed "Adopt Plant" button fill color to green in PlantCard.
+- [x] Removed "Assessment Pending" timeline text from PlantCard.
+- [x] Renamed "AI Expert Tips" to "Care Guide" in CareGuideSection.
+- [x] Implemented automatic care guide generation upon user tapping "adopt plant" via useAppState. Not manager, intentonally.
+- [x] Hid "Rescue Plan" section for healthy but overdue plants in Manager. Confusing to user, not needed.
 
 ### Phase 5: Livestream Notifications + Timeline Overlay
+- [ ] Decision needed: Plant Doctor - Ask user for `lastWateredAt` instead of defaulting to current date on discovery. (Trade-off: increased conversational complexity vs. improved data accuracy).
+- [ ] Review phased care plan and decide if it's necessary. User should just start video chat and plan should be generated and followed in plantdetailspage.
 - [ ] Audit live notifications for livestream with timeline overlay
   - **Current State:** Toast notifications on right side showing plant detections (discovery log)
   - **Existing Implementation Reference:**
