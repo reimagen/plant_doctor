@@ -8,12 +8,12 @@ import { Icons } from '@/lib/constants'
 
 interface Props {
   stream: MediaStream | null
-  streamMode: 'video' | 'audio' | null
+  streamMode: 'video' | null
   isConnecting: boolean
   homeProfile: HomeProfile
   onAutoDetect: (plant: Plant) => void
   onUpdatePlant: (id: string, updates: Partial<Plant>) => void
-  onStartStream: (mode: 'video' | 'audio') => void
+  onStartStream: () => void
   onStopStream: () => void
   plants: Plant[]
 }
@@ -57,10 +57,7 @@ export const DoctorPage: React.FC<Props> = ({
               1. First timers, start a video session to inventory all of your plants
             </p>
             <p className="text-sm font-bold text-stone-800 mt-1">
-              2. Use audio any time you have a quick, general question
-            </p>
-            <p className="text-sm font-bold text-stone-800 mt-1">
-              3. To chat about a specific plant, go to your plant's card in the Jungle page
+              2. To chat about a specific plant, go to your plant's card in the Jungle page
             </p>
           </div>
         </div>
@@ -78,35 +75,18 @@ export const DoctorPage: React.FC<Props> = ({
       {/* Stream Controls Overlay */}
       <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-30 flex gap-3">
         {!isActive ? (
-          <>
-            {/* Camera Button */}
-            <button
-              onClick={() => onStartStream('video')}
-              disabled={isConnecting || streamMode !== null}
-              className={`flex flex-col items-center gap-2 px-4 py-3 rounded-2xl transition-all ${isConnecting || streamMode !== null
-                ? 'bg-stone-500/50 cursor-not-allowed opacity-50'
-                : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
-              title="Start video stream"
-            >
-              <Icons.Video />
-              <span className="text-xs font-bold uppercase">Video</span>
-            </button>
-
-            {/* Microphone Button */}
-            <button
-              onClick={() => onStartStream('audio')}
-              disabled={isConnecting || streamMode !== null}
-              className={`flex flex-col items-center gap-2 px-4 py-3 rounded-2xl transition-all ${isConnecting || streamMode !== null
-                ? 'bg-stone-500/50 cursor-not-allowed opacity-50'
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              title="Start audio stream"
-            >
-              <Icons.Microphone />
-              <span className="text-xs font-bold uppercase">Audio</span>
-            </button>
-          </>
+          <button
+            onClick={onStartStream}
+            disabled={isConnecting || streamMode !== null}
+            className={`flex flex-col items-center gap-2 px-4 py-3 rounded-2xl transition-all ${isConnecting || streamMode !== null
+              ? 'bg-stone-500/50 cursor-not-allowed opacity-50'
+              : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+            title="Start video stream"
+          >
+            <Icons.Video />
+            <span className="text-xs font-bold uppercase">Start</span>
+          </button>
         ) : (
           /* Stop Button */
           <button

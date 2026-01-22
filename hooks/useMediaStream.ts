@@ -10,11 +10,11 @@ import { useCallback, useRef } from 'react'
 export const useMediaStream = () => {
   const streamRef = useRef<MediaStream | null>(null)
 
-  const start = useCallback(async (videoMode: boolean = true) => {
+  const start = useCallback(async () => {
     try {
       const newStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: videoMode ? { facingMode: 'environment' } : false
+        video: { facingMode: 'environment' }
       })
       streamRef.current = newStream
       return newStream

@@ -16,20 +16,20 @@ export function ClientApp() {
   const { start, stop } = useMediaStream()
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [isConnecting, setIsConnecting] = useState(false)
-  const [streamMode, setStreamMode] = useState<'video' | 'audio' | null>(null)
+  const [streamMode, setStreamMode] = useState<'video' | null>(null)
 
-  const handleStartStream = async (mode: 'video' | 'audio') => {
+  const handleStartStream = async () => {
     // Guard: prevent if already connecting, stream active, or mode already claimed
     if (isConnecting || stream || streamMode !== null) return
 
     setIsConnecting(true)
-    setStreamMode(mode)
+    setStreamMode('video')
     try {
-      const newStream = await start(mode === 'video')
+      const newStream = await start()
       setStream(newStream)
       // Navigation to /doctor happens on the Doctor page now, not here
     } catch (error) {
-      console.error(`Failed to start ${mode} stream:`, error)
+      console.error('Failed to start video stream:', error)
       setStreamMode(null) // Release mode claim on error
     } finally {
       setIsConnecting(false)

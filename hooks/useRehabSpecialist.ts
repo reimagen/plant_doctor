@@ -4,7 +4,6 @@ import { useState, useRef, useCallback } from 'react'
 import { Type, FunctionDeclaration } from '@google/genai'
 import { HomeProfile, Plant } from '@/types'
 import { GeminiLiveSession } from '@/lib/gemini-live'
-import { AudioService } from '@/lib/audio-service'
 import { ToolCallRateLimiter } from '@/lib/rate-limiter'
 
 export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: string, updates: Partial<Plant>) => void) => {
@@ -12,7 +11,6 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
   const [lastVerifiedId, setLastVerifiedId] = useState<string | null>(null)
 
   const sessionRef = useRef<GeminiLiveSession | null>(null)
-  const audioServiceRef = useRef(new AudioService(24000))
   const workletRef = useRef<AudioWorkletNode | null>(null)
   const muteGainRef = useRef<GainNode | null>(null)
   const intervalRef = useRef<number | null>(null)
@@ -78,7 +76,6 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
     }
     sessionRef.current?.close()
     sessionRef.current = null
-    await audioServiceRef.current.close()
     if (audioContextRef.current?.state !== 'closed') {
       await audioContextRef.current?.close()
       audioContextRef.current = null
@@ -112,7 +109,6 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 })
       await audioCtx.resume()
       audioContextRef.current = audioCtx
-      await audioServiceRef.current.ensureContext()
 
       const systemInstruction = `REHAB CLINIC MODE - PLANT-ONLY FOCUS. You are verifying the recovery of "${plant.name || plant.species}".
 
@@ -167,8 +163,7 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
             worklet.connect(muteGain)
             muteGain.connect(audioCtx.destination)
 
-            const hasVideo = stream.getVideoTracks().length > 0
-            if (hasVideo && videoRef.current && canvasRef.current) {
+            if (videoRef.current && canvasRef.current) {
               const video = videoRef.current
               const canvas = canvasRef.current
               intervalRef.current = window.setInterval(() => {
@@ -193,11 +188,6 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
             }
           },
           onMessage: async (msg) => {
-            const audioData = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data
-            if (audioData) {
-              await audioServiceRef.current.playRawChunk(GeminiLiveSession.decodeAudio(audioData))
-            }
-
             if (msg.toolCall?.functionCalls) {
               for (const fc of msg.toolCall.functionCalls) {
                 if (!toolCallLimiterRef.current.canCall(fc.name!)) {

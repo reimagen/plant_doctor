@@ -4,7 +4,6 @@ import { useState, useRef, useCallback, type RefObject } from 'react'
 import { Type, FunctionDeclaration } from '@google/genai'
 import { HomeProfile, Plant } from '@/types'
 import { GeminiLiveSession } from '@/lib/gemini-live'
-import { AudioService } from '@/lib/audio-service'
 import { ToolCallRateLimiter } from '@/lib/rate-limiter'
 
 export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Plant) => void) => {
@@ -13,7 +12,6 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
   const [discoveryLog, setDiscoveryLog] = useState<string[]>([])
 
   const sessionRef = useRef<GeminiLiveSession | null>(null)
-  const audioServiceRef = useRef(new AudioService(24000))
   const workletRef = useRef<AudioWorkletNode | null>(null)
   const muteGainRef = useRef<GainNode | null>(null)
   const intervalRef = useRef<number | null>(null)
@@ -73,7 +71,6 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
     }
     sessionRef.current?.close()
     sessionRef.current = null
-    await audioServiceRef.current.close()
     if (audioContextRef.current?.state !== 'closed') {
       await audioContextRef.current?.close()
       audioContextRef.current = null
@@ -107,20 +104,15 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 })
       await audioCtx.resume()
       audioContextRef.current = audioCtx
-      await audioServiceRef.current.ensureContext()
 
-      // Detect if this is audio-only or video mode
-      const hasVideo = stream.getVideoTracks().length > 0
-
-      const systemInstruction = hasVideo
-        ? `You are the Plant Doctor performing a "Jungle Inventory" - PLANT-ONLY MODE.
+      const systemInstruction = `You are the Plant Doctor performing a "Jungle Inventory" - PLANT-ONLY MODE.
 
 CRITICAL RULES:
 1. ONLY catalog and discuss visible plants. Immediately decline any non-plant topics.
 2. If the user asks about anything unrelated to plants, politely redirect: "Let's focus on cataloging your amazing plants!"
 3. Do NOT engage with requests about other topics.
 
-INVENTORY MODE (VIDEO):
+INVENTORY MODE:
 - The user will show you many plants one by one
 - For EVERY visible plant, call propose_plant_to_inventory with details
 - Grade their care habits (A-F) based on visual evidence (dust, soil moisture, leaf condition, pruning)
@@ -142,24 +134,6 @@ Output Format: Always call propose_plant_to_inventory with:
 - lightQuality: Indirect/Direct if visible
 - nearWindow: true/false if visible
 - windowDirection: North/South/East/West if visible`
-        : `You are the Plant Doctor in Q&A mode - providing quick advice and answers about plant care.
-
-CRITICAL RULES:
-1. ONLY discuss plants and plant care. Immediately decline any non-plant topics.
-2. If the user asks about anything unrelated to plants, politely redirect: "I'm here to help with your plants! What questions do you have?"
-3. Do NOT engage with requests about other topics.
-
-Q&A MODE (AUDIO):
-- The user will ask questions about their plants, care routines, problems, or updates
-- Provide expert advice on watering, lighting, fertilizing, pests, diseases, and general plant care
-- Ask clarifying questions if needed to give better advice
-- Give concise, actionable recommendations
-- Be conversational and supportive
-- You can reference their plants by name if mentioned, but cannot see them
-- Do NOT attempt to catalog new plants in this mode
-- Focus on helping them improve care for existing plants
-
-Environment Context: ${JSON.stringify(homeProfileRef.current)}`
 
       const session = new GeminiLiveSession({
         apiKey,
@@ -168,10 +142,7 @@ Environment Context: ${JSON.stringify(homeProfileRef.current)}`
         tools: [{ functionDeclarations: [proposePlantFunction] }],
         callbacks: {
           onOpen: async () => {
-            const greeting = hasVideo
-              ? "I'm ready for the grand tour! Show me your plants one by one, and I'll catalog your whole jungle."
-              : "What questions can I answer about your plants today? I'm here to help with care advice and updates!"
-            session.sendInitialGreet(greeting)
+            session.sendInitialGreet("I'm ready for the grand tour! Show me your plants one by one, and I'll catalog your whole jungle.")
 
             const source = audioCtx.createMediaStreamSource(stream)
             await audioCtx.audioWorklet.addModule('/pcm-capture-worklet.js')
@@ -189,7 +160,7 @@ Environment Context: ${JSON.stringify(homeProfileRef.current)}`
             worklet.connect(muteGain)
             muteGain.connect(audioCtx.destination)
 
-            if (hasVideo && videoRef.current && canvasRef.current) {
+            if (videoRef.current && canvasRef.current) {
               const video = videoRef.current
               const canvas = canvasRef.current
               intervalRef.current = window.setInterval(() => {
@@ -213,9 +184,6 @@ Environment Context: ${JSON.stringify(homeProfileRef.current)}`
             }
           },
           onMessage: async (msg) => {
-            const audio = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data
-            if (audio) await audioServiceRef.current.playRawChunk(GeminiLiveSession.decodeAudio(audio))
-
             if (msg.toolCall?.functionCalls) {
               for (const fc of msg.toolCall.functionCalls) {
                 if (!toolCallLimiterRef.current.canCall(fc.name!)) {
@@ -228,18 +196,9 @@ Environment Context: ${JSON.stringify(homeProfileRef.current)}`
                 }
 
                 if (fc.name === 'propose_plant_to_inventory') {
-                  // In audio-only mode, reject cataloging and ask user to switch to video
-                  if (!hasVideo) {
-                    session.sendToolResponse(fc.id!, fc.name!, {
-                      success: false,
-                      error: 'Cataloging new plants requires a video call so I can see them. Please end this call and start a video livestream instead. That way I can properly identify and catalog your plants.'
-                    })
-                    continue
-                  }
-
                   const args = fc.args as Record<string, unknown>
                   let capturedPhoto = ''
-                  if (stream.getVideoTracks().length > 0 && videoRef.current && canvasRef.current) {
+                  if (videoRef.current && canvasRef.current) {
                     const vid = videoRef.current
                     const can = canvasRef.current
                     const ctx = can.getContext('2d')

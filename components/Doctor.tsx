@@ -1,8 +1,7 @@
 'use client'
 
-import { useRef, useEffect, useState, useMemo } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import { HomeProfile, Plant } from '@/types'
-import { Icons } from '@/lib/constants'
 import { usePlantDoctor } from '@/hooks/usePlantDoctor'
 import { useRehabSpecialist } from '@/hooks/useRehabSpecialist'
 
@@ -25,7 +24,6 @@ export const Doctor: React.FC<Props> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [isAudioOnly, setIsAudioOnly] = useState(false)
 
   const {
     startCall: startDiscoveryCall,
@@ -61,7 +59,6 @@ export const Doctor: React.FC<Props> = ({
       if (videoRef.current) {
         videoRef.current.srcObject = stream
       }
-      setIsAudioOnly(stream.getVideoTracks().length === 0)
 
       // Start the appropriate call (guards inside hooks prevent duplicate calls)
       if (rehabTargetId && rehabPlant) {
@@ -74,7 +71,6 @@ export const Doctor: React.FC<Props> = ({
       if (videoRef.current) {
         videoRef.current.srcObject = null
       }
-      setIsAudioOnly(false)
       stopDiscoveryCall()
       stopRehabCall()
     }
@@ -82,26 +78,15 @@ export const Doctor: React.FC<Props> = ({
 
   return (
     <div className="relative h-screen bg-black overflow-hidden flex flex-col font-sans">
-      {isAudioOnly ? (
-        <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-black gap-4">
-          <div className="text-green-400 animate-pulse">
-            <Icons.Microphone />
-          </div>
-          <p className="text-white/60 text-sm font-bold uppercase tracking-widest">
-            Audio Stream Active
-          </p>
-        </div>
-      ) : (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-            isCalling ? 'opacity-90' : 'opacity-30'
-          }`}
-        />
-      )}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+          isCalling ? 'opacity-90' : 'opacity-30'
+        }`}
+      />
 
       <canvas ref={canvasRef} className="hidden" />
 
@@ -126,7 +111,7 @@ export const Doctor: React.FC<Props> = ({
       )}
 
       <div className="absolute inset-0 z-10 flex flex-col justify-between p-8 pointer-events-none">
-        {!isAudioOnly && isCalling && (
+        {isCalling && (
           <header className="flex justify-between items-start pt-4">
             <div className="bg-black/40 backdrop-blur-xl px-5 py-3 rounded-[24px] border border-white/10">
               <h2 className="text-white font-black text-[10px] uppercase tracking-[0.2em] mb-1">

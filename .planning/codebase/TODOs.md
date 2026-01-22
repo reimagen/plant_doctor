@@ -282,9 +282,21 @@
 - [x] Implemented automatic care guide generation upon user tapping "adopt plant" via useAppState. Not manager, intentonally.
 - [x] Hid "Rescue Plan" section for healthy but overdue plants in Manager. Confusing to user, not needed.
 
-### Phase 5: Livestream Notifications + Timeline Overlay
-- [ ] Decision needed: Plant Doctor - Ask user for `lastWateredAt` instead of defaulting to current date on discovery. (Trade-off: increased conversational complexity vs. improved data accuracy).
-- [ ] Review phased care plan and decide if it's necessary. User should just start video chat and plan should be generated and followed in plantdetailspage.
+### Phase 5: Remove Audio Concept ✅
+- [x] Remove audio concept from the app. We will keep it for future improvements for when we have time.
+  - [x] Deleted `lib/audio-service.ts`
+  - [x] Deleted `public/pcm-capture-worklet.js`
+  - [x] Simplified `useMediaStream.ts` - removed `videoMode` parameter, always request video
+  - [x] Removed AudioService from `usePlantDoctor.ts` and simplified to video-only (removed Q&A mode)
+  - [x] Removed AudioService from `useRehabSpecialist.ts` and simplified to video-only
+  - [x] Removed `isAudioOnly` state from `Doctor.tsx`
+  - [x] Removed microphone button from `DoctorPage.tsx`
+  - [x] Removed audio rehab button from `PlantDetailPage.tsx`
+  - [x] Simplified `ClientApp.tsx` streamMode to `'video' | null`
+
+### Phase 6: Livestream Notifications + Timeline Overlay
+- [ ] Decision needed: Plant Doctor - Don't ask user for `lastWateredAt` instead default to undefined or null. That would mean the card is in PENDING state. The adopt plant and release button should be removed, the adopt plant button should be called "Review Plant". The relase button should be an x at the top right of the card. Then on the detail page of the plant in pending we should have a "Adopt Plant" button that adds the plant to the user's inventory. The watered date should be required and block the user from clicking adopt plant if it's not set. The watered date section label should have an additional indicator to show that it's required for adoption.
+- [ ] When on video call user is asked to prioritize a plant and rescue plant  plan is automatically generated. User should just start video chat and plan should be generated and followed in plantdetailspage.
 - [ ] Audit live notifications for livestream with timeline overlay
   - **Current State:** Toast notifications on right side showing plant detections (discovery log)
   - **Existing Implementation Reference:**
@@ -299,17 +311,45 @@
     - [ ] Add notifications for health observations (e.g., "📝 New leaf growth detected")
     - [ ] Incorporate RescueTimeline component into the livestream overlay during rehab mode
     - [ ] Support mixed notification types in same stack
+    - [ ] Add notifications for plant detections (e.g., "🌱 New plant detected")
   - **Implementation Plan:**
     - [ ] Create notification event system: update useRehabSpecialist to emit events via callback/state
       - Emit when `mark_rescue_task_complete` function is called (task completion notification)
+  - **Timeline Overlay:**
+    - [ ] Add RescueTimeline component to the livestream overlay if a plant needs an immediate action
+    - [ ] The overlay should have a faint opacity lets say 0.3 with no background and the text should be gray. Important we should still see the camera feed.
+    - [ ] The overlay should be position absolute and cover the entire screen.
+    - [ ] The overlay should be z-indexed higher than the livestream.
+    - [ ] It should only show the timeline similar to the plant detail page and nothing else
 
-### Phase 6: General Improvements
+### Phase 7: General Improvements
 - [ ] Add error boundaries (`error.tsx` files)
 - [ ] Add loading states (`loading.tsx` files)
 - [ ] Set up Vitest for testing
 - [ ] Add tests for API route handlers
 - [ ] update structure documents from /Users/lisagu/Projects/plant_doctor/.planning to reflect new setup, audit folder as well.
 - [ ] User should have to tap as few buttons as possible, with the goal of the agent handling task completions, status updates, etc. so the goal is the user should only have to tap the start and end call buttons. 
+- [ ] While rescue plan is active, show next step on summary card. Next to "Next watering" or "Next checkup".
+- [ ] Handle user event correctly when clicking on a card and check in button. Clicking on the button shouldn't nagivage to the plant detail page but to the doctor page. and if we click on the card it should navigate to the detail page.
+- [ ] All first aid tasks should be completed before entering monitoring mode.
+- [ ] Change the welcome note so we only see it from the general call and not from the plant specific call.
+- [ ] The Navigation bar Doctor label and phone icon should be changed to the Video version the icon should be a camera icon. And the Video button should be removed from the Doctor Page. Since it is already in the nav bar.
+
+
+## Phase: If we have time
+- [ ] Audio with inventory
+  1. Perform an action e.g. Watered plant
+  2. Ask for status update and things to do today, and future tasks
+  Edge case: Plants in critical condition
+    - What do we do between audio and livestream? Can we click on video and pass the audio context over.
+  Edge case: Doing something with a specific plant
+    - Can we have an agent to navigate us to the plant detail page and perform an action?
+
+
+
+
+
+
 
 ## NEXT CALL: DISCUSS HOW CARE NOTES SHOULD BE HANDLED
 - [ ] Health notes: stop unbounded append during calls (dedupe/replace strategy)

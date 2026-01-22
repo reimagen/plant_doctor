@@ -12,7 +12,7 @@ interface Props {
   homeProfile: HomeProfile
   onUpdate: (id: string, updates: Partial<Plant>) => void
   onDelete: (id: string) => void
-  onStartStream: (mode: 'video' | 'audio') => void
+  onStartStream: () => void
 }
 
 export const PlantDetailPage: React.FC<Props> = ({ plant, homeProfile, onUpdate, onDelete, onStartStream }) => {
@@ -33,9 +33,9 @@ export const PlantDetailPage: React.FC<Props> = ({ plant, homeProfile, onUpdate,
     router.push('/')
   }
 
-  const handleStartRehab = (mode: 'video' | 'audio') => {
+  const handleStartRehab = () => {
     router.push(`/doctor?plantId=${plant.id}`)
-    onStartStream(mode)
+    onStartStream()
   }
 
   const handleNameChange = (value: string) => {
@@ -54,23 +54,14 @@ export const PlantDetailPage: React.FC<Props> = ({ plant, homeProfile, onUpdate,
           <Icons.ChevronLeft />
         </button>
 
-        {/* Rehab Call Buttons */}
-        <div className="absolute top-4 right-4 flex gap-2">
-          <button
-            onClick={() => handleStartRehab('audio')}
-            className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition-colors"
-            title="Start audio rehab call"
-          >
-            <Icons.Microphone />
-          </button>
-          <button
-            onClick={() => handleStartRehab('video')}
-            className="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition-colors"
-            title="Start video rehab call"
-          >
-            <Icons.Video />
-          </button>
-        </div>
+        {/* Rehab Call Button */}
+        <button
+          onClick={handleStartRehab}
+          className="absolute top-4 right-4 p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition-colors"
+          title="Start video rehab call"
+        >
+          <Icons.Video />
+        </button>
 
         <div className="flex gap-5 items-center pt-8">
           <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-sm flex-shrink-0 border-4 border-stone-50">
