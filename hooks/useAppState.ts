@@ -46,7 +46,7 @@ export const useAppState = () => {
   useEffect(() => {
     const timer = setInterval(() => {
       setPlants(prev => prev.map(p => {
-        if (p.status === 'warning') {
+        if (p.status === 'warning' && p.lastWateredAt) {
           // Calculate next watering date
           const lastDate = new Date(p.lastWateredAt)
           const nextDate = new Date(lastDate)
@@ -108,6 +108,12 @@ export const useAppState = () => {
         return prevPlants;
       }
 
+      // Guard: must have lastWateredAt set before adoption
+      if (!plantToAdopt.lastWateredAt) {
+        console.error("Cannot adopt plant without lastWateredAt set.");
+        return prevPlants;
+      }
+
       // Define the async operation
       const fetchCareGuide = async () => {
         try {
@@ -144,9 +150,9 @@ export const useAppState = () => {
       // Trigger the async operation
       fetchCareGuide();
 
-      // Return the immediately updated list
+      // Return the immediately updated list - don't auto-set lastWateredAt
       return prevPlants.map(p =>
-        p.id === id ? { ...p, status: 'healthy', lastWateredAt: new Date().toISOString() } : p
+        p.id === id ? { ...p, status: 'healthy' } : p
       );
     });
   }, [homeProfile]);

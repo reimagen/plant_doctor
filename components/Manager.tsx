@@ -31,10 +31,13 @@ export const Manager: React.FC<Props> = ({
   onDelete,
   onClose
 }) => {
-  const lastDate = new Date(plant.lastWateredAt)
-  const nextDate = new Date(lastDate)
-  nextDate.setDate(lastDate.getDate() + plant.cadenceDays)
-  const isOverdue = nextDate.getTime() < Date.now()
+  const isPending = plant.status === 'pending'
+  const lastDate = plant.lastWateredAt ? new Date(plant.lastWateredAt) : null
+  const nextDate = lastDate ? new Date(lastDate) : null
+  if (nextDate && lastDate) {
+    nextDate.setDate(lastDate.getDate() + plant.cadenceDays)
+  }
+  const isOverdue = nextDate ? nextDate.getTime() < Date.now() : false
 
   const { isGenerating, error: careGuideError, generateTips } = useCareGuide(
     plant,
@@ -63,6 +66,7 @@ export const Manager: React.FC<Props> = ({
         isOverdue={isOverdue}
         nextDate={nextDate}
         onUpdate={onUpdate}
+        isRequired={isPending}
       />
 
       {(plant.status === 'warning' || plant.status === 'critical' || (plant.rescuePlan && plant.rescuePlan.length > 0)) && (

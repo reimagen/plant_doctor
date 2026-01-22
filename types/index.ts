@@ -28,7 +28,7 @@ export interface Plant {
   species: string;
   photoUrl: string;
   location: string;
-  lastWateredAt: string;
+  lastWateredAt?: string;
   cadenceDays: number;
   status: 'pending' | 'healthy' | 'warning' | 'critical';
   needsCheckIn?: boolean;
@@ -42,4 +42,14 @@ export interface Plant {
   windowDirection?: WindowDirection;
   lightLevel?: string;
   idealConditions?: string;
+}
+
+export type NotificationType = 'detection' | 'task_complete' | 'status_change' | 'observation';
+
+export interface LivestreamNotification {
+  id: string;
+  type: NotificationType;
+  message: string;
+  emoji: string;
+  timestamp: number;
 }

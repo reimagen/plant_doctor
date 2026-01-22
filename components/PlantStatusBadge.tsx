@@ -9,6 +9,7 @@ interface Props {
 
 export const PlantStatusBadge: React.FC<Props> = ({ plant, size = 'md' }) => {
   const getNextWaterDate = () => {
+    if (!plant.lastWateredAt) return null
     const lastDate = new Date(plant.lastWateredAt)
     const nextDate = new Date(lastDate)
     nextDate.setDate(lastDate.getDate() + (plant.cadenceDays || 7))
@@ -17,6 +18,7 @@ export const PlantStatusBadge: React.FC<Props> = ({ plant, size = 'md' }) => {
 
   const getDaysDiff = () => {
     const next = getNextWaterDate()
+    if (!next) return null
     const now = new Date()
     next.setHours(0, 0, 0, 0)
     now.setHours(0, 0, 0, 0)
@@ -29,13 +31,9 @@ export const PlantStatusBadge: React.FC<Props> = ({ plant, size = 'md' }) => {
   const isCritical = plant.status === 'critical'
   const isCheckInNeeded = !!plant.needsCheckIn
   const daysDiff = getDaysDiff()
-  const isOverdue = daysDiff <= 0
+  const isOverdue = daysDiff !== null && daysDiff <= 0
 
-  const hasRescuePlan = !!plant.rescuePlan && plant.rescuePlan.length > 0
-  const hasCompletedTasks = (plant.rescuePlanTasks || []).some(task => task.completed)
-  const isRescuePlanPending = hasRescuePlan && !hasCompletedTasks
-
-  const isRed = isCritical || (isOverdue && daysDiff < -2)
+  const isRed = isCritical || (isOverdue && daysDiff !== null && daysDiff < -2)
   const isYellow = !isRed && (isCheckInNeeded || isOverdue || isMonitoring)
 
   const getStatusConfig = () => {

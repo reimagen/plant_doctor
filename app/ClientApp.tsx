@@ -107,6 +107,7 @@ export function ClientApp() {
               homeProfile={state.homeProfile}
               onUpdate={state.updatePlant}
               onDelete={state.removePlant}
+              onAdopt={state.adoptPlant}
               onStartStream={handleStartStream}
             />
           )}

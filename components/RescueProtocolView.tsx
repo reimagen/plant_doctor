@@ -15,10 +15,12 @@ interface Props {
 export const RescueProtocolView: React.FC<Props> = ({ plant, homeProfile, onClose, onUpdate, onCommit }) => {
   const [isRescuing, setIsRescuing] = useState(false)
 
-  const lastDate = new Date(plant.lastWateredAt)
-  const nextDate = new Date(lastDate)
-  nextDate.setDate(lastDate.getDate() + plant.cadenceDays)
-  const isOverdue = nextDate.getTime() < Date.now()
+  const lastDate = plant.lastWateredAt ? new Date(plant.lastWateredAt) : null
+  const nextDate = lastDate ? new Date(lastDate) : null
+  if (nextDate && lastDate) {
+    nextDate.setDate(lastDate.getDate() + plant.cadenceDays)
+  }
+  const isOverdue = nextDate ? nextDate.getTime() < Date.now() : false
 
   const handleRescueTrigger = async () => {
     setIsRescuing(true)

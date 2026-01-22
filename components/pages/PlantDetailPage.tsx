@@ -12,13 +12,17 @@ interface Props {
   homeProfile: HomeProfile
   onUpdate: (id: string, updates: Partial<Plant>) => void
   onDelete: (id: string) => void
+  onAdopt: (id: string) => void
   onStartStream: () => void
 }
 
-export const PlantDetailPage: React.FC<Props> = ({ plant, homeProfile, onUpdate, onDelete, onStartStream }) => {
+export const PlantDetailPage: React.FC<Props> = ({ plant, homeProfile, onUpdate, onDelete, onAdopt, onStartStream }) => {
   const router = useRouter()
   const [isEditingName, setIsEditingName] = useState(false)
   const [nickname, setNickname] = useState(plant.name || '')
+
+  const isPending = plant.status === 'pending'
+  const canAdopt = isPending && !!plant.lastWateredAt
 
   useEffect(() => {
     setNickname(plant.name || '')
@@ -41,6 +45,12 @@ export const PlantDetailPage: React.FC<Props> = ({ plant, homeProfile, onUpdate,
   const handleNameChange = (value: string) => {
     setNickname(value)
     onUpdate(plant.id, { name: value })
+  }
+
+  const handleAdopt = () => {
+    if (canAdopt) {
+      onAdopt(plant.id)
+    }
   }
 
   return (
@@ -110,6 +120,38 @@ export const PlantDetailPage: React.FC<Props> = ({ plant, homeProfile, onUpdate,
           </div>
         </div>
       </div>
+
+      {/* Pending Adoption Banner */}
+      {isPending && (
+        <div className="mx-6 mt-4 p-5 bg-gradient-to-r from-amber-50 to-orange-50 rounded-3xl border border-amber-200">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] mb-1">
+                Pending Adoption
+              </p>
+              {!plant.lastWateredAt || plant.lastWateredAt === '' ? (
+                <p className="text-sm font-bold text-amber-700">
+                  Set the last watered date below to enable adoption
+                </p>
+              ) : (
+                <p className="text-sm font-bold text-green-700">
+                  Ready to join your jungle!
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handleAdopt}
+              disabled={!canAdopt}
+              className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${canAdopt
+                ? 'bg-green-600 text-white shadow-lg shadow-green-100 hover:bg-green-700 active:scale-95'
+                : 'bg-stone-200 text-stone-400 cursor-not-allowed'
+                }`}
+            >
+              Adopt Plant
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="p-6">

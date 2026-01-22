@@ -40,10 +40,12 @@ export class GeminiContentService {
   }
 
   async generateRescuePlan(plant: Plant, homeProfile: HomeProfile): Promise<string[]> {
-    const lastDate = new Date(plant.lastWateredAt);
-    const nextDate = new Date(lastDate);
-    nextDate.setDate(lastDate.getDate() + plant.cadenceDays);
-    const isOverdue = nextDate.getTime() < Date.now();
+    const lastDate = plant.lastWateredAt ? new Date(plant.lastWateredAt) : null;
+    const nextDate = lastDate ? new Date(lastDate) : null;
+    if (nextDate && lastDate) {
+      nextDate.setDate(lastDate.getDate() + plant.cadenceDays);
+    }
+    const isOverdue = nextDate ? nextDate.getTime() < Date.now() : false;
     
     const condition = isOverdue ? "Severely Dehydrated (Overdue Water)" : `Showing Physical Distress (Status: ${plant.status})`;
     const microEnv = `Light: ${plant.lightIntensity} ${plant.lightQuality}, Near Window: ${plant.nearWindow ? 'Yes' : 'No'}`;

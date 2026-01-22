@@ -113,10 +113,12 @@ async function generateCareGuide(plant: Plant, homeProfile: HomeProfile): Promis
 
 async function generateRescuePlan(plant: Plant, homeProfile: HomeProfile): Promise<any[]> {
   try {
-    const lastDate = new Date(plant.lastWateredAt)
-    const nextDate = new Date(lastDate)
-    nextDate.setDate(lastDate.getDate() + plant.cadenceDays)
-    const isOverdue = nextDate.getTime() < Date.now()
+    const lastDate = plant.lastWateredAt ? new Date(plant.lastWateredAt) : null
+    const nextDate = lastDate ? new Date(lastDate) : null
+    if (nextDate && lastDate) {
+      nextDate.setDate(lastDate.getDate() + plant.cadenceDays)
+    }
+    const isOverdue = nextDate ? nextDate.getTime() < Date.now() : false
 
     const condition = isOverdue
       ? 'Severely Dehydrated (Overdue Water)'

@@ -1,9 +1,11 @@
 'use client'
 
+import { useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { HomeProfile, Plant } from '@/types'
+import { HomeProfile, Plant, LivestreamNotification } from '@/types'
 import { Doctor } from '@/components/Doctor'
 import { Manager } from '@/components/Manager'
+import { RescueTimelineOverlay } from '@/components/plant-details/RescueTimelineOverlay'
 import { Icons } from '@/lib/constants'
 
 interface Props {
@@ -39,8 +41,18 @@ export const DoctorPage: React.FC<Props> = ({
   const rehabTargetId = searchParams.get('plantId')
   const rehabPlant = rehabTargetId ? plants.find(plant => plant.id === rehabTargetId) : null
 
+  // Notification state
+  const [notifications, setNotifications] = useState<LivestreamNotification[]>([])
+
+  const handleNotification = useCallback((notification: LivestreamNotification) => {
+    setNotifications(prev => [notification, ...prev].slice(0, 5))
+  }, [])
+
   // Consider a call active if either stream exists OR streamMode is set
   const isActive = stream !== null || streamMode !== null
+
+  // Check if we should show the rescue timeline overlay
+  const showRescueOverlay = rehabPlant && rehabPlant.rescuePlanTasks && rehabPlant.rescuePlanTasks.length > 0
 
   return (
     <div className="relative min-h-screen bg-black">
@@ -68,9 +80,16 @@ export const DoctorPage: React.FC<Props> = ({
         homeProfile={homeProfile}
         plants={plants}
         rehabTargetId={rehabTargetId}
+        notifications={notifications}
         onAutoDetect={onAutoDetect}
         onUpdatePlant={onUpdatePlant}
+        onNotification={handleNotification}
       />
+
+      {/* Rescue Timeline Overlay - only for rehab mode with rescue tasks */}
+      {showRescueOverlay && isActive && (
+        <RescueTimelineOverlay tasks={rehabPlant.rescuePlanTasks!} />
+      )}
 
       {/* Stream Controls Overlay */}
       <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-30 flex gap-3">

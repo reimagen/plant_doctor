@@ -2,11 +2,15 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { Type, FunctionDeclaration } from '@google/genai'
-import { HomeProfile, Plant } from '@/types'
+import { HomeProfile, Plant, LivestreamNotification } from '@/types'
 import { GeminiLiveSession } from '@/lib/gemini-live'
 import { ToolCallRateLimiter } from '@/lib/rate-limiter'
 
-export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: string, updates: Partial<Plant>) => void) => {
+export const useRehabSpecialist = (
+  homeProfile: HomeProfile,
+  onUpdate: (id: string, updates: Partial<Plant>) => void,
+  onNotification?: (n: LivestreamNotification) => void
+) => {
   const [isCalling, setIsCalling] = useState(false)
   const [lastVerifiedId, setLastVerifiedId] = useState<string | null>(null)
 
@@ -23,6 +27,9 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
 
   const onUpdateRef = useRef(onUpdate)
   onUpdateRef.current = onUpdate
+
+  const onNotificationRef = useRef(onNotification)
+  onNotificationRef.current = onNotification
 
   const verifyRehabFunction: FunctionDeclaration = {
     name: 'verify_rehab_success',
@@ -50,6 +57,18 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
         confirmationMessage: { type: Type.STRING, description: 'A brief acknowledgment message for the user' }
       },
       required: ['taskDescription']
+    }
+  }
+
+  const generateRescuePlanFunction: FunctionDeclaration = {
+    name: 'generate_rescue_plan',
+    parameters: {
+      type: Type.OBJECT,
+      description: 'Generates a rescue plan for a plant that needs immediate care. Call this when you identify a plant needs a rescue protocol but does not have one yet.',
+      properties: {
+        reason: { type: Type.STRING, description: 'Why this plant needs a rescue plan' }
+      },
+      required: ['reason']
     }
   }
 
@@ -121,6 +140,7 @@ Plant Context:
 - Species: ${plant.species}
 - Current Status: ${plant.status}
 - Recovery History: It was previously in ${plant.status} condition.
+- Has Rescue Plan: ${(plant.rescuePlanTasks && plant.rescuePlanTasks.length > 0) ? 'Yes' : 'No'}
 - Current Tasks: ${plant.rescuePlanTasks?.map(t => (t.completed ? `[✓] ${t.description}` : `[ ] ${t.description}`)).join(', ') || 'None'}
  - Location: ${plant.location}
  - Light: ${plant.lightIntensity || 'unknown'} ${plant.lightQuality || ''}
@@ -128,6 +148,7 @@ Plant Context:
  - Watering Cadence: every ${plant.cadenceDays} days
 
 Instructions:
+- If this plant is in critical or warning status and does NOT have a rescue plan, use generate_rescue_plan to create one before proceeding with rehab verification.
 - Analyze the video feed for leaves, soil, stems, and overall plant condition
 - If the plant appears to have recovered, use verify_rehab_success
 - When the user mentions completing any rescue plan task, use mark_rescue_task_complete
@@ -140,7 +161,7 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
         apiKey,
         model: 'gemini-2.0-flash-exp',
         systemInstruction,
-        tools: [{ functionDeclarations: [verifyRehabFunction, markRescueTaskCompleteFunction] }],
+        tools: [{ functionDeclarations: [verifyRehabFunction, markRescueTaskCompleteFunction, generateRescuePlanFunction] }],
         callbacks: {
           onOpen: async () => {
             session.sendInitialGreet(`Hello! I'm here to check on ${plant.name || plant.species}. Please show me its current condition.`)
@@ -201,8 +222,9 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
 
                 if (fc.name === 'verify_rehab_success') {
                   const args = fc.args as Record<string, unknown>
+                  const newStatus = args.newStatus as 'healthy' | 'warning'
                   onUpdateRef.current(plant.id, {
-                    status: args.newStatus as 'healthy' | 'warning',
+                    status: newStatus,
                     needsCheckIn: !(args.success as boolean),
                     notes: [
                       ...(args.observedSymptoms ? [`Observation: ${args.observedSymptoms}`] : []),
@@ -212,6 +234,15 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                   })
                   setLastVerifiedId(plant.id)
                   session.sendToolResponse(fc.id!, fc.name!, { confirmed: true })
+
+                  // Emit status change notification
+                  onNotificationRef.current?.({
+                    id: crypto.randomUUID(),
+                    type: 'status_change',
+                    message: `Status: ${newStatus}`,
+                    emoji: newStatus === 'healthy' ? '💚' : '⚠️',
+                    timestamp: Date.now()
+                  })
                 } else if (fc.name === 'mark_rescue_task_complete') {
                   const args = fc.args as Record<string, unknown>
                   const taskDescription = args.taskDescription as string
@@ -225,6 +256,71 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                     success: true,
                     message: args.confirmationMessage || "Great! I've recorded that task as complete."
                   });
+
+                  // Emit task complete notification
+                  onNotificationRef.current?.({
+                    id: crypto.randomUUID(),
+                    type: 'task_complete',
+                    message: 'Task completed',
+                    emoji: '✅',
+                    timestamp: Date.now()
+                  })
+                } else if (fc.name === 'generate_rescue_plan') {
+                  const args = fc.args as Record<string, unknown>
+                  const reason = args.reason as string
+
+                  // Fetch rescue plan from API
+                  try {
+                    const response = await fetch('/api/gemini/content', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        type: 'rescue-plan',
+                        plant,
+                        homeProfile: homeProfileRef.current,
+                      }),
+                    })
+
+                    if (response.ok) {
+                      const data = await response.json()
+                      if (data.tasks && data.tasks.length > 0) {
+                        onUpdateRef.current(plant.id, {
+                          rescuePlanTasks: data.tasks,
+                          rescuePlan: data.tasks.map((t: { description: string }) => t.description)
+                        })
+
+                        // Emit notification about plan generation
+                        onNotificationRef.current?.({
+                          id: crypto.randomUUID(),
+                          type: 'observation',
+                          message: 'Rescue plan generated',
+                          emoji: '📋',
+                          timestamp: Date.now()
+                        })
+
+                        session.sendToolResponse(fc.id!, fc.name!, {
+                          success: true,
+                          message: `Rescue plan created with ${data.tasks.length} tasks. Reason: ${reason}`
+                        })
+                      } else {
+                        session.sendToolResponse(fc.id!, fc.name!, {
+                          success: false,
+                          error: 'No tasks generated'
+                        })
+                      }
+                    } else {
+                      session.sendToolResponse(fc.id!, fc.name!, {
+                        success: false,
+                        error: 'Failed to generate rescue plan'
+                      })
+                    }
+                  } catch (error) {
+                    console.error('Error generating rescue plan:', error)
+                    session.sendToolResponse(fc.id!, fc.name!, {
+                      success: false,
+                      error: 'Error generating rescue plan'
+                    })
+                  }
                 }
               }
             }

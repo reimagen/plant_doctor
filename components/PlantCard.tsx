@@ -9,12 +9,14 @@ interface Props {
   onWater: (id: string) => void
   onAdopt?: (id: string) => void
   onDelete?: (id: string) => void
+  onReview?: (id: string) => void
   onCheckIn?: (id: string, mode: 'discovery' | 'rehab') => void
   onRescue?: (id: string) => void
 }
 
-export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, onCheckIn, onRescue }) => {
+export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, onReview, onCheckIn, onRescue }) => {
   const getNextWaterDate = () => {
+    if (!plant.lastWateredAt) return null
     const lastDate = new Date(plant.lastWateredAt)
     const nextDate = new Date(lastDate)
     nextDate.setDate(lastDate.getDate() + (plant.cadenceDays || 7))
@@ -23,6 +25,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
 
   const getDaysDiff = () => {
     const next = getNextWaterDate()
+    if (!next) return null
     const now = new Date()
     next.setHours(0, 0, 0, 0)
     now.setHours(0, 0, 0, 0)
@@ -35,14 +38,14 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
   const isCritical = plant.status === 'critical'
   const isCheckInNeeded = !!plant.needsCheckIn
   const daysDiff = getDaysDiff()
-  const isOverdue = daysDiff <= 0
+  const isOverdue = daysDiff !== null && daysDiff <= 0
 
   // Rescue plan states
   const hasRescuePlan = !!plant.rescuePlan && plant.rescuePlan.length > 0
   const hasCompletedTasks = (plant.rescuePlanTasks || []).some(task => task.completed)
   const isRescuePlanPending = hasRescuePlan && !hasCompletedTasks
 
-  const isRed = isCritical || (isOverdue && daysDiff < -2)
+  const isRed = isCritical || (isOverdue && daysDiff !== null && daysDiff < -2)
   const isYellow = !isRed && (isCheckInNeeded || isOverdue || isMonitoring)
 
   const getStatusConfig = () => {
@@ -55,28 +58,28 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
     }
     if (isRed) return {
       label: 'Emergency',
-      timeline: `Watering overdue by ${Math.abs(daysDiff)}d`,
+      timeline: daysDiff !== null ? `Watering overdue by ${Math.abs(daysDiff)}d` : 'Needs attention',
       dot: 'bg-red-500',
       pill: 'bg-red-100 text-red-700',
       ring: 'ring-red-200'
     }
     if (isCheckInNeeded) return {
       label: 'Check-up Due',
-      timeline: `Water in ${daysDiff}d`,
+      timeline: daysDiff !== null ? `Water in ${daysDiff}d` : '',
       dot: 'bg-amber-500',
       pill: 'bg-amber-100 text-amber-700',
       ring: 'ring-amber-200'
     }
     if (isYellow) return {
       label: isOverdue ? 'Thirsty' : 'Monitoring',
-      timeline: isOverdue ? `Overdue ${Math.abs(daysDiff)}d` : `Water in ${daysDiff}d`,
+      timeline: daysDiff !== null ? (isOverdue ? `Overdue ${Math.abs(daysDiff)}d` : `Water in ${daysDiff}d`) : '',
       dot: 'bg-amber-500',
       pill: 'bg-amber-100 text-amber-700',
       ring: 'ring-amber-200'
     }
     return {
       label: 'Healthy',
-      timeline: `Water in ${daysDiff}d`,
+      timeline: daysDiff !== null ? `Water in ${daysDiff}d` : '',
       dot: 'bg-green-500',
       pill: 'bg-green-100 text-green-700',
       ring: 'ring-green-100'
@@ -90,20 +93,12 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
   const renderActionButton = () => {
     if (isPending) {
       return (
-        <div className="flex gap-2 w-full">
-          <button
-            onClick={(e) => { e.stopPropagation(); onAdopt?.(plant.id) }}
-            className="flex-[2] bg-green-600 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-100 active:scale-95 transition-all"
-          >
-            Adopt Plant
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete?.(plant.id) }}
-            className="flex-1 bg-stone-100 text-stone-400 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-stone-200 active:scale-95 transition-all"
-          >
-            Release
-          </button>
-        </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onReview?.(plant.id) }}
+          className="flex-1 bg-green-600 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-100 active:scale-95 transition-all"
+        >
+          Review Plant
+        </button>
       )
     }
 
@@ -144,7 +139,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
     }
 
     // Monitoring plant with future checkup (water due in 2+ days)
-    if (isMonitoring && !isCheckInNeeded && !isOverdue) {
+    if (isMonitoring && !isCheckInNeeded && !isOverdue && daysDiff !== null) {
       return (
         <button
           onClick={(e) => { e.stopPropagation(); onCheckIn?.(plant.id, 'rehab') }}
@@ -173,7 +168,16 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
   }
 
   return (
-    <div className={`group bg-white rounded-[40px] p-5 border transition-all duration-500 ${isRed ? 'border-red-100' : 'border-stone-100 hover:border-green-200 hover:shadow-xl hover:shadow-stone-200/50'}`}>
+    <div className={`group relative bg-white rounded-[40px] p-5 border transition-all duration-500 ${isRed ? 'border-red-100' : 'border-stone-100 hover:border-green-200 hover:shadow-xl hover:shadow-stone-200/50'}`}>
+      {isPending && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete?.(plant.id) }}
+          className="absolute top-4 right-4 p-2 bg-stone-100 text-stone-400 rounded-full hover:bg-stone-200 hover:text-stone-600 active:scale-95 transition-all z-10"
+          title="Release plant"
+        >
+          <Icons.X />
+        </button>
+      )}
       <div className="flex gap-5 mb-6">
         <div className={`relative w-24 h-24 rounded-3xl overflow-hidden shadow-inner flex-shrink-0 ring-4 ring-offset-2 ${config.ring} transition-all duration-500 group-hover:scale-105`}>
           <img src={plant.photoUrl} className="w-full h-full object-cover" alt={commonName} />

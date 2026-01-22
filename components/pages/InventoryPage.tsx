@@ -34,6 +34,7 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
           if (p.status === 'critical') return 0
           if (p.status === 'warning') return 1
           // Check if healthy plant is overdue
+          if (!p.lastWateredAt) return 5 // Plants without lastWateredAt go last
           const lastDate = new Date(p.lastWateredAt)
           const nextDate = new Date(lastDate)
           nextDate.setDate(lastDate.getDate() + p.cadenceDays)
@@ -46,6 +47,7 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
         if (res !== 0) return res
         // Tiebreaker: sort by days until watering (closest first)
         const getNext = (p: Plant) => {
+          if (!p.lastWateredAt) return Infinity
           const d = new Date(p.lastWateredAt)
           d.setDate(d.getDate() + p.cadenceDays)
           return d.getTime()
@@ -55,6 +57,7 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
 
       if (sortBy === 'watering schedule') {
         const getNext = (p: Plant) => {
+          if (!p.lastWateredAt) return Infinity
           const d = new Date(p.lastWateredAt)
           d.setDate(d.getDate() + p.cadenceDays)
           return d.getTime()
@@ -93,6 +96,7 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
                   onWater={onWater}
                   onAdopt={onAdopt}
                   onDelete={onDelete}
+                  onReview={(id) => router.push(`/plants/${id}`)}
                 />
               </div>
             ))}

@@ -2,11 +2,15 @@
 
 import { useState, useRef, useCallback, type RefObject } from 'react'
 import { Type, FunctionDeclaration } from '@google/genai'
-import { HomeProfile, Plant } from '@/types'
+import { HomeProfile, Plant, LivestreamNotification } from '@/types'
 import { GeminiLiveSession } from '@/lib/gemini-live'
 import { ToolCallRateLimiter } from '@/lib/rate-limiter'
 
-export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Plant) => void) => {
+export const usePlantDoctor = (
+  homeProfile: HomeProfile,
+  onPlantDetected: (p: Plant) => void,
+  onNotification?: (n: LivestreamNotification) => void
+) => {
   const [isCalling, setIsCalling] = useState(false)
   const [lastDetectedName, setLastDetectedName] = useState<string | null>(null)
   const [discoveryLog, setDiscoveryLog] = useState<string[]>([])
@@ -24,6 +28,9 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
 
   const homeProfileRef = useRef(homeProfile)
   homeProfileRef.current = homeProfile
+
+  const onNotificationRef = useRef(onNotification)
+  onNotificationRef.current = onNotification
 
   const proposePlantFunction: FunctionDeclaration = {
     name: 'propose_plant_to_inventory',
@@ -213,13 +220,21 @@ Output Format: Always call propose_plant_to_inventory with:
                   session.sendToolResponse(fc.id!, fc.name!, { success: true, acknowledged: args.commonName })
                   setLastDetectedName(args.commonName as string)
                   setDiscoveryLog(prev => [args.commonName as string, ...prev].slice(0, 5))
+
+                  // Emit detection notification
+                  onNotificationRef.current?.({
+                    id: crypto.randomUUID(),
+                    type: 'detection',
+                    message: args.commonName as string,
+                    emoji: '🌿',
+                    timestamp: Date.now()
+                  })
                   onPlantDetectedRef.current({
                     id: crypto.randomUUID(),
                     name: '',
                     species: args.commonName as string,
                     photoUrl: capturedPhoto || `https://images.unsplash.com/photo-1545239351-ef35f43d514b?q=80&w=400&auto=format&fit=crop`,
                     location: 'Detected via Inventory Sweep',
-                    lastWateredAt: new Date().toISOString(),
                     cadenceDays: (args.cadenceDays as number) || 7,
                     status: 'pending',
                     idealConditions: args.idealConditions as string,

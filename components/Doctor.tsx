@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useEffect, useMemo } from 'react'
-import { HomeProfile, Plant } from '@/types'
+import { HomeProfile, Plant, LivestreamNotification } from '@/types'
 import { usePlantDoctor } from '@/hooks/usePlantDoctor'
 import { useRehabSpecialist } from '@/hooks/useRehabSpecialist'
 
@@ -10,8 +10,10 @@ interface Props {
   homeProfile: HomeProfile
   plants: Plant[]
   rehabTargetId?: string | null
+  notifications: LivestreamNotification[]
   onAutoDetect: (plant: Plant) => void
   onUpdatePlant: (id: string, updates: Partial<Plant>) => void
+  onNotification: (n: LivestreamNotification) => void
 }
 
 export const Doctor: React.FC<Props> = ({
@@ -19,8 +21,10 @@ export const Doctor: React.FC<Props> = ({
   homeProfile,
   plants,
   rehabTargetId,
+  notifications,
   onAutoDetect,
-  onUpdatePlant
+  onUpdatePlant,
+  onNotification
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -28,15 +32,12 @@ export const Doctor: React.FC<Props> = ({
   const {
     startCall: startDiscoveryCall,
     stopCall: stopDiscoveryCall,
-    isCalling: isDiscoveryCalling,
-    discoveryLog
-  } = usePlantDoctor(homeProfile, onAutoDetect)
+  } = usePlantDoctor(homeProfile, onAutoDetect, onNotification)
 
   const {
     startRehabCall,
     stopCall: stopRehabCall,
-    isCalling: isRehabCalling
-  } = useRehabSpecialist(homeProfile, onUpdatePlant)
+  } = useRehabSpecialist(homeProfile, onUpdatePlant, onNotification)
 
   const activeMode = rehabTargetId ? 'rehab' : 'discovery'
   const isCalling = stream !== null
@@ -83,30 +84,36 @@ export const Doctor: React.FC<Props> = ({
         autoPlay
         playsInline
         muted
-        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-          isCalling ? 'opacity-90' : 'opacity-30'
-        }`}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${isCalling ? 'opacity-90' : 'opacity-30'
+          }`}
       />
 
       <canvas ref={canvasRef} className="hidden" />
 
-      {isCalling && discoveryLog.length > 0 && (
-        <div className="absolute right-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-end gap-3 pointer-events-none max-w-[180px]">
-          {discoveryLog.map((name, i) => (
-            <div
-              key={`${name}-${i}`}
-              className="bg-black/60 backdrop-blur-md border border-white/20 px-4 py-2 rounded-2xl flex items-center gap-2 animate-slide-up shadow-lg"
-              style={{
-                opacity: Math.max(0, 1 - i * 0.15),
-                transform: `translateX(${i * 4}px) scale(${1 - i * 0.05})`,
-              }}
-            >
-              <span className="text-base flex-shrink-0">🌿</span>
-              <span className="text-white font-black text-[9px] uppercase tracking-widest truncate">
-                {name}
-              </span>
-            </div>
-          ))}
+      {isCalling && notifications.length > 0 && (
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-end gap-3 pointer-events-none max-w-[200px]">
+          {notifications.map((notification, i) => {
+            const bgClass = notification.type === 'task_complete'
+              ? 'bg-green-500/60'
+              : notification.type === 'status_change'
+                ? 'bg-amber-500/60'
+                : 'bg-black/60'
+            return (
+              <div
+                key={notification.id}
+                className={`${bgClass} backdrop-blur-md border border-white/20 px-4 py-2 rounded-2xl flex items-center gap-2 animate-slide-up shadow-lg`}
+                style={{
+                  opacity: Math.max(0, 1 - i * 0.15),
+                  transform: `translateX(${i * 4}px) scale(${1 - i * 0.05})`,
+                }}
+              >
+                <span className="text-base flex-shrink-0">{notification.emoji}</span>
+                <span className="text-white font-black text-[9px] uppercase tracking-widest truncate">
+                  {notification.message}
+                </span>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -119,9 +126,8 @@ export const Doctor: React.FC<Props> = ({
               </h2>
               <div className="flex items-center gap-2">
                 <div
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    isCalling ? 'bg-green-400 animate-pulse' : 'bg-white/20'
-                  }`}
+                  className={`w-1.5 h-1.5 rounded-full ${isCalling ? 'bg-green-400 animate-pulse' : 'bg-white/20'
+                    }`}
                 />
                 <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">
                   {isCalling ? 'Analyzing Stream...' : 'Camera Standby'}
