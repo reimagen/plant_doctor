@@ -97,14 +97,30 @@ export const RescueProtocolView: React.FC<Props> = ({ plant, homeProfile, onClos
         ) : (
           <section className="space-y-4">
             <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-widest px-1">Recovery Roadmap</h3>
-            {plant.rescuePlan.map((step, i) => (
-              <div key={i} className="flex gap-4 p-5 bg-stone-50 rounded-3xl border border-stone-100 group transition-all hover:border-green-200">
-                <div className="w-8 h-8 bg-white border border-stone-200 rounded-xl flex-shrink-0 flex items-center justify-center font-black text-xs text-stone-400">
-                  {i + 1}
+            {plant.rescuePlan.map((step, i) => {
+              // Handle both string and object formats
+              const isObject = typeof step === 'object' && step !== null
+              const action = isObject ? (step as any).action : step
+              const duration = isObject ? (step as any).duration : null
+              const successCriteria = isObject ? (step as any).successCriteria : null
+
+              return (
+                <div key={i} className="flex gap-4 p-5 bg-stone-50 rounded-3xl border border-stone-100 group transition-all hover:border-green-200">
+                  <div className="w-8 h-8 bg-white border border-stone-200 rounded-xl flex-shrink-0 flex items-center justify-center font-black text-xs text-stone-400">
+                    {i + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-stone-700 leading-relaxed">{action}</p>
+                    {duration && (
+                      <p className="text-[10px] text-stone-500 mt-1">⏱ {duration}</p>
+                    )}
+                    {successCriteria && (
+                      <p className="text-[10px] text-green-600 mt-1">✓ {successCriteria}</p>
+                    )}
+                  </div>
                 </div>
-                <p className="text-xs font-bold text-stone-700 leading-relaxed">{step}</p>
-              </div>
-            ))}
+              )
+            })}
           </section>
         )}
       </div>

@@ -152,10 +152,15 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
     }
 
     if (isOverdue) {
+      const isToday = daysDiff === 0
       return (
         <button
           onClick={(e) => { e.stopPropagation(); onWater(plant.id) }}
-          className="flex-1 bg-blue-600 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-blue-100"
+          className={`flex-1 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
+            isToday
+              ? 'bg-blue-600 shadow-lg shadow-blue-100'
+              : 'bg-amber-500 shadow-lg shadow-amber-100'
+          }`}
         >
           <Icons.WateringCan />
           Water Now

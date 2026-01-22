@@ -2,20 +2,18 @@
 
 import { useState, useRef, useCallback, type RefObject } from 'react'
 import { Type, FunctionDeclaration } from '@google/genai'
-import { HomeProfile, Plant, LivestreamNotification } from '@/types'
+import { HomeProfile, Plant } from '@/types'
 import { GeminiLiveSession } from '@/lib/gemini-live'
+import { AudioService } from '@/lib/audio-service'
 import { ToolCallRateLimiter } from '@/lib/rate-limiter'
 
-export const usePlantDoctor = (
-  homeProfile: HomeProfile,
-  onPlantDetected: (p: Plant) => void,
-  onNotification?: (n: LivestreamNotification) => void
-) => {
+export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Plant) => void) => {
   const [isCalling, setIsCalling] = useState(false)
   const [lastDetectedName, setLastDetectedName] = useState<string | null>(null)
   const [discoveryLog, setDiscoveryLog] = useState<string[]>([])
 
   const sessionRef = useRef<GeminiLiveSession | null>(null)
+  const audioServiceRef = useRef(new AudioService(24000))
   const workletRef = useRef<AudioWorkletNode | null>(null)
   const muteGainRef = useRef<GainNode | null>(null)
   const intervalRef = useRef<number | null>(null)
@@ -28,9 +26,6 @@ export const usePlantDoctor = (
 
   const homeProfileRef = useRef(homeProfile)
   homeProfileRef.current = homeProfile
-
-  const onNotificationRef = useRef(onNotification)
-  onNotificationRef.current = onNotification
 
   const proposePlantFunction: FunctionDeclaration = {
     name: 'propose_plant_to_inventory',
@@ -78,6 +73,7 @@ export const usePlantDoctor = (
     }
     sessionRef.current?.close()
     sessionRef.current = null
+    await audioServiceRef.current.close()
     if (audioContextRef.current?.state !== 'closed') {
       await audioContextRef.current?.close()
       audioContextRef.current = null
@@ -111,8 +107,12 @@ export const usePlantDoctor = (
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 })
       await audioCtx.resume()
       audioContextRef.current = audioCtx
+      await audioServiceRef.current.ensureContext()
 
-      const systemInstruction = `You are the Plant Doctor performing a "Jungle Inventory" - PLANT-ONLY MODE.
+      const session = new GeminiLiveSession({
+        apiKey,
+        model: 'gemini-2.0-flash-exp',
+        systemInstruction: `You are the Plant Doctor performing a "Jungle Inventory" - PLANT-ONLY MODE.
 
 CRITICAL RULES:
 1. ONLY catalog and discuss visible plants. Immediately decline any non-plant topics.
@@ -140,12 +140,7 @@ Output Format: Always call propose_plant_to_inventory with:
 - lightIntensity: Low/Medium/Bright if visible
 - lightQuality: Indirect/Direct if visible
 - nearWindow: true/false if visible
-- windowDirection: North/South/East/West if visible`
-
-      const session = new GeminiLiveSession({
-        apiKey,
-        model: 'gemini-2.0-flash-exp',
-        systemInstruction,
+- windowDirection: North/South/East/West if visible`,
         tools: [{ functionDeclarations: [proposePlantFunction] }],
         callbacks: {
           onOpen: async () => {
@@ -167,7 +162,8 @@ Output Format: Always call propose_plant_to_inventory with:
             worklet.connect(muteGain)
             muteGain.connect(audioCtx.destination)
 
-            if (videoRef.current && canvasRef.current) {
+            const hasVideo = stream.getVideoTracks().length > 0
+            if (hasVideo && videoRef.current && canvasRef.current) {
               const video = videoRef.current
               const canvas = canvasRef.current
               intervalRef.current = window.setInterval(() => {
@@ -191,6 +187,9 @@ Output Format: Always call propose_plant_to_inventory with:
             }
           },
           onMessage: async (msg) => {
+            const audio = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data
+            if (audio) await audioServiceRef.current.playRawChunk(GeminiLiveSession.decodeAudio(audio))
+
             if (msg.toolCall?.functionCalls) {
               for (const fc of msg.toolCall.functionCalls) {
                 if (!toolCallLimiterRef.current.canCall(fc.name!)) {
@@ -205,7 +204,7 @@ Output Format: Always call propose_plant_to_inventory with:
                 if (fc.name === 'propose_plant_to_inventory') {
                   const args = fc.args as Record<string, unknown>
                   let capturedPhoto = ''
-                  if (videoRef.current && canvasRef.current) {
+                  if (stream.getVideoTracks().length > 0 && videoRef.current && canvasRef.current) {
                     const vid = videoRef.current
                     const can = canvasRef.current
                     const ctx = can.getContext('2d')
@@ -220,21 +219,13 @@ Output Format: Always call propose_plant_to_inventory with:
                   session.sendToolResponse(fc.id!, fc.name!, { success: true, acknowledged: args.commonName })
                   setLastDetectedName(args.commonName as string)
                   setDiscoveryLog(prev => [args.commonName as string, ...prev].slice(0, 5))
-
-                  // Emit detection notification
-                  onNotificationRef.current?.({
-                    id: crypto.randomUUID(),
-                    type: 'detection',
-                    message: args.commonName as string,
-                    emoji: '🌿',
-                    timestamp: Date.now()
-                  })
                   onPlantDetectedRef.current({
                     id: crypto.randomUUID(),
                     name: '',
                     species: args.commonName as string,
                     photoUrl: capturedPhoto || `https://images.unsplash.com/photo-1545239351-ef35f43d514b?q=80&w=400&auto=format&fit=crop`,
                     location: 'Detected via Inventory Sweep',
+                    lastWateredAt: new Date().toISOString(),
                     cadenceDays: (args.cadenceDays as number) || 7,
                     status: 'pending',
                     idealConditions: args.idealConditions as string,

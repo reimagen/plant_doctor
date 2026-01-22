@@ -30,27 +30,50 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
 
     return list.sort((a, b) => {
       if (sortBy === 'urgency') {
-        const score = (p: Plant) => {
-          if (p.status === 'critical') return 0
-          if (p.status === 'warning') return 1
-          // Check if healthy plant is overdue
-          if (!p.lastWateredAt) return 5 // Plants without lastWateredAt go last
+        const getDaysDiff = (p: Plant) => {
+          if (!p.lastWateredAt) return null
           const lastDate = new Date(p.lastWateredAt)
           const nextDate = new Date(lastDate)
           nextDate.setDate(lastDate.getDate() + p.cadenceDays)
-          const isOverdue = nextDate.getTime() < Date.now()
-          if (isOverdue) return 2
+          return Math.ceil((nextDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+        }
+
+        const score = (p: Plant) => {
+          // 0: Critical status
+          if (p.status === 'critical') return 0
+
+          // Check overdue status
+          const daysDiff = getDaysDiff(p)
+          const isOverdue = daysDiff !== null && daysDiff <= 0
+          const isEmergency = isOverdue && daysDiff !== null && daysDiff < -2
+
+          // 1: Emergency (overdue by 2+ days)
+          if (isEmergency) return 1
+
+          // 2: Overdue (0-2 days overdue, shows "Thirsty")
+          if (isOverdue && !isEmergency) return 2
+
+          // 3: Needs check-in
           if (p.needsCheckIn) return 3
-          return 4 // Healthy and not overdue
+
+          // 4: Warning status
+          if (p.status === 'warning') return 4
+
+          // 5: Healthy on schedule
+          if (p.status === 'healthy' && !isOverdue) return 5
+
+          // 6: No watering date (plants without lastWateredAt go last)
+          if (!p.lastWateredAt) return 6
+
+          return 6
         }
         const res = score(a) - score(b)
         if (res !== 0) return res
         // Tiebreaker: sort by days until watering (closest first)
         const getNext = (p: Plant) => {
-          if (!p.lastWateredAt) return Infinity
-          const d = new Date(p.lastWateredAt)
-          d.setDate(d.getDate() + p.cadenceDays)
-          return d.getTime()
+          const daysDiff = getDaysDiff(p)
+          if (daysDiff === null) return Infinity
+          return daysDiff
         }
         return getNext(a) - getNext(b)
       }

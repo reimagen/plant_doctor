@@ -294,10 +294,10 @@
   - [x] Removed audio rehab button from `PlantDetailPage.tsx`
   - [x] Simplified `ClientApp.tsx` streamMode to `'video' | null`
 
-### Phase 6: Livestream Notifications + Timeline Overlay
-- [ ] Decision needed: Plant Doctor - Don't ask user for `lastWateredAt` instead default to undefined or null. That would mean the card is in PENDING state. The adopt plant and release button should be removed, the adopt plant button should be called "Review Plant". The relase button should be an x at the top right of the card. Then on the detail page of the plant in pending we should have a "Adopt Plant" button that adds the plant to the user's inventory. The watered date should be required and block the user from clicking adopt plant if it's not set. The watered date section label should have an additional indicator to show that it's required for adoption.
-- [ ] When on video call user is asked to prioritize a plant and rescue plant  plan is automatically generated. User should just start video chat and plan should be generated and followed in plantdetailspage.
-- [ ] Audit live notifications for livestream with timeline overlay
+### Phase 6: Livestream Notifications + Timeline Overlay ✅
+- [x] Decision needed: Plant Doctor - Don't ask user for `lastWateredAt` instead default to undefined or null. That would mean the card is in PENDING state. The adopt plant and release button should be removed, the adopt plant button should be called "Review Plant". The relase button should be an x at the top right of the card. Then on the detail page of the plant in pending we should have a "Adopt Plant" button that adds the plant to the user's inventory. The watered date should be required and block the user from clicking adopt plant if it's not set. The watered date section label should have an additional indicator to show that it's required for adoption.
+- [x] When on video call user is asked to prioritize a plant and rescue plant  plan is automatically generated. User should just start video chat and plan should be generated and followed in plantdetailspage.
+- [x] Audit live notifications for livestream with timeline overlay
   - **Current State:** Toast notifications on right side showing plant detections (discovery log)
   - **Existing Implementation Reference:**
     - Location: `DoctorPage.tsx` lines 66-85
@@ -306,21 +306,21 @@
     - Animation: `animate-slide-up` with stagger effect (opacity fades, slight X shift and scale per layer)
     - Max items: 5 notifications (FIFO removal)
   - **Requirements:**
-    - [ ] Add notifications for rescue plan task completions (e.g., "✓ Task: Water Plant")
-    - [ ] Add notifications for plant status changes (e.g., "📈 Status: Warning → Healthy")
-    - [ ] Add notifications for health observations (e.g., "📝 New leaf growth detected")
-    - [ ] Incorporate RescueTimeline component into the livestream overlay during rehab mode
-    - [ ] Support mixed notification types in same stack
-    - [ ] Add notifications for plant detections (e.g., "🌱 New plant detected")
+    - [x] Add notifications for rescue plan task completions (e.g., "✓ Task: Water Plant")
+    - [x] Add notifications for plant status changes (e.g., "📈 Status: Warning → Healthy")
+    - [x] Add notifications for health observations (e.g., "📝 New leaf growth detected")
+    - [x] Incorporate RescueTimeline component into the livestream overlay during rehab mode
+    - [x] Support mixed notification types in same stack
+    - [x] Add notifications for plant detections (e.g., "🌱 New plant detected")
   - **Implementation Plan:**
-    - [ ] Create notification event system: update useRehabSpecialist to emit events via callback/state
+    - [x] Create notification event system: update useRehabSpecialist to emit events via callback/state
       - Emit when `mark_rescue_task_complete` function is called (task completion notification)
   - **Timeline Overlay:**
-    - [ ] Add RescueTimeline component to the livestream overlay if a plant needs an immediate action
-    - [ ] The overlay should have a faint opacity lets say 0.3 with no background and the text should be gray. Important we should still see the camera feed.
-    - [ ] The overlay should be position absolute and cover the entire screen.
-    - [ ] The overlay should be z-indexed higher than the livestream.
-    - [ ] It should only show the timeline similar to the plant detail page and nothing else
+    - [x] Add RescueTimeline component to the livestream overlay if a plant needs an immediate action
+    - [x] The overlay should have a faint opacity lets say 0.3 with no background and the text should be gray. Important we should still see the camera feed.
+    - [x] The overlay should be position absolute and cover the entire screen.
+    - [x] The overlay should be z-indexed higher than the livestream.
+    - [x] It should only show the timeline similar to the plant detail page and nothing else
 
 ### Phase 7: General Improvements
 - [ ] Add error boundaries (`error.tsx` files)
