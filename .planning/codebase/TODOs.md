@@ -322,18 +322,67 @@
     - [x] The overlay should be z-indexed higher than the livestream.
     - [x] It should only show the timeline similar to the plant detail page and nothing else
 
-### Phase 7: General Improvements
+### Phase 7: Livestream & Timeline Refinements (Refines Phase 6)
+- [ ] **Plant targeting indicator for multi-plant frames**
+  - [ ] Add visual indicator (circle/reticle) overlay on livestream
+  - [ ] Indicator helps Gemini identify which plant to focus on when multiple plants visible
+  - [ ] Indicator position communicated to Gemini via frame context or prompt
+- [ ] Refine notification system for clearer visual hierarchy
+  - [ ] Distinguish between task completion, status change, and observation notifications
+  - [ ] Add animation polish for notification transitions
+  - [ ] Ensure notifications don't obscure critical camera feed areas
+- [ ] Improve timeline overlay readability during livestream
+  - [ ] Optimize opacity and contrast for varying backgrounds
+  - [ ] Add collapsible/expandable timeline for less intrusive viewing
+  - [ ] Ensure timeline updates in real-time as tasks are completed
+- [ ] Enhance rescue plan auto-generation during video calls
+  - [ ] Streamline plan generation without user interruption
+  - [ ] Ensure plan syncs immediately to PlantDetailPage
+- [ ] Polish pending adoption workflow from Phase 6
+  - [ ] Improve "Review Plant" card interaction
+  - [ ] Ensure required watered date validation is clear and user-friendly
+
+### Phase 8: User Flow & Status Path Refinements ✅
+**Decisions Made:**
+- Grace period: 1 day (daysDiff -1 still shows "Water today")
+- Thresholds: Gemini per-plant during detection (same place as cadenceDays)
+- Big overdue flow: Water → Monitoring (with checkup)
+- "Add Plant" button: In Jungle page header, navigates to Doctor
+
+**Implementation:**
+- [x] Add Plant type fields: `overdueThresholdMinor`, `overdueThresholdMajor`, `nextCheckupDate`
+- [x] Update usePlantDoctor proposePlantFunction + systemInstruction to include thresholds
+- [x] Refactor PlantStatusBadge/PlantCard with dynamic threshold logic
+- [x] Implement 1-day grace period (daysDiff >= -1 = not overdue)
+- [x] Implement Water → Monitoring flow for major overdue
+- [x] Update button labels: "Water Now" → "Mark as Watered"
+- [x] Add "Water today" label for daysDiff = 0 or -1
+- [x] Show "Mark as Watered" button ONLY on watering day (daysDiff 0 or -1), no button otherwise for healthy
+- [x] Add "Add Plant" button to InventoryPage header → navigates to /doctor
+- [x] Update urgency sorting to use new threshold logic
+
+**Files Modified:**
+- `types/index.ts` - Added threshold and checkup date fields
+- `hooks/usePlantDoctor.ts` - Gemini now sets per-plant thresholds during detection
+- `hooks/useAppState.ts` - Water → Monitoring flow for major overdue plants
+- `components/PlantStatusBadge.tsx` - Dynamic thresholds, grace period, new labels
+- `components/PlantCard.tsx` - New button logic, "Mark as Watered" labels
+- `components/pages/InventoryPage.tsx` - "Add Plant" button, updated urgency sorting
+- `lib/constants.tsx` - Added Plus icon
+
+### Phase 9: General Improvements
 - [ ] Add error boundaries (`error.tsx` files)
 - [ ] Add loading states (`loading.tsx` files)
 - [ ] Set up Vitest for testing
 - [ ] Add tests for API route handlers
 - [ ] update structure documents from /Users/lisagu/Projects/plant_doctor/.planning to reflect new setup, audit folder as well.
-- [ ] User should have to tap as few buttons as possible, with the goal of the agent handling task completions, status updates, etc. so the goal is the user should only have to tap the start and end call buttons. 
+- [ ] User should have to tap as few buttons as possible, with the goal of the agent handling task completions, status updates, etc. so the goal is the user should only have to tap the start and end call buttons.
 - [ ] While rescue plan is active, show next step on summary card. Next to "Next watering" or "Next checkup".
 - [ ] Handle user event correctly when clicking on a card and check in button. Clicking on the button shouldn't nagivage to the plant detail page but to the doctor page. and if we click on the card it should navigate to the detail page.
 - [ ] All first aid tasks should be completed before entering monitoring mode.
 - [ ] Change the welcome note so we only see it from the general call and not from the plant specific call.
 - [ ] The Navigation bar Doctor label and phone icon should be changed to the Video version the icon should be a camera icon. And the Video button should be removed from the Doctor Page. Since it is already in the nav bar.
+- [ ] Rescue plan currently is created by user clicking "begin rescue protocol" instead should be generated during check-up video call after gemini has visually assessed the status of the plant.
 
 
 ## Phase: If we have time

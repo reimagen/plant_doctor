@@ -44,7 +44,9 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
         lightIntensity: { type: Type.STRING, enum: ['Low', 'Medium', 'Bright'] },
         lightQuality: { type: Type.STRING, enum: ['Indirect', 'Direct'] },
         nearWindow: { type: Type.BOOLEAN },
-        windowDirection: { type: Type.STRING, enum: ['North', 'South', 'East', 'West'] }
+        windowDirection: { type: Type.STRING, enum: ['North', 'South', 'East', 'West'] },
+        overdueThresholdMinor: { type: Type.NUMBER, description: 'Days past watering before minor stress appears (drought-tolerant=4-5, normal=2-3, tropical=1-2)' },
+        overdueThresholdMajor: { type: Type.NUMBER, description: 'Days past watering before checkup required (drought-tolerant=8-10, normal=5-6, tropical=3-4)' }
       },
       required: ['commonName', 'scientificName', 'healthStatus', 'habitGrade', 'habitFeedback', 'healthIssues']
     }
@@ -140,7 +142,15 @@ Output Format: Always call propose_plant_to_inventory with:
 - lightIntensity: Low/Medium/Bright if visible
 - lightQuality: Indirect/Direct if visible
 - nearWindow: true/false if visible
-- windowDirection: North/South/East/West if visible`,
+- windowDirection: North/South/East/West if visible
+- overdueThresholdMinor: Days before minor stress appears (based on species drought tolerance)
+  * Drought-tolerant (succulents, cacti, snake plants): 4-5 days
+  * Normal (pothos, philodendron, spider plants): 2-3 days
+  * Tropical/moisture-loving (ferns, calathea, peace lily): 1-2 days
+- overdueThresholdMajor: Days before serious risk requiring checkup
+  * Drought-tolerant: 8-10 days
+  * Normal: 5-6 days
+  * Tropical: 3-4 days`,
         tools: [{ functionDeclarations: [proposePlantFunction] }],
         callbacks: {
           onOpen: async () => {
@@ -233,7 +243,9 @@ Output Format: Always call propose_plant_to_inventory with:
                     lightQuality: args.lightQuality as Plant['lightQuality'],
                     nearWindow: args.nearWindow as boolean | undefined,
                     windowDirection: args.nearWindow ? (args.windowDirection as Plant['windowDirection']) : undefined,
-                    notes: [`Health: ${args.healthIssues}`, `Habit Grade: ${args.habitGrade}`, args.habitFeedback as string]
+                    notes: [`Health: ${args.healthIssues}`, `Habit Grade: ${args.habitGrade}`, args.habitFeedback as string],
+                    overdueThresholdMinor: (args.overdueThresholdMinor as number) || 2,
+                    overdueThresholdMajor: (args.overdueThresholdMajor as number) || 5,
                   });
                 }
               }

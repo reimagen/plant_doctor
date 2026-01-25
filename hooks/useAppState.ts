@@ -94,7 +94,46 @@ export const useAppState = () => {
   const waterPlant = useCallback((id: string) => {
     setPlants(prev => prev.map(p => {
       if (p.id !== id) return p
-      return { ...p, lastWateredAt: new Date().toISOString(), status: 'healthy', needsCheckIn: false }
+
+      // Calculate if this was a major overdue watering
+      const getDaysDiff = () => {
+        if (!p.lastWateredAt) return null
+        const lastDate = new Date(p.lastWateredAt)
+        const nextDate = new Date(lastDate)
+        nextDate.setDate(lastDate.getDate() + (p.cadenceDays || 7))
+        const now = new Date()
+        nextDate.setHours(0, 0, 0, 0)
+        now.setHours(0, 0, 0, 0)
+        return Math.ceil((nextDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      }
+
+      const daysDiff = getDaysDiff()
+      const majorThreshold = p.overdueThresholdMajor ?? 5
+      // daysOverdue: -2 = 1 day overdue (after 1-day grace period)
+      const daysOverdue = daysDiff !== null && daysDiff < -1 ? Math.abs(daysDiff) - 1 : 0
+      const wasMajorOverdue = daysOverdue > majorThreshold
+
+      if (wasMajorOverdue && p.status !== 'critical') {
+        // Water + flip to monitoring with checkup needed in 3 days
+        const checkupDate = new Date()
+        checkupDate.setDate(checkupDate.getDate() + 3)
+        return {
+          ...p,
+          lastWateredAt: new Date().toISOString(),
+          status: 'warning' as const,
+          needsCheckIn: true,
+          nextCheckupDate: checkupDate.toISOString()
+        }
+      }
+
+      // Normal watering - flip to healthy
+      return {
+        ...p,
+        lastWateredAt: new Date().toISOString(),
+        status: 'healthy' as const,
+        needsCheckIn: false,
+        nextCheckupDate: undefined
+      }
     }))
   }, [])
 

@@ -42,6 +42,11 @@ export interface Plant {
   windowDirection?: WindowDirection;
   lightLevel?: string;
   idealConditions?: string;
+  // Gemini-determined overdue thresholds (set during detection)
+  overdueThresholdMinor?: number;  // Days past watering before "thirsty" (e.g., 2)
+  overdueThresholdMajor?: number;  // Days past watering before "checkup required" (e.g., 5)
+  // Monitoring tracking
+  nextCheckupDate?: string;        // ISO date for next scheduled checkup
 }
 
 export type NotificationType = 'detection' | 'task_complete' | 'status_change' | 'observation';

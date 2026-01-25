@@ -38,15 +38,27 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
   const isCritical = plant.status === 'critical'
   const isCheckInNeeded = !!plant.needsCheckIn
   const daysDiff = getDaysDiff()
-  const isOverdue = daysDiff !== null && daysDiff <= 0
+
+  // Grace period: daysDiff >= -1 means not overdue yet (includes watering day and 1-day grace)
+  const isWateringDay = daysDiff !== null && (daysDiff === 0 || daysDiff === -1)
+  const isOverdue = daysDiff !== null && daysDiff < -1  // Overdue starts at -2 (after 1-day grace)
+
+  // Dynamic thresholds from Gemini (with defaults)
+  const minorThreshold = plant.overdueThresholdMinor ?? 2
+  const majorThreshold = plant.overdueThresholdMajor ?? 5
+  const daysOverdue = daysDiff !== null && daysDiff < -1 ? Math.abs(daysDiff) - 1 : 0  // -2 = 1 day overdue
+
+  const isMinorOverdue = daysOverdue > 0 && daysOverdue <= minorThreshold
+  const isMajorOverdue = daysOverdue > minorThreshold && daysOverdue <= majorThreshold
+  const isEmergency = isCritical || daysOverdue > majorThreshold
 
   // Rescue plan states
   const hasRescuePlan = !!plant.rescuePlan && plant.rescuePlan.length > 0
   const hasCompletedTasks = (plant.rescuePlanTasks || []).some(task => task.completed)
   const isRescuePlanPending = hasRescuePlan && !hasCompletedTasks
 
-  const isRed = isCritical || (isOverdue && daysDiff !== null && daysDiff < -2)
-  const isYellow = !isRed && (isCheckInNeeded || isOverdue || isMonitoring)
+  const isRed = isEmergency
+  const isYellow = !isRed && (isCheckInNeeded || isOverdue || isMonitoring || isMajorOverdue)
 
   const getStatusConfig = () => {
     if (isPending) return {
@@ -56,26 +68,47 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       pill: 'bg-stone-100 text-stone-500',
       ring: 'ring-stone-100'
     }
-    if (isRed) return {
+    if (isEmergency) return {
       label: 'Emergency',
-      timeline: daysDiff !== null ? `Watering overdue by ${Math.abs(daysDiff)}d` : 'Needs attention',
+      timeline: daysOverdue > 0 ? `Water now - ${daysOverdue}d overdue` : 'Needs attention',
       dot: 'bg-red-500',
       pill: 'bg-red-100 text-red-700',
       ring: 'ring-red-200'
     }
     if (isCheckInNeeded) return {
       label: 'Check-up Due',
-      timeline: daysDiff !== null ? `Water in ${daysDiff}d` : '',
+      timeline: daysDiff !== null ? (daysDiff > 0 ? `Water in ${daysDiff}d` : 'Water today') : '',
       dot: 'bg-amber-500',
       pill: 'bg-amber-100 text-amber-700',
       ring: 'ring-amber-200'
     }
-    if (isYellow) return {
-      label: isOverdue ? 'Thirsty' : 'Monitoring',
-      timeline: daysDiff !== null ? (isOverdue ? `Overdue ${Math.abs(daysDiff)}d` : `Water in ${daysDiff}d`) : '',
+    if (isMajorOverdue) return {
+      label: 'Checkup Needed',
+      timeline: `${daysOverdue}d overdue`,
       dot: 'bg-amber-500',
       pill: 'bg-amber-100 text-amber-700',
       ring: 'ring-amber-200'
+    }
+    if (isMinorOverdue) return {
+      label: 'Thirsty',
+      timeline: `${daysOverdue}d overdue`,
+      dot: 'bg-amber-500',
+      pill: 'bg-amber-100 text-amber-700',
+      ring: 'ring-amber-200'
+    }
+    if (isMonitoring && !isOverdue) return {
+      label: 'Monitoring',
+      timeline: daysDiff !== null ? (daysDiff > 0 ? `Water in ${daysDiff}d` : 'Water today') : '',
+      dot: 'bg-amber-500',
+      pill: 'bg-amber-100 text-amber-700',
+      ring: 'ring-amber-200'
+    }
+    if (isWateringDay) return {
+      label: 'Water Today',
+      timeline: 'Water today',
+      dot: 'bg-blue-500',
+      pill: 'bg-blue-100 text-blue-700',
+      ring: 'ring-blue-100'
     }
     return {
       label: 'Healthy',
@@ -91,6 +124,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
   const commonName = plant.species
 
   const renderActionButton = () => {
+    // 1. Pending → "Review Plant"
     if (isPending) {
       return (
         <button
@@ -102,7 +136,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    // Emergency states take priority
+    // 2. Rescue plan pending → "Complete First Rescue Step"
     if (isRescuePlanPending) {
       return (
         <button
@@ -114,7 +148,8 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    if (isRed) {
+    // 3. Emergency (critical OR daysOverdue > majorThreshold) → "Begin Rescue Protocol"
+    if (isEmergency) {
       return (
         <button
           onClick={(e) => { e.stopPropagation(); onRescue?.(plant.id) }}
@@ -125,7 +160,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    // Checkup states for warning plants
+    // 4. Checkup needed (warning + needsCheckIn) → "Start Checkup"
     if (isCheckInNeeded) {
       return (
         <button
@@ -138,8 +173,8 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    // Monitoring plant with future checkup (water due in 2+ days)
-    if (isMonitoring && !isCheckInNeeded && !isOverdue && daysDiff !== null) {
+    // 5. Monitoring with future checkup → "Checkup in Xd"
+    if (isMonitoring && !isCheckInNeeded && !isOverdue && daysDiff !== null && daysDiff > 0) {
       return (
         <button
           onClick={(e) => { e.stopPropagation(); onCheckIn?.(plant.id, 'rehab') }}
@@ -151,24 +186,47 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    if (isOverdue) {
-      const isToday = daysDiff === 0
+    // 6. Major overdue (> minorThreshold, ≤ majorThreshold) → "Mark as Watered" (amber)
+    // Waters AND triggers Water → Monitoring flow
+    if (isMajorOverdue) {
       return (
         <button
           onClick={(e) => { e.stopPropagation(); onWater(plant.id) }}
-          className={`flex-1 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2 ${
-            isToday
-              ? 'bg-blue-600 shadow-lg shadow-blue-100'
-              : 'bg-amber-500 shadow-lg shadow-amber-100'
-          }`}
+          className="flex-1 bg-amber-500 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-100 active:scale-95 transition-all flex items-center justify-center gap-2"
         >
           <Icons.WateringCan />
-          Water Now
+          Mark as Watered
         </button>
       )
     }
 
-    // Healthy plants have no action button - tap card to see details
+    // 7. Minor overdue (1 to minorThreshold days overdue) → "Mark as Watered" (amber)
+    if (isMinorOverdue) {
+      return (
+        <button
+          onClick={(e) => { e.stopPropagation(); onWater(plant.id) }}
+          className="flex-1 bg-amber-500 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-100 active:scale-95 transition-all flex items-center justify-center gap-2"
+        >
+          <Icons.WateringCan />
+          Mark as Watered
+        </button>
+      )
+    }
+
+    // 8. Watering day (daysDiff = 0 or -1, within grace period) → "Mark as Watered" (blue)
+    if (isWateringDay) {
+      return (
+        <button
+          onClick={(e) => { e.stopPropagation(); onWater(plant.id) }}
+          className="flex-1 bg-blue-600 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 active:scale-95 transition-all flex items-center justify-center gap-2"
+        >
+          <Icons.WateringCan />
+          Mark as Watered
+        </button>
+      )
+    }
+
+    // 9. Healthy (daysDiff > 0) → No button (tap card to see details)
     return null
   }
 
