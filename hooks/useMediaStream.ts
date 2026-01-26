@@ -12,6 +12,11 @@ export const useMediaStream = () => {
 
   const start = useCallback(async () => {
     try {
+      // Check if mediaDevices API is available (requires secure context: HTTPS or localhost)
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Camera access not available. Ensure you are using HTTPS.')
+      }
+
       const newStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: { facingMode: 'environment' }
