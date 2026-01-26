@@ -52,11 +52,6 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
   const isMajorOverdue = daysOverdue > minorThreshold && daysOverdue <= majorThreshold
   const isEmergency = isCritical || daysOverdue > majorThreshold
 
-  // Rescue plan states
-  const hasRescuePlan = !!plant.rescuePlan && plant.rescuePlan.length > 0
-  const hasCompletedTasks = (plant.rescuePlanTasks || []).some(task => task.completed)
-  const isRescuePlanPending = hasRescuePlan && !hasCompletedTasks
-
   const isRed = isEmergency
   const isYellow = !isRed && (isCheckInNeeded || isOverdue || isMonitoring || isMajorOverdue)
 
@@ -136,19 +131,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    // 2. Rescue plan pending → "Complete First Rescue Step"
-    if (isRescuePlanPending) {
-      return (
-        <button
-          onClick={(e) => { e.stopPropagation(); onCheckIn?.(plant.id, 'rehab') }}
-          className="flex-1 bg-red-600 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-100 active:scale-95 transition-all"
-        >
-          Complete First Rescue Step
-        </button>
-      )
-    }
-
-    // 3. Emergency (critical OR daysOverdue > majorThreshold) → "Begin Rescue Protocol"
+    // 2. Emergency (critical OR daysOverdue > majorThreshold) → "Begin Rescue Protocol"
     if (isEmergency) {
       return (
         <button
@@ -160,7 +143,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    // 4. Checkup needed (warning + needsCheckIn) → "Start Checkup"
+    // 3. Checkup needed (warning + needsCheckIn) → "Start Checkup"
     if (isCheckInNeeded) {
       return (
         <button
@@ -173,7 +156,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    // 5. Monitoring with future checkup → "Checkup in Xd"
+    // 4. Monitoring with future checkup → "Checkup in Xd"
     if (isMonitoring && !isCheckInNeeded && !isOverdue && daysDiff !== null && daysDiff > 0) {
       return (
         <button
@@ -186,7 +169,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    // 6. Major overdue (> minorThreshold, ≤ majorThreshold) → "Mark as Watered" (amber)
+    // 5. Major overdue (> minorThreshold, ≤ majorThreshold) → "Mark as Watered" (amber)
     // Waters AND triggers Water → Monitoring flow
     if (isMajorOverdue) {
       return (
@@ -200,7 +183,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    // 7. Minor overdue (1 to minorThreshold days overdue) → "Mark as Watered" (amber)
+    // 6. Minor overdue (1 to minorThreshold days overdue) → "Mark as Watered" (amber)
     if (isMinorOverdue) {
       return (
         <button
@@ -213,7 +196,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    // 8. Watering day (daysDiff = 0 or -1, within grace period) → "Mark as Watered" (blue)
+    // 7. Watering day (daysDiff = 0 or -1, within grace period) → "Mark as Watered" (blue)
     if (isWateringDay) {
       return (
         <button
@@ -226,7 +209,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    // 9. Healthy (daysDiff > 0) → No button (tap card to see details)
+    // 8. Healthy (daysDiff > 0) → No button (tap card to see details)
     return null
   }
 
