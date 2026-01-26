@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation'
 import { HomeProfile, Plant } from '@/types'
 import { Doctor } from '@/components/Doctor'
 import { Manager } from '@/components/Manager'
-import { RescueTimelineOverlay } from '@/components/plant-details/RescueTimelineOverlay'
+import { FirstAidStepOverlay } from '@/components/plant-details/FirstAidStepOverlay'
 import { Icons } from '@/lib/constants'
 
 interface Props {
@@ -48,7 +48,8 @@ export const DoctorPage: React.FC<Props> = ({
 
   return (
     <div className="relative min-h-screen bg-black">
-      {!isActive && (
+      {/* Top overlay - How to Use OR First Aid Steps */}
+      {!isActive ? (
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl">
           <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-5 py-4 shadow-2xl">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 text-center">
@@ -65,7 +66,9 @@ export const DoctorPage: React.FC<Props> = ({
             </p>
           </div>
         </div>
-      )}
+      ) : showRescueOverlay ? (
+        <FirstAidStepOverlay tasks={rehabPlant.rescuePlanTasks!} />
+      ) : null}
 
       <Doctor
         stream={stream}
@@ -75,11 +78,6 @@ export const DoctorPage: React.FC<Props> = ({
         onAutoDetect={onAutoDetect}
         onUpdatePlant={onUpdatePlant}
       />
-
-      {/* Rescue Timeline Overlay - only for rehab mode with rescue tasks */}
-      {showRescueOverlay && isActive && (
-        <RescueTimelineOverlay tasks={rehabPlant.rescuePlanTasks!} />
-      )}
 
       {/* Stream Controls Overlay */}
       <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-30 flex gap-3">
