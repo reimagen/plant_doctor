@@ -12,7 +12,7 @@ interface Props {
   streamMode: 'video' | null
   isConnecting: boolean
   homeProfile: HomeProfile
-  onAutoDetect: (plant: Plant) => void
+  onAutoDetect: (plant: Plant, options?: { forceNew?: boolean }) => void
   onUpdatePlant: (id: string, updates: Partial<Plant>) => void
   onStartStream: () => void
   onStopStream: () => void
@@ -40,6 +40,11 @@ export const DoctorPage: React.FC<Props> = ({
   const rehabTargetId = searchParams.get('plantId')
   const mode = searchParams.get('mode')
   const rehabPlant = rehabTargetId ? plants.find(plant => plant.id === rehabTargetId) : null
+  const isAddPlantMode = mode === 'add-plant'
+
+  const handleAutoDetect = (plant: Plant) => {
+    onAutoDetect(plant, { forceNew: isAddPlantMode })
+  }
 
   // Determine welcome message based on entry route
   const getWelcomeMessage = () => {
@@ -58,11 +63,30 @@ export const DoctorPage: React.FC<Props> = ({
   // Check if we should show the rescue timeline overlay
   const showRescueOverlay = rehabPlant && rehabPlant.rescuePlanTasks && rehabPlant.rescuePlanTasks.length > 0
 
+  // Determine which phase to show (phase-1, phase-2, or phase-3)
+  // Shows the first phase that has incomplete tasks
+  const getCurrentPhase = () => {
+    if (!rehabPlant?.rescuePlanTasks) return null
+
+    const hasIncompletePhase1 = rehabPlant.rescuePlanTasks.some(t => t.phase === 'phase-1' && !t.completed)
+    if (hasIncompletePhase1) return 'phase-1'
+
+    const hasIncompletePhase2 = rehabPlant.rescuePlanTasks.some(t => t.phase === 'phase-2' && !t.completed)
+    if (hasIncompletePhase2) return 'phase-2'
+
+    const hasIncompletePhase3 = rehabPlant.rescuePlanTasks.some(t => t.phase === 'phase-3' && !t.completed)
+    if (hasIncompletePhase3) return 'phase-3'
+
+    return null
+  }
+
+  const currentPhase = getCurrentPhase()
+
   return (
     <div className="relative min-h-screen bg-black">
-      {/* Top overlay - First Aid Steps OR How to Use */}
-      {showRescueOverlay ? (
-        <FirstAidStepOverlay tasks={rehabPlant.rescuePlanTasks!} />
+      {/* Top overlay - Phase-based rescue steps OR How to Use */}
+      {showRescueOverlay && currentPhase ? (
+        <FirstAidStepOverlay tasks={rehabPlant.rescuePlanTasks!} phase={currentPhase as 'phase-1' | 'phase-2' | 'phase-3'} />
       ) : !isActive ? (
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl">
           <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-5 py-4 shadow-2xl">
@@ -91,7 +115,7 @@ export const DoctorPage: React.FC<Props> = ({
         homeProfile={homeProfile}
         plants={plants}
         rehabTargetId={rehabTargetId}
-        onAutoDetect={onAutoDetect}
+        onAutoDetect={handleAutoDetect}
         onUpdatePlant={onUpdatePlant}
       />
 

@@ -3,28 +3,65 @@
 import { useState, useEffect, useMemo } from 'react'
 import { RescueTask } from '@/types'
 
+type PhaseType = 'phase-1' | 'phase-2' | 'phase-3'
+
 interface Props {
   tasks: RescueTask[]
+  phase: PhaseType
 }
 
-export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
+const PHASE_CONFIG = {
+  'phase-1': {
+    title: 'IMMEDIATE ACTION',
+    label: 'First Aid Step',
+    color: 'red',
+    bgClass: 'bg-white/90',
+    textClass: 'text-stone-800',
+    bulletClass: 'bg-red-500',
+    completionMessage: 'First Aid Complete!'
+  },
+  'phase-2': {
+    title: 'RECOVERY SUPPORT',
+    label: 'Recovery Step',
+    color: 'amber',
+    bgClass: 'bg-white/90',
+    textClass: 'text-stone-800',
+    bulletClass: 'bg-amber-500',
+    completionMessage: 'Recovery Phase Complete!'
+  },
+  'phase-3': {
+    title: 'ONGOING MONITORING',
+    label: 'Maintenance Step',
+    color: 'blue',
+    bgClass: 'bg-white/90',
+    textClass: 'text-stone-800',
+    bulletClass: 'bg-blue-500',
+    completionMessage: 'Monitoring Phase Complete!'
+  }
+}
+
+export const FirstAidStepOverlay: React.FC<Props> = ({ tasks, phase }) => {
   const [showCelebration, setShowCelebration] = useState(false)
   const [hideCelebration, setHideCelebration] = useState(false)
 
-  // Sort all tasks by sequencing
-  const sortedTasks = useMemo(() => {
-    return [...tasks].sort((a, b) => (a.sequencing ?? 0) - (b.sequencing ?? 0))
-  }, [tasks])
+  const config = PHASE_CONFIG[phase]
 
-  const completedCount = sortedTasks.filter(task => task.completed).length
-  const totalCount = sortedTasks.length
+  // Filter tasks for this phase and sort by sequencing
+  const phaseTasks = useMemo(() => {
+    return tasks
+      .filter(task => task.phase === phase)
+      .sort((a, b) => (a.sequencing ?? 0) - (b.sequencing ?? 0))
+  }, [tasks, phase])
+
+  const completedCount = phaseTasks.filter(task => task.completed).length
+  const totalCount = phaseTasks.length
   const allComplete = totalCount > 0 && completedCount === totalCount
 
   // Find the current (next incomplete) task
-  const currentTaskIndex = sortedTasks.findIndex(task => !task.completed)
-  const currentTask = currentTaskIndex >= 0 ? sortedTasks[currentTaskIndex] : null
+  const currentTaskIndex = phaseTasks.findIndex(task => !task.completed)
+  const currentTask = currentTaskIndex >= 0 ? phaseTasks[currentTaskIndex] : null
 
-  // Handle celebration when all tasks complete
+  // Handle celebration when all tasks in this phase complete
   useEffect(() => {
     if (allComplete && !showCelebration && !hideCelebration) {
       setShowCelebration(true)
@@ -35,7 +72,7 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
     }
   }, [allComplete, showCelebration, hideCelebration])
 
-  // Don't render if no tasks
+  // Don't render if no tasks in this phase
   if (totalCount === 0) {
     return null
   }
@@ -54,10 +91,10 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
             <span className="text-2xl">🌱</span>
             <div className="text-center">
               <p className="text-sm font-black text-white">
-                First Aid Complete!
+                {config.completionMessage}
               </p>
               <p className="text-xs font-bold text-white/80 mt-1">
-                Your plant is on the road to recovery
+                Great progress on your plant's recovery
               </p>
             </div>
             <span className="text-2xl">✨</span>
@@ -79,16 +116,21 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
       key={currentTask.id}
       className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl animate-slide-up"
     >
-      <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-5 py-4 shadow-2xl">
-        {/* Header with progress */}
+      <div className={`${config.bgClass} backdrop-blur-xl border border-white/60 rounded-3xl px-5 py-4 shadow-2xl`}>
+        {/* Header with phase tag and progress */}
         <div className="flex items-center justify-between mb-3">
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500">
-            First Aid Step {currentStepNumber}/{totalCount}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-600 bg-red-50 px-2 py-1 rounded-full">
+              {config.title}
+            </p>
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500">
+              {config.label} {currentStepNumber}/{totalCount}
+            </p>
+          </div>
 
           {/* Progress dots */}
           <div className="flex items-center gap-1.5">
-            {sortedTasks.map((task, index) => {
+            {phaseTasks.map((task, index) => {
               const isCompleted = task.completed
               const isCurrent = index === currentTaskIndex
 
@@ -99,7 +141,7 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
                     isCompleted
                       ? 'bg-green-500'
                       : isCurrent
-                      ? 'bg-red-500 animate-pulse'
+                      ? `${config.bulletClass} animate-pulse`
                       : 'bg-stone-300'
                   }`}
                 />
@@ -109,7 +151,7 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
         </div>
 
         {/* Current step description */}
-        <p className="text-sm font-bold text-stone-800">
+        <p className={`text-sm font-bold ${config.textClass}`}>
           {currentTask.description}
         </p>
 
