@@ -76,7 +76,15 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       pill: 'bg-amber-100 text-amber-700',
       ring: 'ring-amber-200'
     }
-    // All other healthy plants (including watering day) show Healthy badge
+    // Watering day - show Healthy badge with blue "Water today" tag
+    if (isWateringDay) return {
+      label: 'Healthy',
+      timeline: 'Water today',
+      dot: 'bg-green-500',
+      pill: 'bg-blue-100 text-blue-700',
+      ring: 'ring-green-100'
+    }
+    // All other healthy plants show Healthy badge with watering schedule
     return {
       label: 'Healthy',
       timeline: daysDiff !== null ? `Water in ${daysDiff}d` : '',
