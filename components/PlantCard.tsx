@@ -76,13 +76,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       pill: 'bg-amber-100 text-amber-700',
       ring: 'ring-amber-200'
     }
-    if (isWateringDay) return {
-      label: 'Water Today',
-      timeline: 'Water today',
-      dot: 'bg-blue-500',
-      pill: 'bg-blue-100 text-blue-700',
-      ring: 'ring-blue-100'
-    }
+    // All other healthy plants (including watering day) show Healthy badge
     return {
       label: 'Healthy',
       timeline: daysDiff !== null ? `Water in ${daysDiff}d` : '',
@@ -175,12 +169,12 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    // 7. Watering day (daysDiff = 0 or -1, within grace period) → "Mark as Watered" (blue)
+    // 7. Watering day (daysDiff = 0 or -1, within grace period) → "Mark as Watered" (green)
     if (isWateringDay) {
       return (
         <button
           onClick={(e) => { e.stopPropagation(); onWater(plant.id) }}
-          className="flex-1 bg-blue-600 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-100 active:scale-95 transition-all flex items-center justify-center gap-2"
+          className="flex-1 bg-green-600 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-green-100 active:scale-95 transition-all flex items-center justify-center gap-2"
         >
           <Icons.WateringCan />
           Mark as Watered
