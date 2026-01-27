@@ -11,20 +11,18 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
   const [showCelebration, setShowCelebration] = useState(false)
   const [hideCelebration, setHideCelebration] = useState(false)
 
-  // Filter and sort phase-1 tasks
-  const phase1Tasks = useMemo(() => {
-    return tasks
-      .filter(task => task.phase === 'phase-1')
-      .sort((a, b) => (a.sequencing ?? 0) - (b.sequencing ?? 0))
+  // Sort all tasks by sequencing
+  const sortedTasks = useMemo(() => {
+    return [...tasks].sort((a, b) => (a.sequencing ?? 0) - (b.sequencing ?? 0))
   }, [tasks])
 
-  const completedCount = phase1Tasks.filter(task => task.completed).length
-  const totalCount = phase1Tasks.length
+  const completedCount = sortedTasks.filter(task => task.completed).length
+  const totalCount = sortedTasks.length
   const allComplete = totalCount > 0 && completedCount === totalCount
 
   // Find the current (next incomplete) task
-  const currentTaskIndex = phase1Tasks.findIndex(task => !task.completed)
-  const currentTask = currentTaskIndex >= 0 ? phase1Tasks[currentTaskIndex] : null
+  const currentTaskIndex = sortedTasks.findIndex(task => !task.completed)
+  const currentTask = currentTaskIndex >= 0 ? sortedTasks[currentTaskIndex] : null
 
   // Handle celebration when all tasks complete
   useEffect(() => {
@@ -37,7 +35,7 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
     }
   }, [allComplete, showCelebration, hideCelebration])
 
-  // Don't render if no phase-1 tasks
+  // Don't render if no tasks
   if (totalCount === 0) {
     return null
   }
@@ -90,7 +88,7 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
 
           {/* Progress dots */}
           <div className="flex items-center gap-1.5">
-            {phase1Tasks.map((task, index) => {
+            {sortedTasks.map((task, index) => {
               const isCompleted = task.completed
               const isCurrent = index === currentTaskIndex
 
