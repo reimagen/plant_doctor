@@ -56,30 +56,16 @@ export const PlantStatusBadge: React.FC<Props> = ({ plant, size = 'md' }) => {
       dot: 'bg-red-500',
       pill: 'bg-red-100 text-red-700',
     }
-    if (isCheckInNeeded) return {
-      label: 'Check-up Due',
-      dot: 'bg-amber-500',
-      pill: 'bg-amber-100 text-amber-700',
+    // Watering day check BEFORE overdue checks
+    if (isWateringDay) return {
+      label: 'Healthy',
+      dot: 'bg-green-500',
+      pill: 'bg-blue-100 text-blue-700',
     }
-    if (isMajorOverdue) return {
-      label: 'Checkup Needed',
-      dot: 'bg-amber-500',
-      pill: 'bg-amber-100 text-amber-700',
-    }
-    if (isMinorOverdue) return {
-      label: 'Thirsty',
-      dot: 'bg-amber-500',
-      pill: 'bg-amber-100 text-amber-700',
-    }
-    if (isMonitoring && !isOverdue) return {
+    if (isCheckInNeeded || isMajorOverdue || isMinorOverdue || isMonitoring) return {
       label: 'Monitoring',
       dot: 'bg-amber-500',
       pill: 'bg-amber-100 text-amber-700',
-    }
-    if (isWateringDay) return {
-      label: 'Water Today',
-      dot: 'bg-blue-500',
-      pill: 'bg-blue-100 text-blue-700',
     }
     return {
       label: 'Healthy',
