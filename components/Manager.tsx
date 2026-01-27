@@ -64,7 +64,7 @@ export const Manager: React.FC<Props> = ({
         isRequired={isPending}
       />
 
-      {(plant.status === 'warning' || plant.status === 'critical' || (plant.rescuePlan && plant.rescuePlan.length > 0)) && (
+      {(plant.status === 'warning' || plant.status === 'critical' || (plant.rescuePlan && plant.rescuePlan.length > 0) || (plant.rescuePlanTasks && plant.rescuePlanTasks.length > 0)) && (
         <RescuePlanSection
           plant={plant}
           onTaskComplete={handleTaskComplete}
