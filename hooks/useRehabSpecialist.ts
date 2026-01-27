@@ -247,7 +247,39 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                                      task.description.toLowerCase().includes(taskDescription.toLowerCase())
                     return taskMatch ? { ...task, completed: true } : task
                   })
-                  onUpdateRef.current(plant.id, { rescuePlanTasks: updatedTasks });
+
+                  // Apply side effects from task completion
+                  const completedTask = updatedTasks.find(task => {
+                    const taskMatch = taskDescription.toLowerCase().includes(task.description.toLowerCase()) ||
+                                     task.description.toLowerCase().includes(taskDescription.toLowerCase())
+                    return taskMatch
+                  })
+
+                  const updates: Partial<Plant> = { rescuePlanTasks: updatedTasks }
+
+                  // Check if this is a watering task (phase-1 watering-related task)
+                  const isWateringTask = completedTask &&
+                    completedTask.phase === 'phase-1' &&
+                    /water|hydrat|soak|drench/.test(completedTask.description.toLowerCase())
+
+                  // If watering task is completed, update last watered date
+                  if (isWateringTask) {
+                    console.log(`[RESCUE] Watering task completed for ${plant.name} - updating lastWateredAt`)
+                    updates.lastWateredAt = new Date().toISOString()
+                  }
+
+                  // Check if this is the first task being completed
+                  const hadNoCompletedTasks = !plant.rescuePlanTasks?.some(task => task.completed)
+                  const nowHasCompletedTasks = updatedTasks.some(task => task.completed)
+                  const wasFirstTaskCompleted = hadNoCompletedTasks && nowHasCompletedTasks
+
+                  // If first task is being completed and plant is still critical, flip to warning (monitoring)
+                  if (wasFirstTaskCompleted && plant.status === 'critical') {
+                    console.log(`[RESCUE] First task completed for ${plant.name} - flipping status from critical to warning`)
+                    updates.status = 'warning'
+                  }
+
+                  onUpdateRef.current(plant.id, updates);
                   session.sendToolResponse(fc.id!, fc.name!, {
                     success: true,
                     message: args.confirmationMessage || "Great! I've recorded that task as complete."
