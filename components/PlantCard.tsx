@@ -220,11 +220,13 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
             {commonName}
           </p>
 
-          <div className="bg-stone-50 rounded-xl px-3 py-2 inline-block">
-            <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest">
-              {config.timeline}
-            </p>
-          </div>
+          {config.timeline && (
+            <div className={`rounded-xl px-3 py-2 inline-block ${config.pill}`}>
+              <p className="text-[10px] font-black uppercase tracking-widest">
+                {config.timeline}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
