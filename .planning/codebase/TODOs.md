@@ -394,12 +394,14 @@
 - [x] **Update test data**
   - [x] Add 3-phase test plant with clear testing guide comments
 
-### Phase 7.5: Debug Rescue Plan Flow & Notification Polish (Partial)
+### Phase 7.5: Debug Rescue Plan Flow ✅
 - [x] **Debug & Verify Rescue Plan Persistence**
   - [x] Verified rescue plan tasks persist from livestream to plant details
   - [x] Confirmed status transition (critical → warning) triggers only after all phase-1 complete
   - [x] Verified localStorage cache cleared, test data loads correctly
   - [x] All phase-1 task completion logic validated during livestream
+
+### Phase 7.8: UX Polish - Notifications & Timeline Overlay
 - [ ] **Refine notification system for clearer visual hierarchy**
   - [ ] Distinguish between task completion, status change, and observation notifications
   - [ ] Add animation polish for notification transitions
