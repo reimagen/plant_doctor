@@ -144,9 +144,10 @@ export const TEST_PLANTS: Plant[] = [
 
   // EMERGENCY - Red badge, overdue by 3+ days, with 3-phase rescue plan
   // TEST: Complete tasks one-by-one to verify:
-  // 1. Status stays CRITICAL until all 3 PHASE-1 tasks complete
-  // 2. Overlay shows "Phase 1: First Aid" until all phase-1 done
-  // 3. Only after all phase-1 complete does it flip to "Monitoring" (warning status)
+  // 1. During livestream: Overlay shows ONLY Phase 1 (First Aid) tasks
+  // 2. Status stays CRITICAL until all 3 PHASE-1 tasks complete
+  // 3. In plant details: Phase 1 under "First Aid" (red), Phases 2+3 under "Monitoring" (amber)
+  // 4. Only after all phase-1 complete does status flip to "Monitoring" (warning status)
   {
     id: 'status-emergency',
     name: 'Ruby in Crisis',

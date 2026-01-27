@@ -3,11 +3,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { RescueTask } from '@/types'
 
-type PhaseType = 'phase-1' | 'phase-2' | 'phase-3'
-
 interface Props {
   tasks: RescueTask[]
-  phase: PhaseType
 }
 
 const PHASE_CONFIG = {
@@ -19,39 +16,21 @@ const PHASE_CONFIG = {
     textClass: 'text-stone-800',
     bulletClass: 'bg-red-500',
     completionMessage: 'First Aid Complete!'
-  },
-  'phase-2': {
-    title: 'RECOVERY SUPPORT',
-    label: 'Recovery Step',
-    color: 'amber',
-    bgClass: 'bg-white/90',
-    textClass: 'text-stone-800',
-    bulletClass: 'bg-amber-500',
-    completionMessage: 'Recovery Phase Complete!'
-  },
-  'phase-3': {
-    title: 'ONGOING MONITORING',
-    label: 'Maintenance Step',
-    color: 'blue',
-    bgClass: 'bg-white/90',
-    textClass: 'text-stone-800',
-    bulletClass: 'bg-blue-500',
-    completionMessage: 'Monitoring Phase Complete!'
   }
 }
 
-export const FirstAidStepOverlay: React.FC<Props> = ({ tasks, phase }) => {
+export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
   const [showCelebration, setShowCelebration] = useState(false)
   const [hideCelebration, setHideCelebration] = useState(false)
 
-  const config = PHASE_CONFIG[phase]
+  const config = PHASE_CONFIG['phase-1']
 
-  // Filter tasks for this phase and sort by sequencing
+  // Filter Phase 1 tasks and sort by sequencing
   const phaseTasks = useMemo(() => {
     return tasks
-      .filter(task => task.phase === phase)
+      .filter(task => task.phase === 'phase-1')
       .sort((a, b) => (a.sequencing ?? 0) - (b.sequencing ?? 0))
-  }, [tasks, phase])
+  }, [tasks])
 
   const completedCount = phaseTasks.filter(task => task.completed).length
   const totalCount = phaseTasks.length
@@ -121,7 +100,7 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks, phase }) => {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-600 bg-red-50 px-2 py-1 rounded-full">
-              {config.title}
+              {config.title} — First Aid
             </p>
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500">
               {config.label} {currentStepNumber}/{totalCount}

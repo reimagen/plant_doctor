@@ -63,30 +63,15 @@ export const DoctorPage: React.FC<Props> = ({
   // Check if we should show the rescue timeline overlay
   const showRescueOverlay = rehabPlant && rehabPlant.rescuePlanTasks && rehabPlant.rescuePlanTasks.length > 0
 
-  // Determine which phase to show (phase-1, phase-2, or phase-3)
-  // Shows the first phase that has incomplete tasks
-  const getCurrentPhase = () => {
-    if (!rehabPlant?.rescuePlanTasks) return null
-
-    const hasIncompletePhase1 = rehabPlant.rescuePlanTasks.some(t => t.phase === 'phase-1' && !t.completed)
-    if (hasIncompletePhase1) return 'phase-1'
-
-    const hasIncompletePhase2 = rehabPlant.rescuePlanTasks.some(t => t.phase === 'phase-2' && !t.completed)
-    if (hasIncompletePhase2) return 'phase-2'
-
-    const hasIncompletePhase3 = rehabPlant.rescuePlanTasks.some(t => t.phase === 'phase-3' && !t.completed)
-    if (hasIncompletePhase3) return 'phase-3'
-
-    return null
-  }
-
-  const currentPhase = getCurrentPhase()
+  // Only show Phase 1 (First Aid) tasks during livestream
+  // Phase 2 and 3 are only visible in plant details
+  const hasIncompletePhase1 = rehabPlant?.rescuePlanTasks?.some(t => t.phase === 'phase-1' && !t.completed) ?? false
 
   return (
     <div className="relative min-h-screen bg-black">
-      {/* Top overlay - Phase-based rescue steps OR How to Use */}
-      {showRescueOverlay && currentPhase ? (
-        <FirstAidStepOverlay tasks={rehabPlant.rescuePlanTasks!} phase={currentPhase as 'phase-1' | 'phase-2' | 'phase-3'} />
+      {/* Top overlay - First Aid (Phase 1) rescue steps OR How to Use */}
+      {showRescueOverlay && hasIncompletePhase1 ? (
+        <FirstAidStepOverlay tasks={rehabPlant.rescuePlanTasks!} />
       ) : !isActive ? (
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl">
           <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-5 py-4 shadow-2xl">

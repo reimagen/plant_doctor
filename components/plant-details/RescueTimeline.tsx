@@ -22,18 +22,22 @@ interface Props {
   onTaskComplete: (taskId: string, completed: boolean) => void
 }
 
-const PHASE_INFO = {
-  'phase-1': {
-    title: 'Phase 1: First Aid',
-    description: 'Complete these immediately to stabilize the plant'
+const SECTION_INFO = {
+  'first-aid': {
+    title: 'First Aid',
+    description: 'Complete these immediately to stabilize the plant',
+    bgClass: 'bg-red-50 border-red-100',
+    titleClass: 'text-red-600',
+    descClass: 'text-red-500',
+    badgeClass: 'text-red-400'
   },
-  'phase-2': {
-    title: 'Phase 2: Recovery',
-    description: 'Follow up within 1-2 days to support recovery'
-  },
-  'phase-3': {
-    title: 'Phase 3: Monitor',
-    description: 'Ongoing maintenance for 2+ weeks'
+  'monitoring': {
+    title: 'Monitoring',
+    description: 'Recovery support and ongoing maintenance',
+    bgClass: 'bg-amber-50 border-amber-100',
+    titleClass: 'text-amber-600',
+    descClass: 'text-amber-500',
+    badgeClass: 'text-amber-400'
   }
 }
 
@@ -45,56 +49,39 @@ export const RescueTimeline: React.FC<Props> = ({
   const completedCount = tasks.filter(t => t.completed).length
   const totalCount = tasks.length
 
-  // Group tasks by phase
-  const tasksByPhase = {
-    'phase-1': tasks.filter(t => t.phase === 'phase-1'),
-    'phase-2': tasks.filter(t => t.phase === 'phase-2'),
-    'phase-3': tasks.filter(t => t.phase === 'phase-3')
+  // Group tasks by section: First Aid (phase-1) and Monitoring (phase-2 + phase-3)
+  const tasksBySection = {
+    'first-aid': tasks.filter(t => t.phase === 'phase-1'),
+    'monitoring': tasks.filter(t => t.phase === 'phase-2' || t.phase === 'phase-3')
   }
 
-  const renderPhaseGroup = (phaseKey: 'phase-1' | 'phase-2' | 'phase-3') => {
-    const phaseTasks = tasksByPhase[phaseKey]
-    if (phaseTasks.length === 0) return null
+  const renderSection = (sectionKey: 'first-aid' | 'monitoring') => {
+    const sectionTasks = tasksBySection[sectionKey]
+    if (sectionTasks.length === 0) return null
 
-    const phaseInfo = PHASE_INFO[phaseKey]
-    const phaseCompleted = phaseTasks.filter(t => t.completed).length
+    const sectionInfo = SECTION_INFO[sectionKey]
+    const sectionCompleted = sectionTasks.filter(t => t.completed).length
 
     return (
-      <div key={phaseKey} className="space-y-3 mb-6">
-        {/* Phase header */}
-        <div className={`p-4 rounded-2xl border ${
-          phaseKey === 'phase-1' ? 'bg-red-50 border-red-100' :
-          phaseKey === 'phase-2' ? 'bg-amber-50 border-amber-100' :
-          'bg-blue-50 border-blue-100'
-        }`}>
-          <h4 className={`text-[10px] font-black uppercase tracking-widest mb-1 ${
-            phaseKey === 'phase-1' ? 'text-red-600' :
-            phaseKey === 'phase-2' ? 'text-amber-600' :
-            'text-blue-600'
-          }`}>
-            {phaseInfo.title}
+      <div key={sectionKey} className="space-y-3 mb-6">
+        {/* Section header */}
+        <div className={`p-4 rounded-2xl border ${sectionInfo.bgClass}`}>
+          <h4 className={`text-[10px] font-black uppercase tracking-widest mb-1 ${sectionInfo.titleClass}`}>
+            {sectionInfo.title}
           </h4>
-          <p className={`text-[9px] font-medium ${
-            phaseKey === 'phase-1' ? 'text-red-500' :
-            phaseKey === 'phase-2' ? 'text-amber-500' :
-            'text-blue-500'
-          }`}>
-            {phaseInfo.description}
+          <p className={`text-[9px] font-medium ${sectionInfo.descClass}`}>
+            {sectionInfo.description}
           </p>
-          {phaseTasks.length > 1 && (
-            <p className={`text-[8px] font-bold uppercase tracking-widest mt-2 ${
-              phaseKey === 'phase-1' ? 'text-red-400' :
-              phaseKey === 'phase-2' ? 'text-amber-400' :
-              'text-blue-400'
-            }`}>
-              {phaseCompleted} of {phaseTasks.length} tasks
+          {sectionTasks.length > 1 && (
+            <p className={`text-[8px] font-bold uppercase tracking-widest mt-2 ${sectionInfo.badgeClass}`}>
+              {sectionCompleted} of {sectionTasks.length} tasks
             </p>
           )}
         </div>
 
-        {/* Phase tasks */}
+        {/* Section tasks */}
         <div className="space-y-3 ml-2">
-          {phaseTasks.map((task, index) => (
+          {sectionTasks.map((task, index) => (
             <div key={task.id} className="flex gap-4 items-start">
               {/* Timeline line and dot */}
               <div className="flex flex-col items-center pt-1">
@@ -120,7 +107,7 @@ export const RescueTimeline: React.FC<Props> = ({
                     </svg>
                   )}
                 </button>
-                {index < phaseTasks.length - 1 && (
+                {index < sectionTasks.length - 1 && (
                   <div
                     className={`w-1 flex-1 mt-2 ${
                       task.completed ? 'bg-green-200' : 'bg-stone-200'
@@ -178,9 +165,8 @@ export const RescueTimeline: React.FC<Props> = ({
 
       {totalCount > 0 ? (
         <div className="space-y-6">
-          {renderPhaseGroup('phase-1')}
-          {renderPhaseGroup('phase-2')}
-          {renderPhaseGroup('phase-3')}
+          {renderSection('first-aid')}
+          {renderSection('monitoring')}
         </div>
       ) : (
         <div className="p-8 border-2 border-dashed border-red-100 rounded-3xl text-center">
