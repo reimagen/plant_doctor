@@ -55,6 +55,18 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
     }
   }
 
+  const createRescuePlanFunction: FunctionDeclaration = {
+    name: 'create_rescue_plan',
+    parameters: {
+      type: Type.OBJECT,
+      description: 'Generates a detailed rescue plan with specific tasks for the plant based on assessment. Call this after you have assessed the plant and identified what needs to be done.',
+      properties: {
+        summary: { type: Type.STRING, description: 'Brief summary of the plant\'s condition and why the plan is needed' }
+      },
+      required: ['summary']
+    }
+  }
+
   const stopCall = useCallback(async () => {
     // Use ref check to avoid depending on isCalling state
     if (!sessionRef.current && !isConnectingRef.current) return
@@ -133,6 +145,7 @@ Plant Context:
 
 Instructions:
 - Analyze the video feed for leaves, soil, stems, and overall plant condition
+- If there is no rescue plan yet (Current Tasks: None), assess the plant and then use create_rescue_plan to generate a detailed recovery plan
 - If the plant appears to have recovered, use verify_rehab_success
 - When the user mentions completing any rescue plan task, use mark_rescue_task_complete
 - Ask clarifying questions about the plant's appearance and care activities
@@ -144,7 +157,7 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
         apiKey,
         model: 'gemini-2.0-flash-exp',
         systemInstruction,
-        tools: [{ functionDeclarations: [verifyRehabFunction, markRescueTaskCompleteFunction] }],
+        tools: [{ functionDeclarations: [createRescuePlanFunction, verifyRehabFunction, markRescueTaskCompleteFunction] }],
         callbacks: {
           onOpen: async () => {
             session.sendInitialGreet(`Hello! I'm here to check on ${plant.name || plant.species}. Please show me its current condition.`)
@@ -235,6 +248,55 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                     success: true,
                     message: args.confirmationMessage || "Great! I've recorded that task as complete."
                   });
+                } else if (fc.name === 'create_rescue_plan') {
+                  try {
+                    const response = await fetch('/api/gemini/content', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        type: 'rescue-plan',
+                        plant,
+                        homeProfile: homeProfileRef.current
+                      })
+                    })
+
+                    if (response.ok) {
+                      const data = await response.json()
+                      if (data.steps && data.steps.length > 0) {
+                        const tasks = data.steps.map((step: any, index: number) => ({
+                          id: `task-${Date.now()}-${index}`,
+                          description: typeof step === 'string' ? step : step.action || step.description || 'Unknown step',
+                          completed: false,
+                          phase: step.phase,
+                          duration: step.duration,
+                          sequencing: step.sequencing || index + 1,
+                          successCriteria: step.successCriteria
+                        }))
+                        onUpdateRef.current(plant.id, { rescuePlanTasks: tasks })
+                        session.sendToolResponse(fc.id!, fc.name!, {
+                          success: true,
+                          taskCount: tasks.length,
+                          message: `Rescue plan created with ${tasks.length} tasks`
+                        })
+                      } else {
+                        session.sendToolResponse(fc.id!, fc.name!, {
+                          success: false,
+                          error: 'Failed to generate rescue plan steps'
+                        })
+                      }
+                    } else {
+                      session.sendToolResponse(fc.id!, fc.name!, {
+                        success: false,
+                        error: 'API error generating rescue plan'
+                      })
+                    }
+                  } catch (error) {
+                    console.error('Error creating rescue plan:', error)
+                    session.sendToolResponse(fc.id!, fc.name!, {
+                      success: false,
+                      error: 'Error generating rescue plan'
+                    })
+                  }
                 }
               }
             }
