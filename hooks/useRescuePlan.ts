@@ -21,11 +21,6 @@ export const useRescueTaskManager = (
       completedTask.phase === 'phase-1' &&
       /water|hydrat|soak|drench/.test(completedTask.description.toLowerCase())
 
-    // Check if this is the first task being completed
-    const hadNoCompletedTasks = !plant.rescuePlanTasks?.some(task => task.completed)
-    const nowHasCompletedTasks = updatedTasks.some(task => task.completed)
-    const wasFirstTaskCompleted = hadNoCompletedTasks && nowHasCompletedTasks
-
     const updates: Partial<Plant> = { rescuePlanTasks: updatedTasks }
 
     // If watering task is completed, update last watered date
@@ -34,13 +29,17 @@ export const useRescueTaskManager = (
       updates.lastWateredAt = new Date().toISOString()
     }
 
-    // If first task is being completed and plant is still critical, flip to warning (monitoring)
-    if (wasFirstTaskCompleted && plant.status === 'critical') {
-      console.log(`[RESCUE] First task completed for ${plant.name} - flipping status from critical to warning`)
+    // Check if all phase-1 tasks are now complete
+    const phase1Tasks = updatedTasks.filter(t => t.phase === 'phase-1')
+    const allPhase1Complete = phase1Tasks.length > 0 && phase1Tasks.every(t => t.completed)
+
+    // Only flip to warning after ALL phase-1 tasks are completed
+    if (allPhase1Complete && plant.status === 'critical' && completed) {
+      console.log(`[RESCUE] All phase-1 tasks completed for ${plant.name} - flipping status from critical to warning`)
       updates.status = 'warning'
     }
 
-    console.log(`[RESCUE] Task toggle for ${plant.name}: completed=${completed}, wasFirst=${wasFirstTaskCompleted}, isWatering=${isWateringTask}, status change=${updates.status ? 'yes' : 'no'}`)
+    console.log(`[RESCUE] Task toggle for ${plant.name}: completed=${completed}, allPhase1=${allPhase1Complete}, isWatering=${isWateringTask}, status change=${updates.status ? 'yes' : 'no'}`)
     onUpdate(plant.id, updates)
   }, [plant.rescuePlanTasks, plant.status, plant.id, onUpdate])
 

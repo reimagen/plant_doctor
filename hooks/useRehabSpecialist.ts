@@ -298,14 +298,13 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                     updates.lastWateredAt = new Date().toISOString()
                   }
 
-                  // Check if this is the first task being completed
-                  const hadNoCompletedTasks = !plant.rescuePlanTasks?.some(task => task.completed)
-                  const nowHasCompletedTasks = updatedTasks.some(task => task.completed)
-                  const wasFirstTaskCompleted = hadNoCompletedTasks && nowHasCompletedTasks
+                  // Check if all phase-1 tasks are now complete
+                  const phase1Tasks = updatedTasks.filter(t => t.phase === 'phase-1')
+                  const allPhase1Complete = phase1Tasks.length > 0 && phase1Tasks.every(t => t.completed)
 
-                  // If first task is being completed and plant is still critical, flip to warning (monitoring)
-                  if (wasFirstTaskCompleted && plant.status === 'critical') {
-                    console.log(`[RESCUE] First task completed for ${plant.name} - flipping status from critical to warning`)
+                  // Only flip to warning after ALL phase-1 tasks are completed
+                  if (allPhase1Complete && plant.status === 'critical') {
+                    console.log(`[RESCUE] All phase-1 tasks completed for ${plant.name} - flipping status from critical to warning`)
                     updates.status = 'warning'
                   }
 
