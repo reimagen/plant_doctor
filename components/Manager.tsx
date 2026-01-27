@@ -2,7 +2,7 @@
 
 import { Plant, HomeProfile } from '@/types'
 import { useCareGuide } from '@/hooks/useCareGuide'
-import { useRescuePlan } from '@/hooks/useRescuePlan'
+import { useRescueTaskManager } from '@/hooks/useRescuePlan'
 import { CareGuideSection } from '@/components/plant-details/CareGuideSection'
 import { DangerZoneSection } from '@/components/plant-details/DangerZoneSection'
 import { EnvironmentSettingsSection } from '@/components/plant-details/EnvironmentSettingsSection'
@@ -45,12 +45,7 @@ export const Manager: React.FC<Props> = ({
     onUpdate
   )
 
-  const {
-    isRescueGenerating,
-    error: rescueError,
-    generateRescuePlan,
-    handleTaskComplete,
-  } = useRescuePlan(plant, homeProfile, onUpdate)
+  const { handleTaskComplete } = useRescueTaskManager(plant, onUpdate)
 
   const handleDelete = () => {
     if (confirm(`Remove ${plant.name || plant.species} from your jungle?`)) {
@@ -72,8 +67,6 @@ export const Manager: React.FC<Props> = ({
       {(plant.status === 'warning' || plant.status === 'critical' || (plant.rescuePlan && plant.rescuePlan.length > 0)) && (
         <RescuePlanSection
           plant={plant}
-          isRescueGenerating={isRescueGenerating}
-          onGenerate={generateRescuePlan}
           onTaskComplete={handleTaskComplete}
         />
       )}
@@ -86,14 +79,9 @@ export const Manager: React.FC<Props> = ({
         <EnvironmentSettingsSection plant={plant} onUpdate={onUpdate} />
       </div>
 
-      {(careGuideError || rescueError) && (
+      {careGuideError && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-2">
-          {careGuideError && (
-            <p className="text-xs font-bold text-red-600">{careGuideError}</p>
-          )}
-          {rescueError && (
-            <p className="text-xs font-bold text-red-600">{rescueError}</p>
-          )}
+          <p className="text-xs font-bold text-red-600">{careGuideError}</p>
         </div>
       )}
 

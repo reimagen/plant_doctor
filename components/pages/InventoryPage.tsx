@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plant, HomeProfile } from '@/types'
 import { PlantCard } from '@/components/PlantCard'
-import { RescueProtocolView } from '@/components/RescueProtocolView'
 import { Icons } from '@/lib/constants'
 
 interface Props {
@@ -20,7 +19,6 @@ type SortOption = 'urgency' | 'watering schedule' | 'name'
 
 export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, onAdopt, onDelete, onUpdate }) => {
   const router = useRouter()
-  const [rescuePlantId, setRescuePlantId] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<SortOption>('urgency')
 
   const pendingPlants = plants.filter(p => p.status === 'pending')
@@ -115,8 +113,6 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
     })
   }, [junglePlantsRaw, sortBy])
 
-  const rescuePlant = plants.find(p => p.id === rescuePlantId)
-
   return (
     <div className="p-6 animate-fade-in pb-24 min-h-screen bg-stone-50">
       <header className="mb-10 flex items-center justify-between">
@@ -197,26 +193,12 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
                   onWater={onWater}
                   onDelete={onDelete}
                   onCheckIn={() => router.push(`/doctor?plantId=${plant.id}`)}
-                  onRescue={(id) => setRescuePlantId(id)}
                 />
               </div>
             ))}
           </div>
         )}
       </section>
-
-      {rescuePlant && (
-        <RescueProtocolView
-          plant={rescuePlant}
-          homeProfile={homeProfile}
-          onClose={() => setRescuePlantId(null)}
-          onUpdate={onUpdate}
-          onCommit={(plantId) => {
-            setRescuePlantId(null)
-            router.push(`/plants/${plantId}`)
-          }}
-        />
-      )}
     </div>
   )
 }

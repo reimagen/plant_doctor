@@ -19,8 +19,6 @@ interface Props {
     species: string
     rescuePlanTasks?: RescueTask[]
   }
-  isGenerating: boolean
-  onGenerate: () => Promise<void>
   onTaskComplete: (taskId: string, completed: boolean) => void
 }
 
@@ -41,8 +39,6 @@ const PHASE_INFO = {
 
 export const RescueTimeline: React.FC<Props> = ({
   plant,
-  isGenerating,
-  onGenerate,
   onTaskComplete,
 }) => {
   const tasks = (plant.rescuePlanTasks || []).sort((a, b) => (a.sequencing || 0) - (b.sequencing || 0))
@@ -169,24 +165,15 @@ export const RescueTimeline: React.FC<Props> = ({
 
   return (
     <section className="bg-red-50/40 p-5 rounded-3xl border border-red-100/50">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex-1">
-          <label className="text-[10px] font-black text-red-600/60 uppercase tracking-[0.2em] mb-2 block">
-            Rescue Plan
-          </label>
-          {totalCount > 0 && (
-            <p className="text-[9px] font-bold text-red-600/50 uppercase tracking-widest">
-              {completedCount} of {totalCount} tasks completed
-            </p>
-          )}
-        </div>
-        <button
-          onClick={onGenerate}
-          disabled={isGenerating}
-          className="text-[10px] font-black text-red-600 uppercase tracking-widest disabled:opacity-50 hover:text-red-700 transition-colors"
-        >
-          {isGenerating ? 'Generating...' : totalCount > 0 ? 'Regenerate' : 'Generate'}
-        </button>
+      <div className="mb-4">
+        <label className="text-[10px] font-black text-red-600/60 uppercase tracking-[0.2em] mb-2 block">
+          Rescue Plan
+        </label>
+        {totalCount > 0 && (
+          <p className="text-[9px] font-bold text-red-600/50 uppercase tracking-widest">
+            {completedCount} of {totalCount} tasks completed
+          </p>
+        )}
       </div>
 
       {totalCount > 0 ? (
@@ -198,10 +185,10 @@ export const RescueTimeline: React.FC<Props> = ({
       ) : (
         <div className="p-8 border-2 border-dashed border-red-100 rounded-3xl text-center">
           <p className="text-[10px] font-black text-red-300 uppercase">
-            No rescue plan generated yet
+            No rescue plan yet
           </p>
           <p className="text-[9px] text-red-400/60 mt-2">
-            Click "Generate" to create a personalized recovery plan for {plant.name}
+            Start a livestream checkup with the Plant Doctor to generate a personalized rescue plan
           </p>
         </div>
       )}

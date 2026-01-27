@@ -11,10 +11,9 @@ interface Props {
   onDelete?: (id: string) => void
   onReview?: (id: string) => void
   onCheckIn?: (id: string, mode: 'discovery' | 'rehab') => void
-  onRescue?: (id: string) => void
 }
 
-export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, onReview, onCheckIn, onRescue }) => {
+export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, onReview, onCheckIn }) => {
   const getNextWaterDate = () => {
     if (!plant.lastWateredAt) return null
     const lastDate = new Date(plant.lastWateredAt)
@@ -131,14 +130,15 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    // 2. Emergency (critical OR daysOverdue > majorThreshold) → "Begin Rescue Protocol"
+    // 2. Emergency (critical OR daysOverdue > majorThreshold) → "Start Checkup"
     if (isEmergency) {
       return (
         <button
-          onClick={(e) => { e.stopPropagation(); onRescue?.(plant.id) }}
-          className="flex-1 bg-red-600 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-100 active:scale-95 transition-all"
+          onClick={(e) => { e.stopPropagation(); onCheckIn?.(plant.id, 'rehab') }}
+          className="flex-1 bg-red-600 text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-100 active:scale-95 transition-all flex items-center justify-center gap-2"
         >
-          Begin Rescue Protocol
+          <Icons.Video />
+          Start Checkup
         </button>
       )
     }
