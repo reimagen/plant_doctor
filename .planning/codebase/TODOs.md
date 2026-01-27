@@ -340,13 +340,13 @@
   - [x] Phase 3: "ONGOING MONITORING" (blue) - Maintenance steps
   - [x] DoctorPage auto-transitions between phases as tasks complete
   - [x] User sees "First Aid Step 1/2", then "Recovery Step 1/3", etc.
-- [ ] **Plan: Remove manual rescue generation (next session)**
-  - [ ] Remove `generateRescuePlan` from useRescuePlan hook
-  - [ ] Delete RescueProtocolView component
-  - [ ] Remove "Begin Rescue Protocol" button from PlantCard
-  - [ ] Remove "Generate" button from RescueTimeline
-  - [ ] Update empty states to direct users to livestream checkup
-  - [ ] Rename useRescuePlan to useRescueTaskManager (single purpose)
+- [x] **Remove manual rescue generation (completed in Phase 7)**
+  - [x] Remove `generateRescuePlan` from useRescuePlan hook
+  - [x] Delete RescueProtocolView component
+  - [x] Remove "Begin Rescue Protocol" button from PlantCard → "Start Checkup"
+  - [x] Remove "Generate" button from RescueTimeline
+  - [x] Update empty states to direct users to livestream checkup
+  - [x] Rename useRescuePlan to useRescueTaskManager (single purpose)
 
 **Files Modified:**
 - `components/pages/DoctorPage.tsx` - Overlay logic, phase detection, sidebar hiding
@@ -364,22 +364,52 @@
 - Livestream targeting glow ring added and prompt updated to focus centered plant
 - Navigation doctor icon updated to a stethoscope
 
-### Phase 7: Livestream & Timeline Refinements (Refines Phase 6)
+### Phase 7: Livestream & Timeline Refinements ✅ (Completed)
 - [x] **Plant targeting indicator for multi-plant frames**
   - [x] Add visual indicator (circle/reticle) overlay on livestream
   - [x] Indicator helps Gemini identify which plant to focus on when multiple plants visible
   - [x] Indicator position communicated to Gemini via frame context or prompt
-- [ ] Refine notification system for clearer visual hierarchy
+- [x] **Remove manual rescue generation (deferred from Phase 6.5)**
+  - [x] Remove `generateRescuePlan` from useRescueTaskManager hook
+  - [x] Delete RescueProtocolView.tsx component
+  - [x] Change "Begin Rescue Protocol" button to "Start Checkup"
+  - [x] Remove "Generate" button from RescueTimeline
+  - [x] Update empty state messages to guide users to livestream
+- [x] **Fix AI task completion side effects**
+  - [x] Apply watering task detection when AI marks tasks complete
+  - [x] Update `lastWateredAt` for watering tasks during livestream
+  - [x] Apply status transitions consistently (UI and AI paths)
+- [x] **Fix task matching logic**
+  - [x] Implement best-match scoring (exact > substring > word overlap)
+  - [x] Prevent multiple tasks completing simultaneously from loose matching
+- [x] **Fix status transition timing**
+  - [x] Only flip to "Monitoring" (warning) after ALL phase-1 tasks complete
+  - [x] Was prematurely flipping on first task completion
+- [x] **Hide manager panel during livestream calls**
+  - [x] Remove plant details sidebar from DoctorPage during active calls
+  - [x] Only FirstAidStepOverlay displays during livestream
+- [x] **Fix rescue plan visibility in plant details**
+  - [x] Update Manager.tsx visibility condition to check `rescuePlanTasks`
+  - [x] Plans created by AI now appear in plant details
+- [x] **Update test data**
+  - [x] Add 3-phase test plant with clear testing guide comments
+
+### Phase 7.5: Debug Rescue Plan Flow & Notification Polish
+- [ ] **Debug & Verify Rescue Plan Persistence**
+  - [ ] Trace data flow: AI generates plan → plant state updates → navigates to details
+  - [ ] Verify `rescuePlanTasks` is present in plant object after generation
+  - [ ] Confirm plant details page receives updated plant data on navigation
+  - [ ] Test browser cache clearing doesn't affect persistence
+  - [ ] Verify status transition (critical → warning) triggers only after all phase-1 complete
+  - [ ] Add console logging to track rescue plan creation and state updates
+- [ ] **Refine notification system for clearer visual hierarchy**
   - [ ] Distinguish between task completion, status change, and observation notifications
   - [ ] Add animation polish for notification transitions
   - [ ] Ensure notifications don't obscure critical camera feed areas
-- [ ] Improve timeline overlay readability during livestream
+- [ ] **Improve timeline overlay readability during livestream**
   - [ ] Optimize opacity and contrast for varying backgrounds
   - [ ] Add collapsible/expandable timeline for less intrusive viewing
   - [ ] Ensure timeline updates in real-time as tasks are completed
-- [ ] Enhance rescue plan auto-generation during video calls
-  - [ ] Streamline plan generation without user interruption
-  - [ ] Ensure plan syncs immediately to PlantDetailPage
 
 ### Phase 8: General Improvements
 - [ ] Add error boundaries (`error.tsx` files)
