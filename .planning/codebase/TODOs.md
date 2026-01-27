@@ -486,13 +486,19 @@
 
 ### Phase 7.8: UX Polish - Notifications & Timeline Overlay & Testing checkup logic
 - [ ] **Refine notification system for clearer visual hierarchy**
-  - [ ] Distinguish between task completion, status change, and observation notifications - unclear wha this meant
+  - [ ] Distinguish between task completion, status change, and observation notifications - unclear what this meant
   - [ ] Add animation polish for notification transitions - didn't do yet, Phase 1 currently just pops up when it's generated
   - [X] Ensure notifications don't obscure critical camera feed areas
+- [ ] **Livestream issues**
+  - [ ] Validate what is passed to Gemini for livestream besides the plant ID (i.e. need to pass rest of profile like last watered date, previous heath notes, etc.) - Gemini said "sorry I can't see the last watered date" but is able to update it? 
+  - [ ] Gemini doesn't always save the rescue plan to the plantdetailpage (created timeline on call, but didn't save)
+  - [ ] Ensure Gemini makes timeline updates in real-time as tasks are completed - had issues with this, I would say the task is done but not see the update made on the timeline overlay and was unable to move ot the next first aid task. 
+  - [ ] Gemini ignores user and keeps speaking over user, idk if we can fix or if that will cause conflicts.
+  - [ ] Gemini mistakes plant identification (jade plant was misidentified, vs others were fine, could be plant specific issue), or adds multiple of the same plant during inventory sweep/add plant (i.e. added jade plant twice) -- could be because this plant is tricky to identify
+  - [ ] User must speak first (might be confusing to a user who expects Gemini to speak first)
 - [ ] **Improve timeline overlay readability during livestream**
   - [X] Optimize opacity and contrast for varying backgrounds
   - [X] Timeline focuses on Phase 1: First Aid.
-  - [ ] Ensure AI makes timeline updates in real-time as tasks are completed - had issues with this, I would say the task is done but not see the update made. 
 - [ ] **Check-Up due logic** 
   - [ ] Ensure test data aligns with AI-generated responsibilities. Added major/minorThresholds to test data. "needs attention" in conflict with healthy but checkup due displayed. Currently status-checkup-due is driven by needsCheckIn vs. overdue thresholds. Validate logic elsewhere in app. 
 
@@ -506,6 +512,7 @@
 - [ ] Add tests for API route handlers
 - [ ] update structure documents from /Users/lisagu/Projects/plant_doctor/.planning to reflect new setup, audit folder as well.
 - [ ] User should have to tap as few buttons as possible, with the goal of the agent handling task completions, status updates, etc. so the goal is the user should only have to tap the start and end call buttons.
+- [ ] Deploy to Vercel
 
 
 ## Phase: If we have time
