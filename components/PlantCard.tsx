@@ -74,7 +74,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       label: 'Healthy',
       timeline: 'Water today',
       dot: 'bg-green-500',
-      pill: 'bg-blue-100 text-blue-700',
+      pill: 'bg-blue-600 text-white',
       ring: 'ring-green-100'
     }
     if (isCheckInNeeded || isMajorOverdue || isMinorOverdue || isMonitoring) return {
