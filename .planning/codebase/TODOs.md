@@ -394,14 +394,12 @@
 - [x] **Update test data**
   - [x] Add 3-phase test plant with clear testing guide comments
 
-### Phase 7.5: Debug Rescue Plan Flow & Notification Polish
-- [ ] **Debug & Verify Rescue Plan Persistence**
-  - [ ] Trace data flow: AI generates plan → plant state updates → navigates to details
-  - [ ] Verify `rescuePlanTasks` is present in plant object after generation
-  - [ ] Confirm plant details page receives updated plant data on navigation
-  - [ ] Test browser cache clearing doesn't affect persistence
-  - [ ] Verify status transition (critical → warning) triggers only after all phase-1 complete
-  - [ ] Add console logging to track rescue plan creation and state updates
+### Phase 7.5: Debug Rescue Plan Flow & Notification Polish (Partial)
+- [x] **Debug & Verify Rescue Plan Persistence**
+  - [x] Verified rescue plan tasks persist from livestream to plant details
+  - [x] Confirmed status transition (critical → warning) triggers only after all phase-1 complete
+  - [x] Verified localStorage cache cleared, test data loads correctly
+  - [x] All phase-1 task completion logic validated during livestream
 - [ ] **Refine notification system for clearer visual hierarchy**
   - [ ] Distinguish between task completion, status change, and observation notifications
   - [ ] Add animation polish for notification transitions
@@ -459,6 +457,39 @@
 - ✅ Status stays "Emergency" (critical) until ALL phase-1 complete
 - ✅ Plant details shows "First Aid" (red) + "Monitoring" (amber) sections
 - ✅ Status flips to "Monitoring" only after all phase-1 tasks complete
+
+### Phase 7.7: Simplify Plant Card Labels & Watering UX ✅
+**Problem:** Plant card had confusing variant labels ("Check-up Due", "Checkup Needed", "Thirsty") and blue "Water Today" badge that replaced "Healthy" status.
+
+**Solution:** Consolidate all warning states to "Monitoring" label, keep watering day plants showing "Healthy" with blue action indicator.
+
+**Completed:**
+- [x] **Consolidate warning labels**
+  - [x] Removed "Check-up Due", "Checkup Needed", "Thirsty" labels
+  - [x] All warning states (isCheckInNeeded, isMajorOverdue, isMinorOverdue, isMonitoring) now show "Monitoring"
+  - [x] Updated both PlantCard and PlantStatusBadge components
+- [x] **Fix watering day display**
+  - [x] Changed from showing "Water Today" badge (blue) to "Healthy" badge (green)
+  - [x] Added blue "Water today" action tag below badge
+  - [x] Green "Mark as Watered" button for consistency
+- [x] **Fix condition ordering**
+  - [x] Moved isWateringDay check before isMinorOverdue to prioritize watering day
+  - [x] Ensures plants in water-today window show correct status
+- [x] **Fix timeline tag styling**
+  - [x] Changed from hardcoded `bg-stone-50` to dynamic `config.pill`
+  - [x] Watering day now shows blue fill (`bg-blue-600 text-white`)
+  - [x] Monitoring plants show amber fill
+  - [x] Added check to hide empty timeline tags
+
+**Files Modified:**
+- `components/PlantCard.tsx` - Consolidated labels, fixed watering day logic, dynamic styling
+- `components/PlantStatusBadge.tsx` - Consolidated labels, watering day logic
+
+**Verified Working:**
+- ✅ All warning states show "Monitoring" label
+- ✅ Watering day shows "Healthy" badge with blue "Water today" action tag
+- ✅ Blue fill on action tags provides visual hierarchy
+- ✅ Clearer UX with less label variance
 
 ### Phase 8: General Improvements
 - [ ] Add error boundaries (`error.tsx` files)
