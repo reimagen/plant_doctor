@@ -38,7 +38,19 @@ export const DoctorPage: React.FC<Props> = ({
 }) => {
   const searchParams = useSearchParams()
   const rehabTargetId = searchParams.get('plantId')
+  const mode = searchParams.get('mode')
   const rehabPlant = rehabTargetId ? plants.find(plant => plant.id === rehabTargetId) : null
+
+  // Determine welcome message based on entry route
+  const getWelcomeMessage = () => {
+    if (rehabTargetId) {
+      return 'Begin livestream to start your plant\'s checkup'
+    } else if (mode === 'add-plant') {
+      return 'Begin a livestream to add a plant'
+    } else {
+      return 'The doctor is (always) in'
+    }
+  }
 
   // Consider a call active if either stream exists OR streamMode is set
   const isActive = stream !== null || streamMode !== null
@@ -48,26 +60,30 @@ export const DoctorPage: React.FC<Props> = ({
 
   return (
     <div className="relative min-h-screen bg-black">
-      {/* Top overlay - How to Use OR First Aid Steps */}
-      {!isActive ? (
+      {/* Top overlay - First Aid Steps OR How to Use */}
+      {showRescueOverlay ? (
+        <FirstAidStepOverlay tasks={rehabPlant.rescuePlanTasks!} />
+      ) : !isActive ? (
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl">
           <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-5 py-4 shadow-2xl">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 text-center">
-              The doctor is (always) in
+              {getWelcomeMessage()}
             </p>
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 mt-3 text-left">
-              How to Use:
-            </p>
-            <p className="text-sm font-bold text-stone-800 mt-2">
-              1. First timers, start a video session to inventory all of your plants
-            </p>
-            <p className="text-sm font-bold text-stone-800 mt-1">
-              2. To chat about a specific plant, go to your plant's card in the Jungle page
-            </p>
+            {!rehabTargetId && (
+              <>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 mt-3 text-left">
+                  How to Use:
+                </p>
+                <p className="text-sm font-bold text-stone-800 mt-2">
+                  1. First timers, start a video session to inventory all of your plants
+                </p>
+                <p className="text-sm font-bold text-stone-800 mt-1">
+                  2. To chat about a specific plant, go to your plant's card in the Jungle page
+                </p>
+              </>
+            )}
           </div>
         </div>
-      ) : showRescueOverlay ? (
-        <FirstAidStepOverlay tasks={rehabPlant.rescuePlanTasks!} />
       ) : null}
 
       <Doctor
@@ -80,7 +96,7 @@ export const DoctorPage: React.FC<Props> = ({
       />
 
       {/* Stream Controls Overlay */}
-      <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-30 flex gap-3">
+      <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-40 flex gap-3">
         {!isActive ? (
           <button
             onClick={onStartStream}
@@ -106,7 +122,7 @@ export const DoctorPage: React.FC<Props> = ({
           </button>
         )}
       </div>
-      {rehabPlant && (
+      {rehabPlant && !showRescueOverlay && (
         <aside className="absolute inset-x-0 bottom-0 z-30 max-h-[70vh] overflow-y-auto bg-white/95 backdrop-blur-xl rounded-t-[36px] border-t border-white/60 shadow-2xl">
           <div className="px-6 pt-6">
             <div className="flex items-center justify-between mb-6">
