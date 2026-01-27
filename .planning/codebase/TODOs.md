@@ -401,16 +401,6 @@
   - [x] Verified localStorage cache cleared, test data loads correctly
   - [x] All phase-1 task completion logic validated during livestream
 
-### Phase 7.8: UX Polish - Notifications & Timeline Overlay
-- [ ] **Refine notification system for clearer visual hierarchy**
-  - [ ] Distinguish between task completion, status change, and observation notifications
-  - [ ] Add animation polish for notification transitions
-  - [ ] Ensure notifications don't obscure critical camera feed areas
-- [ ] **Improve timeline overlay readability during livestream**
-  - [ ] Optimize opacity and contrast for varying backgrounds
-  - [ ] Add collapsible/expandable timeline for less intrusive viewing
-  - [ ] Ensure timeline updates in real-time as tasks are completed
-
 ### Phase 7.6: Simplify Rescue Phase Display - First Aid (Livestream) vs Monitoring (Details) ✅
 **Problem:** AI generates phases 1-3, but only phase 1 should show during livestream. Phases 2-3 create confusion and "Monitoring" name collides with status. Blue Phase 3 color is unnecessary.
 
@@ -493,9 +483,21 @@
 - ✅ Blue fill on action tags provides visual hierarchy
 - ✅ Clearer UX with less label variance
 
-### Phase 8: General Improvements
+### Phase 7.8: UX Polish - Notifications & Timeline Overlay
+- [ ] **Refine notification system for clearer visual hierarchy**
+  - [ ] Distinguish between task completion, status change, and observation notifications
+  - [ ] Add animation polish for notification transitions
+  - [ ] Ensure notifications don't obscure critical camera feed areas
+- [ ] **Improve timeline overlay readability during livestream**
+  - [ ] Optimize opacity and contrast for varying backgrounds
+  - [ ] Add collapsible/expandable timeline for less intrusive viewing
+  - [ ] Ensure timeline updates in real-time as tasks are completed
+
+### Phase 8: General Improvements + Checks
 - [ ] Add error boundaries (`error.tsx` files)
 - [ ] Add loading states (`loading.tsx` files)
+- [ ] Evaluate Plant Manager vs. Plant Doctor responsibilities for any remaining overlap or refactoring opportunities
+- [ ] Double check rehabspecialist vs. plantdoctor (difference should be passing plant id)
 - [ ] Set up Vitest for testing
 - [ ] Add tests for API route handlers
 - [ ] update structure documents from /Users/lisagu/Projects/plant_doctor/.planning to reflect new setup, audit folder as well.
