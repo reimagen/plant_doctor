@@ -485,13 +485,13 @@
 
 ### Phase 7.8: UX Polish - Notifications & Timeline Overlay
 - [ ] **Refine notification system for clearer visual hierarchy**
-  - [ ] Distinguish between task completion, status change, and observation notifications
-  - [ ] Add animation polish for notification transitions
-  - [ ] Ensure notifications don't obscure critical camera feed areas
+  - [ ] Distinguish between task completion, status change, and observation notifications - unclear wha this meant
+  - [ ] Add animation polish for notification transitions - didn't do yet, Phase 1 currently just pops up when it's generated
+  - [X] Ensure notifications don't obscure critical camera feed areas
 - [ ] **Improve timeline overlay readability during livestream**
-  - [ ] Optimize opacity and contrast for varying backgrounds
-  - [ ] Add collapsible/expandable timeline for less intrusive viewing
-  - [ ] Ensure timeline updates in real-time as tasks are completed
+  - [X] Optimize opacity and contrast for varying backgrounds
+  - [X] Timeline focuses on Phase 1: First Aid.
+  - [ ] Ensure AI makes timeline updates in real-time as tasks are completed - had issues with this, I would say the task is done but not see the update made. 
 
 ### Phase 8: General Improvements + Checks
 - [ ] Add error boundaries (`error.tsx` files)
@@ -503,7 +503,7 @@
 - [ ] update structure documents from /Users/lisagu/Projects/plant_doctor/.planning to reflect new setup, audit folder as well.
 - [ ] User should have to tap as few buttons as possible, with the goal of the agent handling task completions, status updates, etc. so the goal is the user should only have to tap the start and end call buttons.
 - [ ] All first aid tasks should be completed before entering monitoring mode.
-- [ ] The Navigation bar Doctor icon should be changed from a phone to a doctor icon.
+- [X] The Navigation bar Doctor icon should be changed from a phone to a doctor icon.
 
 
 ## Phase: If we have time

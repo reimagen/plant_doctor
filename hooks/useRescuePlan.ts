@@ -39,6 +39,12 @@ export const useRescueTaskManager = (
       updates.status = 'warning'
     }
 
+    // Revert to critical if any phase-1 task is uncompleted while in monitoring mode
+    if (!completed && !allPhase1Complete && plant.status === 'warning') {
+      console.log(`[RESCUE] Phase-1 task uncompleted for ${plant.name} - reverting status from warning to critical`)
+      updates.status = 'critical'
+    }
+
     console.log(`[RESCUE] Task toggle for ${plant.name}: completed=${completed}, allPhase1=${allPhase1Complete}, isWatering=${isWateringTask}, status change=${updates.status ? 'yes' : 'no'}`)
     onUpdate(plant.id, updates)
   }, [plant.rescuePlanTasks, plant.status, plant.id, onUpdate])
