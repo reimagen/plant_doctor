@@ -142,7 +142,11 @@ export const TEST_PLANTS: Plant[] = [
     careGuideGeneratedAt: new Date(Date.now() - (6 * oneDayMs)).toISOString()
   },
 
-  // EMERGENCY - Red badge, overdue by 3+ days
+  // EMERGENCY - Red badge, overdue by 3+ days, with 3-phase rescue plan
+  // TEST: Complete tasks one-by-one to verify:
+  // 1. Status stays CRITICAL until all 3 PHASE-1 tasks complete
+  // 2. Overlay shows "Phase 1: First Aid" until all phase-1 done
+  // 3. Only after all phase-1 complete does it flip to "Monitoring" (warning status)
   {
     id: 'status-emergency',
     name: 'Ruby in Crisis',
@@ -183,7 +187,7 @@ export const TEST_PLANTS: Plant[] = [
     ],
     rescuePlanTasks: [
       {
-        id: 'task-water-deeply',
+        id: 'task-phase1-water',
         description: 'Water deeply until water drains from bottom - use filtered or distilled water only',
         completed: false,
         phase: 'phase-1',
@@ -192,7 +196,7 @@ export const TEST_PLANTS: Plant[] = [
         successCriteria: 'Water visibly drains from bottom, soil is moist'
       },
       {
-        id: 'task-prune-damaged',
+        id: 'task-phase1-prune',
         description: 'Remove damaged yellow leaves and trim brown leaf edges with clean scissors',
         completed: false,
         phase: 'phase-1',
@@ -201,7 +205,7 @@ export const TEST_PLANTS: Plant[] = [
         successCriteria: 'All yellowed leaves removed, brown edges trimmed'
       },
       {
-        id: 'task-humidity',
+        id: 'task-phase1-humidity',
         description: 'Increase humidity by misting leaves and placing on pebble tray with water',
         completed: false,
         phase: 'phase-1',
@@ -210,7 +214,7 @@ export const TEST_PLANTS: Plant[] = [
         successCriteria: 'Pebble tray filled, leaves misted with water'
       },
       {
-        id: 'task-relocate',
+        id: 'task-phase2-relocate',
         description: 'Move to a bright indirect location away from drafts and heat sources',
         completed: false,
         phase: 'phase-2',
@@ -219,7 +223,7 @@ export const TEST_PLANTS: Plant[] = [
         successCriteria: 'Plant in stable, bright location away from vents'
       },
       {
-        id: 'task-monitor',
+        id: 'task-phase3-monitor',
         description: 'Check soil moisture daily - keep consistently moist but not soggy',
         completed: false,
         phase: 'phase-3',
@@ -230,7 +234,7 @@ export const TEST_PLANTS: Plant[] = [
     ],
     careGuide: [
       'EMERGENCY: Plant requires immediate rescue intervention.',
-      'Tap "Begin Rescue Protocol" to start an emergency assessment call.',
+      'Tap "Start Checkup" to begin an emergency assessment call.',
       'Be prepared to provide detailed plant care info for AI recommendations.',
       'Follow the rescue plan tasks during or after the call.'
     ],
