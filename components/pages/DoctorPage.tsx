@@ -149,7 +149,7 @@ export const DoctorPage: React.FC<Props> = ({
           </button>
         )}
       </div>
-      {rehabPlant && !showRescueOverlay && (
+      {rehabPlant && !showRescueOverlay && isActive && (
         <aside className="absolute inset-x-0 bottom-0 z-30 max-h-[70vh] overflow-y-auto bg-white/95 backdrop-blur-xl rounded-t-[36px] border-t border-white/60 shadow-2xl">
           <div className="px-6 pt-6">
             <div className="flex items-center justify-between mb-6">
