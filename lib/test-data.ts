@@ -23,7 +23,8 @@ export const TEST_PLANTS: Plant[] = [
       'Newly detected - needs to be adopted to your collection.',
       'Tap "Adopt Plant" to add to inventory.',
       'Once adopted, assessments will begin.'
-    ]
+    ],
+    careGuideGeneratedAt: new Date(Date.now() - (2 * oneDayMs)).toISOString()
   },
 
   // HEALTHY - Green badge, water in 5 days
@@ -45,7 +46,8 @@ export const TEST_PLANTS: Plant[] = [
       'Plant is thriving.',
       'No action needed at this time.',
       'Tap card to view full care details.'
-    ]
+    ],
+    careGuideGeneratedAt: new Date(Date.now() - (3 * oneDayMs)).toISOString()
   },
 
   // MONITORING - Yellow badge, warning status, water in 3 days, no checkup yet
@@ -67,7 +69,8 @@ export const TEST_PLANTS: Plant[] = [
       'Plant is in monitoring status.',
       'Shows minor stress signs.',
       'Checkup will be due soon when water is needed.'
-    ]
+    ],
+    careGuideGeneratedAt: new Date(Date.now() - (4 * oneDayMs)).toISOString()
   },
 
   // WATER IN 1D - Yellow badge, warning status, water due tomorrow, checkup not yet triggered
@@ -89,7 +92,8 @@ export const TEST_PLANTS: Plant[] = [
       'Plant needs attention soon.',
       'Checkup will be prompted when watering becomes due.',
       'Keep monitoring the status.'
-    ]
+    ],
+    careGuideGeneratedAt: new Date(Date.now() - oneDayMs).toISOString()
   },
 
   // CHECK-UP DUE - Amber badge, warning status, water due today, checkup triggered
@@ -111,7 +115,8 @@ export const TEST_PLANTS: Plant[] = [
       'Check-up is due now - tap "Start Checkup" to begin a health assessment call.',
       'During the call, discuss watering and any health concerns.',
       'Plant will be reassessed after the checkup.'
-    ]
+    ],
+    careGuideGeneratedAt: new Date(Date.now() - (5 * oneDayMs)).toISOString()
   },
 
   // THIRSTY - Blue button, overdue by 1 day (but healthy status, so just "Water Now" button, no checkup)
@@ -133,7 +138,8 @@ export const TEST_PLANTS: Plant[] = [
       'Plant is overdue for water by 1 day.',
       'Tap "Water Now" to log watering and restore to healthy status.',
       'No health assessment needed at this time.'
-    ]
+    ],
+    careGuideGeneratedAt: new Date(Date.now() - (6 * oneDayMs)).toISOString()
   },
 
   // EMERGENCY - Red badge, overdue by 3+ days
@@ -157,6 +163,17 @@ export const TEST_PLANTS: Plant[] = [
       'Several leaves have turned yellow and dropped.',
       'Plant has been without water for 3+ days.'
     ],
+    notesSessions: [
+      [
+        'Leaves are severely curled and browning.',
+        'Soil is bone dry and pulling from pot edges.',
+        'Several leaves have turned yellow and dropped.'
+      ],
+      [
+        'Plant has been without water for 3+ days.'
+      ]
+    ],
+    notesUpdatedAt: new Date(Date.now() - oneDayMs).toISOString(),
     rescuePlan: [
       'Water deeply until water drains from bottom - use filtered or distilled water only',
       'Remove damaged yellow leaves and trim brown leaf edges with clean scissors',
@@ -216,6 +233,7 @@ export const TEST_PLANTS: Plant[] = [
       'Tap "Begin Rescue Protocol" to start an emergency assessment call.',
       'Be prepared to provide detailed plant care info for AI recommendations.',
       'Follow the rescue plan tasks during or after the call.'
-    ]
+    ],
+    careGuideGeneratedAt: new Date(Date.now() - (7 * oneDayMs)).toISOString()
   }
 ]

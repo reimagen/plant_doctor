@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Plant, HomeProfile } from '@/types'
 import { StorageService } from '@/lib/storage-service'
 import { getCurrentSeason } from '@/lib/season'
@@ -10,6 +10,7 @@ export const useAppState = () => {
   const [plants, setPlants] = useState<Plant[]>([])
   const [homeProfile, setHomeProfile] = useState<HomeProfile>(DEFAULT_HOME_PROFILE)
   const [isHydrated, setIsHydrated] = useState(false)
+  const careGuideRequestsRef = useRef(new Set<string>())
 
   // Hydrate from localStorage on mount
   useEffect(() => {
@@ -71,9 +72,60 @@ export const useAppState = () => {
     return () => clearInterval(timer)
   }, [])
 
-  const addPlant = useCallback((newPlant: Plant) => {
+  const requestCareGuide = useCallback(async (plant: Plant) => {
+    if (!plant.species) return
+    if (careGuideRequestsRef.current.has(plant.id)) return
+    careGuideRequestsRef.current.add(plant.id)
+    try {
+      const response = await fetch('/api/gemini/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'care-guide',
+          plant,
+          homeProfile
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error generating care guide: ${response.status}`)
+      }
+
+      const data = await response.json()
+      if (data.tips && data.tips.length > 0) {
+        setPlants(currentPlants =>
+          currentPlants.map(p =>
+            p.id === plant.id ? { ...p, careGuide: data.tips, careGuideGeneratedAt: new Date().toISOString() } : p
+          )
+        )
+      } else if (data.error) {
+        console.error(`Care guide generation API error: ${data.error}`)
+      }
+    } catch (e) {
+      console.error('Failed to generate care guide on add:', e)
+    } finally {
+      careGuideRequestsRef.current.delete(plant.id)
+    }
+  }, [homeProfile])
+
+  useEffect(() => {
+    plants.forEach((plant) => {
+      if (plant.status !== 'pending') return
+      if (plant.careGuide && plant.careGuide.length > 0) return
+      if (careGuideRequestsRef.current.has(plant.id)) return
+      requestCareGuide(plant)
+    })
+  }, [plants, requestCareGuide])
+
+  const addPlant = useCallback((newPlant: Plant, options?: { forceNew?: boolean }) => {
     setPlants(prev => {
-      const exists = prev.find(p => p.id === newPlant.id || (p.species === newPlant.species && p.location === newPlant.location))
+      const forceNew = options?.forceNew ?? false
+      const exists = forceNew
+        ? null
+        : prev.find(p =>
+          p.id === newPlant.id
+          || (p.status === 'pending' && p.species === newPlant.species && p.location === newPlant.location)
+        )
 
       if (exists) {
         return prev.map(p => p.id === exists.id ? { ...p, ...newPlant, status: p.status } : p)
@@ -138,63 +190,26 @@ export const useAppState = () => {
   }, [])
 
   const adoptPlant = useCallback((id: string) => {
-    // Immediately update the plant's status for instant UI feedback,
-    // then asynchronously fetch the care guide in a fire-and-forget manner.
+    // Immediately update the plant's status for instant UI feedback.
     setPlants(prevPlants => {
       const plantToAdopt = prevPlants.find(p => p.id === id)
       if (!plantToAdopt) {
-        console.error("Plant to adopt not found, cannot generate care guide.");
-        return prevPlants;
+        console.error("Plant to adopt not found.")
+        return prevPlants
       }
 
       // Guard: must have lastWateredAt set before adoption
       if (!plantToAdopt.lastWateredAt) {
-        console.error("Cannot adopt plant without lastWateredAt set.");
-        return prevPlants;
+        console.error("Cannot adopt plant without lastWateredAt set.")
+        return prevPlants
       }
-
-      // Define the async operation
-      const fetchCareGuide = async () => {
-        try {
-          const response = await fetch('/api/gemini/content', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'care-guide',
-              plant: plantToAdopt,
-              homeProfile: homeProfile, // From useCallback dependency
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error(`API error generating care guide: ${response.status}`);
-          }
-
-          const data = await response.json();
-          if (data.tips && data.tips.length > 0) {
-            // Update the state again with the new care guide
-            setPlants(currentPlants =>
-              currentPlants.map(p =>
-                p.id === id ? { ...p, careGuide: data.tips } : p
-              )
-            );
-          } else if (data.error) {
-            console.error(`Care guide generation API error: ${data.error}`);
-          }
-        } catch (e) {
-          console.error('Failed to generate care guide on adoption:', e);
-        }
-      };
-
-      // Trigger the async operation
-      fetchCareGuide();
 
       // Return the immediately updated list - don't auto-set lastWateredAt
       return prevPlants.map(p =>
         p.id === id ? { ...p, status: 'healthy' } : p
-      );
-    });
-  }, [homeProfile]);
+      )
+    })
+  }, [])
 
   return {
     plants,

@@ -120,6 +120,7 @@ CRITICAL RULES:
 1. ONLY catalog and discuss visible plants. Immediately decline any non-plant topics.
 2. If the user asks about anything unrelated to plants, politely redirect: "Let's focus on cataloging your amazing plants!"
 3. Do NOT engage with requests about other topics.
+4. When multiple plants are visible, focus on the plant centered in the on-screen targeting reticle.
 
 INVENTORY MODE:
 - The user will show you many plants one by one
@@ -234,7 +235,7 @@ Output Format: Always call propose_plant_to_inventory with:
                     name: '',
                     species: args.commonName as string,
                     photoUrl: capturedPhoto || `https://images.unsplash.com/photo-1545239351-ef35f43d514b?q=80&w=400&auto=format&fit=crop`,
-                    location: 'Detected via Inventory Sweep',
+                    location: '',
                     lastWateredAt: new Date().toISOString(),
                     cadenceDays: (args.cadenceDays as number) || 7,
                     status: 'pending',
@@ -244,6 +245,8 @@ Output Format: Always call propose_plant_to_inventory with:
                     nearWindow: args.nearWindow as boolean | undefined,
                     windowDirection: args.nearWindow ? (args.windowDirection as Plant['windowDirection']) : undefined,
                     notes: [`Health: ${args.healthIssues}`, `Habit Grade: ${args.habitGrade}`, args.habitFeedback as string],
+                    notesSessions: [[`Health: ${args.healthIssues}`, `Habit Grade: ${args.habitGrade}`, args.habitFeedback as string]],
+                    notesUpdatedAt: new Date().toISOString(),
                     overdueThresholdMinor: (args.overdueThresholdMinor as number) || 2,
                     overdueThresholdMajor: (args.overdueThresholdMajor as number) || 5,
                   });

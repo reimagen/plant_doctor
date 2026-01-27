@@ -51,6 +51,20 @@ export const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0-1.5 1.5-2.25 3-1.5l3.75 1.875a2.25 2.25 0 0 1 1.125 2.625l-.75 2.625a.75.75 0 0 0 .187.75l4.688 4.688a.75.75 0 0 0 .75.187l2.625-.75a2.25 2.25 0 0 1 2.625 1.125L20.5 19.5c.75 1.5 0 3-1.5 3h-1.5c-8.284 0-15-6.716-15-15v-1.5Z" />
     </svg>
   ),
+  Doctor: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6M9 12h6" />
+    </svg>
+  ),
+  DoctorStethoscope: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5.5 4v4a6.5 6.5 0 0 0 13 0V4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 14.5v2a3.5 3.5 0 0 0 7 0v-2.5" />
+      <circle cx="19.5" cy="12" r="2.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 4h2.5M13.5 4H16" />
+    </svg>
+  ),
   ChevronLeft: () => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />

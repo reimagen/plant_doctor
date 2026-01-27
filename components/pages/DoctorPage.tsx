@@ -102,7 +102,10 @@ export const DoctorPage: React.FC<Props> = ({
                   1. First timers, start a video session to inventory all of your plants
                 </p>
                 <p className="text-sm font-bold text-stone-800 mt-1">
-                  2. To chat about a specific plant, go to your plant's card in the Jungle page
+                  2. Focus your camera, showing your plant in the ring below
+                </p>
+                <p className="text-sm font-bold text-stone-800 mt-1">
+                  3. The Doctor will assess your plant and add it to your Jungle
                 </p>
               </>
             )}

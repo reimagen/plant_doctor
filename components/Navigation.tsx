@@ -27,7 +27,7 @@ export const Navigation: React.FC<Props> = () => {
           pathname === '/doctor' ? 'text-green-600 scale-110' : 'text-stone-400'
         }`}
       >
-        <Icons.Phone />
+        <Icons.DoctorStethoscope />
         <span className="text-[10px] font-bold uppercase tracking-widest">Doctor</span>
       </Link>
 

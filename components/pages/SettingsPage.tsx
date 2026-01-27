@@ -12,6 +12,28 @@ export const SettingsPage: React.FC<Props> = ({ profile, onChange }) => {
     onChange({ ...profile, [key]: value })
   }
 
+  const renderOptionGroup = <T extends string>(
+    label: string,
+    options: readonly T[],
+    value: T,
+    onSelect: (next: T) => void
+  ) => (
+    <div>
+      <h3 className="font-bold text-stone-800 mb-4">{label}</h3>
+      <div className={`grid gap-2 ${options.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+        {options.map(option => (
+          <button
+            key={option}
+            onClick={() => onSelect(option)}
+            className={`py-4 rounded-2xl text-xs font-black capitalize border transition-all ${value === option ? 'bg-green-600 text-white border-green-600' : 'bg-white text-stone-500 border-stone-100'}`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+
   return (
     <div className="p-6 pb-24 space-y-8 animate-fade-in min-h-screen bg-stone-50">
       <header>
@@ -33,35 +55,9 @@ export const SettingsPage: React.FC<Props> = ({ profile, onChange }) => {
           </button>
         </div>
 
-        <div>
-          <h3 className="font-bold text-stone-800 mb-4">Humidity Level</h3>
-          <div className="grid grid-cols-3 gap-2">
-            {(['dry', 'normal', 'humid'] as const).map(v => (
-              <button
-                key={v}
-                onClick={() => update('humidity', v)}
-                className={`py-4 rounded-2xl text-xs font-black capitalize border transition-all ${profile.humidity === v ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-100'}`}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-        </div>
+        {renderOptionGroup('Humidity Level', ['dry', 'normal', 'humid'] as const, profile.humidity, (v) => update('humidity', v))}
 
-        <div>
-          <h3 className="font-bold text-stone-800 mb-4">Hemisphere</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {(['Northern', 'Southern'] as const).map(v => (
-              <button
-                key={v}
-                onClick={() => update('hemisphere', v)}
-                className={`py-4 rounded-2xl text-xs font-black border transition-all ${profile.hemisphere === v ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-100'}`}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-        </div>
+        {renderOptionGroup('Hemisphere', ['Northern', 'Southern'] as const, profile.hemisphere, (v) => update('hemisphere', v))}
 
         <div>
           <h3 className="font-bold text-stone-800 mb-4">Seasonal Mode</h3>
@@ -71,20 +67,7 @@ export const SettingsPage: React.FC<Props> = ({ profile, onChange }) => {
           </div>
         </div>
 
-        <div>
-          <h3 className="font-bold text-stone-800 mb-4">Natural Light</h3>
-          <div className="grid grid-cols-3 gap-2">
-            {(['low', 'medium', 'bright'] as const).map(v => (
-              <button
-                key={v}
-                onClick={() => update('light', v)}
-                className={`py-4 rounded-2xl text-xs font-black capitalize border transition-all ${profile.light === v ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-100'}`}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-        </div>
+        {renderOptionGroup('Natural Light', ['low', 'medium', 'bright'] as const, profile.light, (v) => update('light', v))}
       </section>
 
       <div className="bg-green-50 p-6 rounded-[32px] border border-green-100">

@@ -135,7 +135,7 @@ export const PlantDetailPage: React.FC<Props> = ({ plant, homeProfile, onUpdate,
                 </p>
               ) : (
                 <p className="text-sm font-bold text-green-700">
-                  Ready to join your jungle!
+                  Ready to join your jungle! Give your plant a nickname, select the last watered date, and review the environment settings.
                 </p>
               )}
             </div>

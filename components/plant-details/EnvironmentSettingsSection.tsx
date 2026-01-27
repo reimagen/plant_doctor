@@ -25,17 +25,22 @@ export const EnvironmentSettingsSection: React.FC<Props> = ({ plant, onUpdate })
           <p className="text-[8px] font-bold text-stone-300 uppercase tracking-widest mb-2">
             {plant.lightIntensity ? 'Detected from call' : 'Manual'}
           </p>
-          <select
-            value={plant.lightIntensity}
-            onChange={e => onUpdate(plant.id, { lightIntensity: e.target.value as IntensityLevel })}
-            className="w-full bg-stone-50 border border-stone-100 rounded-2xl px-4 py-3 text-xs font-bold text-stone-700"
-          >
-            {amounts.map(a => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={plant.lightIntensity}
+              onChange={e => onUpdate(plant.id, { lightIntensity: e.target.value as IntensityLevel })}
+              className="w-full bg-white border border-stone-100 rounded-2xl px-4 py-3 pr-12 text-xs font-bold text-stone-700 appearance-none"
+            >
+              {amounts.map(a => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+            <svg className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-800" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.086l3.71-3.856a.75.75 0 1 1 1.08 1.04l-4.24 4.405a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06Z" />
+            </svg>
+          </div>
         </div>
         <div>
           <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-2 block">
@@ -44,42 +49,51 @@ export const EnvironmentSettingsSection: React.FC<Props> = ({ plant, onUpdate })
           <p className="text-[8px] font-bold text-stone-300 uppercase tracking-widest mb-2">
             {plant.lightQuality ? 'Detected from call' : 'Manual'}
           </p>
-          <select
-            value={plant.lightQuality}
-            onChange={e => onUpdate(plant.id, { lightQuality: e.target.value as QualityLevel })}
-            className="w-full bg-stone-50 border border-stone-100 rounded-2xl px-4 py-3 text-xs font-bold text-stone-700"
-          >
-            {exposures.map(a => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={plant.lightQuality}
+              onChange={e => onUpdate(plant.id, { lightQuality: e.target.value as QualityLevel })}
+              className="w-full bg-white border border-stone-100 rounded-2xl px-4 py-3 pr-12 text-xs font-bold text-stone-700 appearance-none"
+            >
+              {exposures.map(a => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </select>
+            <svg className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-800" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.086l3.71-3.856a.75.75 0 1 1 1.08 1.04l-4.24 4.405a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06Z" />
+            </svg>
+          </div>
         </div>
         <div>
           <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-2 block">
             Water Cycle (Days)
           </label>
+          <p className="text-[8px] font-bold text-stone-300 uppercase tracking-widest mb-2">
+            AI recommended
+          </p>
           <input
             type="number"
             value={plant.cadenceDays}
             onChange={e => onUpdate(plant.id, { cadenceDays: parseInt(e.target.value) || 1 })}
-            className="w-full bg-stone-50 border border-stone-100 rounded-2xl px-4 py-3 text-xs font-bold text-stone-700"
+            className="w-full bg-white border border-stone-100 rounded-2xl px-4 py-3 text-xs font-bold text-stone-700"
+            style={{ appearance: 'auto', WebkitAppearance: 'auto', MozAppearance: 'auto' }}
           />
         </div>
         <div>
           <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-2 block">
-            Location
+            Location (Optional)
           </label>
           <p className="text-[8px] font-bold text-stone-300 uppercase tracking-widest mb-2">
-            {plant.location && plant.location !== 'Detected via Inventory Sweep' ? 'Detected from call' : 'Manual'}
+            {plant.location && plant.location !== 'Detected via Inventory Sweep' ? 'Detected from call' : 'Manual Entry'}
           </p>
           <input
             type="text"
             value={plant.location || ''}
             onChange={e => onUpdate(plant.id, { location: e.target.value })}
-            className="w-full bg-stone-50 border border-stone-100 rounded-2xl px-4 py-3 text-xs font-bold text-stone-700"
-            placeholder="e.g., Living Room Window"
+            className="w-full bg-white border border-stone-100 rounded-2xl px-4 py-3 text-xs font-bold text-stone-700 placeholder:text-stone-300"
+            placeholder="e.g., Living Room"
           />
         </div>
         <div>
@@ -89,18 +103,33 @@ export const EnvironmentSettingsSection: React.FC<Props> = ({ plant, onUpdate })
           <p className="text-[8px] font-bold text-stone-300 uppercase tracking-widest mb-2">
             {typeof plant.nearWindow === 'boolean' ? 'Detected from call' : 'Manual'}
           </p>
-          <label className="flex items-center gap-3 bg-stone-50 border border-stone-100 rounded-2xl px-4 py-3 text-xs font-bold text-stone-700">
-            <input
-              type="checkbox"
-              checked={Boolean(plant.nearWindow)}
-              onChange={e => onUpdate(plant.id, {
-                nearWindow: e.target.checked,
-                windowDirection: e.target.checked ? plant.windowDirection : undefined
-              })}
-              className="h-4 w-4 text-green-600 rounded"
-            />
-            <span>{plant.nearWindow ? 'Yes' : 'No'}</span>
-          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex items-center justify-center gap-2 bg-white border border-stone-100 rounded-2xl px-4 py-3 text-xs font-bold text-stone-700">
+              <input
+                type="radio"
+                name={`near-window-${plant.id}`}
+                checked={plant.nearWindow === true}
+                onChange={() => onUpdate(plant.id, {
+                  nearWindow: true,
+                })}
+                className="h-4 w-4 text-green-600"
+              />
+              <span>Yes</span>
+            </label>
+            <label className="flex items-center justify-center gap-2 bg-white border border-stone-100 rounded-2xl px-4 py-3 text-xs font-bold text-stone-700">
+              <input
+                type="radio"
+                name={`near-window-${plant.id}`}
+                checked={plant.nearWindow === false}
+                onChange={() => onUpdate(plant.id, {
+                  nearWindow: false,
+                  windowDirection: undefined
+                })}
+                className="h-4 w-4 text-green-600"
+              />
+              <span>No</span>
+            </label>
+          </div>
         </div>
         <div>
           <label className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-2 block">
@@ -109,21 +138,26 @@ export const EnvironmentSettingsSection: React.FC<Props> = ({ plant, onUpdate })
           <p className="text-[8px] font-bold text-stone-300 uppercase tracking-widest mb-2">
             {plant.windowDirection ? 'Detected from call' : 'Manual'}
           </p>
-          <select
-            value={plant.windowDirection || ''}
-            onChange={e => onUpdate(plant.id, { windowDirection: e.target.value as WindowDirection })}
-            disabled={!plant.nearWindow}
-            className="w-full bg-stone-50 border border-stone-100 rounded-2xl px-4 py-3 text-xs font-bold text-stone-700 disabled:opacity-50"
-          >
-            <option value="" disabled>
-              Select direction
-            </option>
-            {directions.map(direction => (
-              <option key={direction} value={direction}>
-                {direction}
+          <div className="relative">
+            <select
+              value={plant.windowDirection || ''}
+              onChange={e => onUpdate(plant.id, { windowDirection: e.target.value as WindowDirection })}
+              disabled={!plant.nearWindow}
+              className="w-full bg-white border border-stone-100 rounded-2xl px-4 py-3 pr-12 text-xs font-bold text-stone-700 appearance-none disabled:opacity-50"
+            >
+              <option value="" disabled>
+                Select direction
               </option>
-            ))}
-          </select>
+              {directions.map(direction => (
+                <option key={direction} value={direction}>
+                  {direction}
+                </option>
+              ))}
+            </select>
+            <svg className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-800" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.086l3.71-3.856a.75.75 0 1 1 1.08 1.04l-4.24 4.405a.75.75 0 0 1-1.08 0L5.21 8.27a.75.75 0 0 1 .02-1.06Z" />
+            </svg>
+          </div>
         </div>
       </div>
     </section>

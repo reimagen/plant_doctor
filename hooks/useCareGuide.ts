@@ -33,7 +33,7 @@ export const useCareGuide = (
 
       const data = await response.json()
       if (data.tips && data.tips.length > 0) {
-        onUpdate(plant.id, { careGuide: data.tips })
+        onUpdate(plant.id, { careGuide: data.tips, careGuideGeneratedAt: new Date().toISOString() })
         console.log(`[SUCCESS] Care guide generated: ${data.tips.length} tips`)
       } else if (data.error) {
         setError(data.error)

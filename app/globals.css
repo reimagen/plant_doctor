@@ -13,3 +13,13 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+input[type='number'] {
+  -moz-appearance: auto;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  opacity: 1;
+  margin: 0;
+}

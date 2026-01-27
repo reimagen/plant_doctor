@@ -95,6 +95,16 @@ export const Doctor: React.FC<Props> = ({
         />
       )}
 
+      {!isAudioOnly && (
+        <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
+          <div className="relative w-[40vmin] h-[40vmin] max-w-[320px] max-h-[320px] rounded-full">
+            <div className="absolute inset-0 rounded-full border border-white/50" />
+            <div className="absolute inset-3 rounded-full border border-white/20" />
+            <div className="absolute inset-0 rounded-full shadow-[0_0_30px_rgba(255,255,255,0.25)]" />
+          </div>
+        </div>
+      )}
+
       <canvas ref={canvasRef} className="hidden" />
 
       {isCalling && discoveryLog.length > 0 && (
@@ -118,10 +128,10 @@ export const Doctor: React.FC<Props> = ({
       )}
 
       <div className="absolute inset-0 z-10 flex flex-col justify-between p-8 pointer-events-none">
-        <header className="flex justify-between items-start pt-4">
+        <header className="flex justify-between items-start pt-16">
           <div className="bg-black/40 backdrop-blur-xl px-5 py-3 rounded-[24px] border border-white/10">
             <h2 className="text-white font-black text-[10px] uppercase tracking-[0.2em] mb-1">
-              {activeMode === 'rehab' ? `Target: ${rehabPlant?.name || 'Plant'}` : 'Inventory Sweep'}
+              {activeMode === 'rehab' ? `Plant Nickname: ${rehabPlant?.name || 'Plant'}` : 'Inventory Sweep'}
             </h2>
             <div className="flex items-center gap-2">
               <div

@@ -224,14 +224,18 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
 
                 if (fc.name === 'verify_rehab_success') {
                   const args = fc.args as Record<string, unknown>
+                  const sessionNotes = [
+                    ...(args.observedSymptoms ? [`Observation: ${args.observedSymptoms}`] : []),
+                    ...(args.recoveryNote ? [args.recoveryNote as string] : [])
+                  ].slice(0, 3)
+                  const existingSessions = plant.notesSessions || (plant.notes ? [plant.notes] : [])
+                  const notesSessions = [sessionNotes, ...existingSessions].slice(0, 3)
                   onUpdateRef.current(plant.id, {
                     status: args.newStatus as 'healthy' | 'warning',
                     needsCheckIn: !(args.success as boolean),
-                    notes: [
-                      ...(args.observedSymptoms ? [`Observation: ${args.observedSymptoms}`] : []),
-                      ...(args.recoveryNote ? [args.recoveryNote as string] : []),
-                      ...(plant.notes || [])
-                    ]
+                    notes: notesSessions.flat(),
+                    notesSessions,
+                    notesUpdatedAt: new Date().toISOString()
                   })
                   setLastVerifiedId(plant.id)
                   session.sendToolResponse(fc.id!, fc.name!, { confirmed: true })

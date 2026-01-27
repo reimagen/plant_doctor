@@ -294,55 +294,7 @@
   - [x] Removed audio rehab button from `PlantDetailPage.tsx`
   - [x] Simplified `ClientApp.tsx` streamMode to `'video' | null`
 
-### Phase 6: Livestream Notifications + Timeline Overlay ✅
-- [x] Decision needed: Plant Doctor - Don't ask user for `lastWateredAt` instead default to undefined or null. That would mean the card is in PENDING state. The adopt plant and release button should be removed, the adopt plant button should be called "Review Plant". The relase button should be an x at the top right of the card. Then on the detail page of the plant in pending we should have a "Adopt Plant" button that adds the plant to the user's inventory. The watered date should be required and block the user from clicking adopt plant if it's not set. The watered date section label should have an additional indicator to show that it's required for adoption.
-- [x] When on video call user is asked to prioritize a plant and rescue plant  plan is automatically generated. User should just start video chat and plan should be generated and followed in plantdetailspage.
-- [x] Audit live notifications for livestream with timeline overlay
-  - **Current State:** Toast notifications on right side showing plant detections (discovery log)
-  - **Existing Implementation Reference:**
-    - Location: `DoctorPage.tsx` lines 66-85
-    - Pattern: Toast-based notification stack on right side (`absolute right-6 top-1/2 -translate-y-1/2 z-20`)
-    - Styling: Dark semi-transparent cards (`bg-black/60 backdrop-blur-md border border-white/20`)
-    - Animation: `animate-slide-up` with stagger effect (opacity fades, slight X shift and scale per layer)
-    - Max items: 5 notifications (FIFO removal)
-  - **Requirements:**
-    - [x] Add notifications for rescue plan task completions (e.g., "✓ Task: Water Plant")
-    - [x] Add notifications for plant status changes (e.g., "📈 Status: Warning → Healthy")
-    - [x] Add notifications for health observations (e.g., "📝 New leaf growth detected")
-    - [x] Incorporate RescueTimeline component into the livestream overlay during rehab mode
-    - [x] Support mixed notification types in same stack
-    - [x] Add notifications for plant detections (e.g., "🌱 New plant detected")
-  - **Implementation Plan:**
-    - [x] Create notification event system: update useRehabSpecialist to emit events via callback/state
-      - Emit when `mark_rescue_task_complete` function is called (task completion notification)
-  - **Timeline Overlay:**
-    - [x] Add RescueTimeline component to the livestream overlay if a plant needs an immediate action
-    - [x] The overlay should have a faint opacity lets say 0.3 with no background and the text should be gray. Important we should still see the camera feed.
-    - [x] The overlay should be position absolute and cover the entire screen.
-    - [x] The overlay should be z-indexed higher than the livestream.
-    - [x] It should only show the timeline similar to the plant detail page and nothing else
-
-### Phase 7: Livestream & Timeline Refinements (Refines Phase 6)
-- [ ] **Plant targeting indicator for multi-plant frames**
-  - [ ] Add visual indicator (circle/reticle) overlay on livestream
-  - [ ] Indicator helps Gemini identify which plant to focus on when multiple plants visible
-  - [ ] Indicator position communicated to Gemini via frame context or prompt
-- [ ] Refine notification system for clearer visual hierarchy
-  - [ ] Distinguish between task completion, status change, and observation notifications
-  - [ ] Add animation polish for notification transitions
-  - [ ] Ensure notifications don't obscure critical camera feed areas
-- [ ] Improve timeline overlay readability during livestream
-  - [ ] Optimize opacity and contrast for varying backgrounds
-  - [ ] Add collapsible/expandable timeline for less intrusive viewing
-  - [ ] Ensure timeline updates in real-time as tasks are completed
-- [ ] Enhance rescue plan auto-generation during video calls
-  - [ ] Streamline plan generation without user interruption
-  - [ ] Ensure plan syncs immediately to PlantDetailPage
-- [ ] Polish pending adoption workflow from Phase 6
-  - [ ] Improve "Review Plant" card interaction
-  - [ ] Ensure required watered date validation is clear and user-friendly
-
-### Phase 8: User Flow & Status Path Refinements ✅
+### Phase 6: User Flow & Status Path Refinements ✅
 **Decisions Made:**
 - Grace period: 1 day (daysDiff -1 still shows "Water today")
 - Thresholds: Gemini per-plant during detection (same place as cadenceDays)
@@ -370,19 +322,74 @@
 - `components/pages/InventoryPage.tsx` - "Add Plant" button, updated urgency sorting
 - `lib/constants.tsx` - Added Plus icon
 
-### Phase 9: General Improvements
+### Phase 6.5: Rescue Timeline Display & AI-Driven Plan Generation ✅
+- [x] **Fix checkup page rescue timeline flow**
+  - [x] FirstAidStepOverlay persists after stream stops (DoctorPage.tsx)
+  - [x] PlantManager sidebar hides when rescue timeline exists
+  - [x] Welcome message only shows when no stream AND no rescue timeline
+- [x] **Add AI rescue plan generation during livestream**
+  - [x] Added `create_rescue_plan` tool to useRehabSpecialist hook
+  - [x] AI automatically generates rescue plan after assessing plant
+  - [x] Calls `/api/gemini/content` to generate structured rescue tasks
+  - [x] Updates plant with `rescuePlanTasks` array during conversation
+- [x] **Fix overlay to show all rescue phases sequentially**
+  - [x] FirstAidStepOverlay now accepts `phase` prop (phase-1, phase-2, phase-3)
+  - [x] Shows only tasks from current phase with phase-specific labels
+  - [x] Phase 1: "IMMEDIATE ACTION" (red) - First Aid steps
+  - [x] Phase 2: "RECOVERY SUPPORT" (amber) - Recovery steps
+  - [x] Phase 3: "ONGOING MONITORING" (blue) - Maintenance steps
+  - [x] DoctorPage auto-transitions between phases as tasks complete
+  - [x] User sees "First Aid Step 1/2", then "Recovery Step 1/3", etc.
+- [ ] **Plan: Remove manual rescue generation (next session)**
+  - [ ] Remove `generateRescuePlan` from useRescuePlan hook
+  - [ ] Delete RescueProtocolView component
+  - [ ] Remove "Begin Rescue Protocol" button from PlantCard
+  - [ ] Remove "Generate" button from RescueTimeline
+  - [ ] Update empty states to direct users to livestream checkup
+  - [ ] Rename useRescuePlan to useRescueTaskManager (single purpose)
+
+**Files Modified:**
+- `components/pages/DoctorPage.tsx` - Overlay logic, phase detection, sidebar hiding
+- `components/plant-details/FirstAidStepOverlay.tsx` - Phase-based display
+- `hooks/useRehabSpecialist.ts` - Added create_rescue_plan tool
+
+**Plan Created:**
+- `/Users/lisagu/.claude/plans/abundant-stirring-allen.md` - Full removal plan for manual generation
+
+**Recent Updates (post Phase 6.5):**
+- Add-plant livestream always creates pending entries; care guides now generate on add (not adoption) and include health notes + ideal conditions
+- Care guide timestamps show "Last Generated: Mon DD" and test data includes generated timestamps
+- Health notes now track session-based updates (max 3 sessions, max 3 notes per session) with "Last Updated" label vs. endless prepending
+- Environment Settings refinements (near-window Yes/No radios, white inputs, Water Cycle helper, visible spinners)
+- Livestream targeting glow ring added and prompt updated to focus centered plant
+- Navigation doctor icon updated to a stethoscope
+
+### Phase 7: Livestream & Timeline Refinements (Refines Phase 6)
+- [x] **Plant targeting indicator for multi-plant frames**
+  - [x] Add visual indicator (circle/reticle) overlay on livestream
+  - [x] Indicator helps Gemini identify which plant to focus on when multiple plants visible
+  - [x] Indicator position communicated to Gemini via frame context or prompt
+- [ ] Refine notification system for clearer visual hierarchy
+  - [ ] Distinguish between task completion, status change, and observation notifications
+  - [ ] Add animation polish for notification transitions
+  - [ ] Ensure notifications don't obscure critical camera feed areas
+- [ ] Improve timeline overlay readability during livestream
+  - [ ] Optimize opacity and contrast for varying backgrounds
+  - [ ] Add collapsible/expandable timeline for less intrusive viewing
+  - [ ] Ensure timeline updates in real-time as tasks are completed
+- [ ] Enhance rescue plan auto-generation during video calls
+  - [ ] Streamline plan generation without user interruption
+  - [ ] Ensure plan syncs immediately to PlantDetailPage
+
+### Phase 8: General Improvements
 - [ ] Add error boundaries (`error.tsx` files)
 - [ ] Add loading states (`loading.tsx` files)
 - [ ] Set up Vitest for testing
 - [ ] Add tests for API route handlers
 - [ ] update structure documents from /Users/lisagu/Projects/plant_doctor/.planning to reflect new setup, audit folder as well.
 - [ ] User should have to tap as few buttons as possible, with the goal of the agent handling task completions, status updates, etc. so the goal is the user should only have to tap the start and end call buttons.
-- [ ] While rescue plan is active, show next step on summary card. Next to "Next watering" or "Next checkup".
-- [ ] Handle user event correctly when clicking on a card and check in button. Clicking on the button shouldn't nagivage to the plant detail page but to the doctor page. and if we click on the card it should navigate to the detail page.
 - [ ] All first aid tasks should be completed before entering monitoring mode.
-- [ ] Change the welcome note so we only see it from the general call and not from the plant specific call.
-- [ ] The Navigation bar Doctor label and phone icon should be changed to the Video version the icon should be a camera icon. And the Video button should be removed from the Doctor Page. Since it is already in the nav bar.
-- [ ] Rescue plan currently is created by user clicking "begin rescue protocol" instead should be generated during check-up video call after gemini has visually assessed the status of the plant.
+- [ ] The Navigation bar Doctor icon should be changed from a phone to a doctor icon.
 
 
 ## Phase: If we have time
@@ -393,16 +400,6 @@
     - What do we do between audio and livestream? Can we click on video and pass the audio context over.
   Edge case: Doing something with a specific plant
     - Can we have an agent to navigate us to the plant detail page and perform an action?
-
-
-
-
-
-
-
-## NEXT CALL: DISCUSS HOW CARE NOTES SHOULD BE HANDLED
-- [ ] Health notes: stop unbounded append during calls (dedupe/replace strategy)
-- [ ] Health notes: add manual removal UI from plant details
 
 
 ## Future Considerations

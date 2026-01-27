@@ -33,7 +33,10 @@ export interface Plant {
   status: 'pending' | 'healthy' | 'warning' | 'critical';
   needsCheckIn?: boolean;
   careGuide?: string[];
+  careGuideGeneratedAt?: string;
   notes?: string[];
+  notesSessions?: string[][];
+  notesUpdatedAt?: string;
   rescuePlan?: string[];
   rescuePlanTasks?: RescueTask[];
   lightIntensity?: IntensityLevel;

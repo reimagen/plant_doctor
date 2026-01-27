@@ -80,9 +80,11 @@ export const Manager: React.FC<Props> = ({
 
       <IdealConditionsSection idealConditions={plant.idealConditions} />
 
-      <HealthNotesSection notes={plant.notes} />
+      <HealthNotesSection notes={plant.notes} notesSessions={plant.notesSessions} notesUpdatedAt={plant.notesUpdatedAt} />
 
-      <EnvironmentSettingsSection plant={plant} onUpdate={onUpdate} />
+      <div className="bg-white rounded-3xl border border-stone-100 p-5">
+        <EnvironmentSettingsSection plant={plant} onUpdate={onUpdate} />
+      </div>
 
       {(careGuideError || rescueError) && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-2">
@@ -95,11 +97,14 @@ export const Manager: React.FC<Props> = ({
         </div>
       )}
 
-      <CareGuideSection
-        careGuide={plant.careGuide}
-        isGenerating={isGenerating}
-        onGenerate={generateTips}
-      />
+      <div className="bg-white rounded-3xl border border-stone-100 p-5">
+        <CareGuideSection
+          careGuide={plant.careGuide}
+          careGuideGeneratedAt={plant.careGuideGeneratedAt}
+          isGenerating={isGenerating}
+          onGenerate={generateTips}
+        />
+      </div>
 
       {onDelete && <DangerZoneSection onDelete={handleDelete} />}
     </div>

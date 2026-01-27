@@ -77,12 +77,16 @@ export async function POST(request: NextRequest) {
 async function generateCareGuide(plant: Plant, homeProfile: HomeProfile): Promise<string[]> {
   try {
     const microEnv = `Light: ${plant.lightIntensity} ${plant.lightQuality}, Near Window: ${plant.nearWindow ? 'Yes' : 'No'}`
+    const healthNotes = plant.notes && plant.notes.length > 0 ? plant.notes.join(' | ') : 'None provided'
+    const idealConditions = plant.idealConditions || 'None provided'
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
       contents: `Generate 4 concise care tips for a ${plant.species}.
       Home Environment: ${JSON.stringify(homeProfile)}.
-      Specific Placement: ${microEnv}.`,
+      Specific Placement: ${microEnv}.
+      Ideal Conditions: ${idealConditions}.
+      Health Notes: ${healthNotes}.`,
       config: {
         responseMimeType: 'application/json',
         responseSchema: {

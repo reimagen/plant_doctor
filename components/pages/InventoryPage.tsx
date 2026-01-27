@@ -125,7 +125,7 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
           <p className="text-stone-500 font-medium">You have {junglePlantsRaw.length} active companions</p>
         </div>
         <button
-          onClick={() => router.push('/doctor')}
+          onClick={() => router.push('/doctor?mode=add-plant')}
           className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-2xl text-sm font-bold hover:bg-green-700 transition-all active:scale-95"
         >
           <Icons.Plus />
