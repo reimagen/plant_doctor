@@ -60,7 +60,7 @@ export const PlantStatusBadge: React.FC<Props> = ({ plant, size = 'md' }) => {
     if (isWateringDay) return {
       label: 'Healthy',
       dot: 'bg-green-500',
-      pill: 'bg-blue-100 text-blue-700',
+      pill: 'bg-green-100 text-green-700',
     }
     if (isCheckInNeeded || isMajorOverdue || isMinorOverdue || isMonitoring) return {
       label: 'Monitoring',
