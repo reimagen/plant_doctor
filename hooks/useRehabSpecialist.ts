@@ -242,18 +242,48 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                 } else if (fc.name === 'mark_rescue_task_complete') {
                   const args = fc.args as Record<string, unknown>
                   const taskDescription = args.taskDescription as string
-                  const updatedTasks = (plant.rescuePlanTasks || []).map(task => {
-                    const taskMatch = taskDescription.toLowerCase().includes(task.description.toLowerCase()) ||
-                                     task.description.toLowerCase().includes(taskDescription.toLowerCase())
-                    return taskMatch ? { ...task, completed: true } : task
-                  })
 
-                  // Apply side effects from task completion
-                  const completedTask = updatedTasks.find(task => {
-                    const taskMatch = taskDescription.toLowerCase().includes(task.description.toLowerCase()) ||
-                                     task.description.toLowerCase().includes(taskDescription.toLowerCase())
-                    return taskMatch
-                  })
+                  // Find the single best-matching task (not already completed)
+                  let bestMatch: { task: any; score: number } | null = null
+                  const taskLower = taskDescription.toLowerCase()
+
+                  for (const task of (plant.rescuePlanTasks || [])) {
+                    if (task.completed) continue // Skip already-completed tasks
+
+                    const descLower = task.description.toLowerCase()
+                    let matchScore = 0
+
+                    // Exact match (highest priority)
+                    if (taskLower === descLower) {
+                      matchScore = 1000
+                    }
+                    // Contains entire task description (high priority)
+                    else if (taskLower.includes(descLower)) {
+                      matchScore = 100
+                    }
+                    // Task contains entire AI description (high priority)
+                    else if (descLower.includes(taskLower)) {
+                      matchScore = 100
+                    }
+                    // Significant word overlap (medium priority)
+                    else {
+                      const aiWords = taskLower.split(/\s+/)
+                      const taskWords = descLower.split(/\s+/)
+                      const matchedWords = aiWords.filter(word => taskWords.some(tw => tw.includes(word) || word.includes(tw)))
+                      if (matchedWords.length >= Math.min(aiWords.length, taskWords.length) * 0.5) {
+                        matchScore = 50
+                      }
+                    }
+
+                    if (matchScore > (bestMatch?.score || 0)) {
+                      bestMatch = { task, score: matchScore }
+                    }
+                  }
+
+                  const completedTask = bestMatch?.task
+                  const updatedTasks = (plant.rescuePlanTasks || []).map(task =>
+                    task.id === completedTask?.id ? { ...task, completed: true } : task
+                  )
 
                   const updates: Partial<Plant> = { rescuePlanTasks: updatedTasks }
 
