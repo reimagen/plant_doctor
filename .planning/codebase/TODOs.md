@@ -411,6 +411,48 @@
   - [ ] Add collapsible/expandable timeline for less intrusive viewing
   - [ ] Ensure timeline updates in real-time as tasks are completed
 
+### Phase 7.6: Simplify Rescue Phase Display - First Aid (Livestream) vs Monitoring (Details)
+**Problem:** AI generates phases 1-3, but only phase 1 should show during livestream. Phases 2-3 create confusion and "Monitoring" name collides with status. Blue Phase 3 color is unnecessary.
+
+**Solution:** Show phase 1 only during call, group phase 2+3 as "Monitoring" in plant details with amber color.
+
+**Simplified Color System:**
+- Red = First Aid (Phase 1) - immediate action, both livestream and plant details
+- Amber = Monitoring (Phase 2+3) - recovery & follow-up guidance, plant details only
+- ❌ Remove Blue = Phase 3 no longer exists as separate display category
+
+- [ ] **Update FirstAidStepOverlay**
+  - [ ] Only render Phase 1 (First Aid) tasks during livestream
+  - [ ] Remove phase transition logic (don't cycle to Phase 2/3)
+  - [ ] Hide phase 2/3 tasks completely during call (not accessible)
+  - [ ] Remove Phase 2 amber config from PHASE_CONFIG
+  - [ ] Remove Phase 3 blue config from PHASE_CONFIG
+- [ ] **Update RescueTimeline in plant details**
+  - [ ] Add grouping logic: Phase 1 → "First Aid" section (red)
+  - [ ] Group Phase 2 + Phase 3 together → "Monitoring" section (amber)
+  - [ ] Create single PHASE_CONFIG for "First Aid" and "Monitoring" headings
+  - [ ] Display both sections with appropriate styling
+  - [ ] Users can see full recovery plan even during livestream
+- [ ] **Update DoctorPage getCurrentPhase**
+  - [ ] Only detect Phase 1 tasks for FirstAidStepOverlay
+  - [ ] Don't look for Phase 2/3 during call
+  - [ ] Remove phase-2 and phase-3 detection logic
+- [ ] **Update test data (Ruby)**
+  - [ ] Keep 3 phases in rescuePlanTasks (unchanged, AI generates full plan)
+  - [ ] Comment clarifies: "Phase 1 shows on livestream (red), Phases 2-3 group in Monitoring (amber)"
+  - [ ] Verify Phase 3 task shows in "Monitoring" section on plant details
+- [ ] **Language consistency**
+  - [ ] "First Aid" = Phase 1 label (immediate, livestream + details)
+  - [ ] "Monitoring" = Phases 2+3 grouped (recovery guidance, plant details only)
+  - [ ] Status `warning` = "Monitoring" badge (plant health state, inventory card)
+
+**Files to Modify:**
+- `components/plant-details/FirstAidStepOverlay.tsx` - Only show phase-1, remove phase-2/3 config
+- `components/pages/DoctorPage.tsx` - Only detect phase-1
+- `components/plant-details/RescueTimeline.tsx` - Add grouping logic (First Aid / Monitoring)
+- `lib/test-data.ts` - Update comments for clarity
+- `lib/constants.tsx` - If PHASE_CONFIG is centralized, update there instead
+
 ### Phase 8: General Improvements
 - [ ] Add error boundaries (`error.tsx` files)
 - [ ] Add loading states (`loading.tsx` files)
