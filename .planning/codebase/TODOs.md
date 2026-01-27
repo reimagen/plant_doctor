@@ -472,6 +472,7 @@
   - [x] Watering day now shows blue fill (`bg-blue-600 text-white`)
   - [x] Monitoring plants show amber fill
   - [x] Added check to hide empty timeline tags
+  - [X] All first aid tasks should be completed before entering monitoring mode.
 
 **Files Modified:**
 - `components/PlantCard.tsx` - Consolidated labels, fixed watering day logic, dynamic styling
@@ -483,7 +484,7 @@
 - ✅ Blue fill on action tags provides visual hierarchy
 - ✅ Clearer UX with less label variance
 
-### Phase 7.8: UX Polish - Notifications & Timeline Overlay
+### Phase 7.8: UX Polish - Notifications & Timeline Overlay & Testing checkup logic
 - [ ] **Refine notification system for clearer visual hierarchy**
   - [ ] Distinguish between task completion, status change, and observation notifications - unclear wha this meant
   - [ ] Add animation polish for notification transitions - didn't do yet, Phase 1 currently just pops up when it's generated
@@ -492,8 +493,11 @@
   - [X] Optimize opacity and contrast for varying backgrounds
   - [X] Timeline focuses on Phase 1: First Aid.
   - [ ] Ensure AI makes timeline updates in real-time as tasks are completed - had issues with this, I would say the task is done but not see the update made. 
+- [ ] **Check-Up due logic** 
+  - [ ] Ensure test data aligns with AI-generated responsibilities. Added major/minorThresholds to test data. "needs attention" in conflict with healthy but checkup due displayed. Currently status-checkup-due is driven by needsCheckIn vs. overdue thresholds. Validate logic elsewhere in app. 
 
 ### Phase 8: General Improvements + Checks
+- [X] The Navigation bar Doctor icon should be changed from a phone to a doctor icon. - used stethoscope
 - [ ] Add error boundaries (`error.tsx` files)
 - [ ] Add loading states (`loading.tsx` files)
 - [ ] Evaluate Plant Manager vs. Plant Doctor responsibilities for any remaining overlap or refactoring opportunities
@@ -502,8 +506,6 @@
 - [ ] Add tests for API route handlers
 - [ ] update structure documents from /Users/lisagu/Projects/plant_doctor/.planning to reflect new setup, audit folder as well.
 - [ ] User should have to tap as few buttons as possible, with the goal of the agent handling task completions, status updates, etc. so the goal is the user should only have to tap the start and end call buttons.
-- [ ] All first aid tasks should be completed before entering monitoring mode.
-- [X] The Navigation bar Doctor icon should be changed from a phone to a doctor icon.
 
 
 ## Phase: If we have time

@@ -82,8 +82,11 @@ export const Icons = {
   ),
   WateringCan: () => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 12H3.75" />
-      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" opacity="0.3" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 2.25c-3.3 3.78-6.75 8.02-6.75 11.25a6.75 6.75 0 0 0 13.5 0c0-3.23-3.45-7.47-6.75-11.25Z"
+      />
     </svg>
   ),
   Microphone: () => (
