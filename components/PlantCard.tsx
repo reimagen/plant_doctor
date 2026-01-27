@@ -69,28 +69,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       pill: 'bg-red-100 text-red-700',
       ring: 'ring-red-200'
     }
-    if (isCheckInNeeded) return {
-      label: 'Check-up Due',
-      timeline: daysDiff !== null ? (daysDiff > 0 ? `Water in ${daysDiff}d` : 'Water today') : '',
-      dot: 'bg-amber-500',
-      pill: 'bg-amber-100 text-amber-700',
-      ring: 'ring-amber-200'
-    }
-    if (isMajorOverdue) return {
-      label: 'Checkup Needed',
-      timeline: `${daysOverdue}d overdue`,
-      dot: 'bg-amber-500',
-      pill: 'bg-amber-100 text-amber-700',
-      ring: 'ring-amber-200'
-    }
-    if (isMinorOverdue) return {
-      label: 'Thirsty',
-      timeline: `${daysOverdue}d overdue`,
-      dot: 'bg-amber-500',
-      pill: 'bg-amber-100 text-amber-700',
-      ring: 'ring-amber-200'
-    }
-    if (isMonitoring && !isOverdue) return {
+    if (isCheckInNeeded || isMajorOverdue || isMinorOverdue || isMonitoring) return {
       label: 'Monitoring',
       timeline: daysDiff !== null ? (daysDiff > 0 ? `Water in ${daysDiff}d` : 'Water today') : '',
       dot: 'bg-amber-500',
