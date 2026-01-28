@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { RescueTask } from '@/types'
 
 interface Props {
@@ -22,6 +22,9 @@ const PHASE_CONFIG = {
 export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
   const [showCelebration, setShowCelebration] = useState(false)
   const [hideCelebration, setHideCelebration] = useState(false)
+  const [stepAnimating, setStepAnimating] = useState(false)
+  const [recentlyCompletedIndex, setRecentlyCompletedIndex] = useState<number | null>(null)
+  const prevTaskIdRef = useRef<string | null>(null)
 
   const config = PHASE_CONFIG['phase-1']
 
@@ -39,6 +42,27 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
   // Find the current (next incomplete) task
   const currentTaskIndex = phaseTasks.findIndex(task => !task.completed)
   const currentTask = currentTaskIndex >= 0 ? phaseTasks[currentTaskIndex] : null
+
+  // Detect step changes and trigger transition animation
+  useEffect(() => {
+    if (!currentTask) return
+
+    const prevId = prevTaskIdRef.current
+    if (prevId !== null && prevId !== currentTask.id) {
+      // Step changed — find the just-completed dot (the one before current)
+      const justCompletedIdx = currentTaskIndex - 1
+      if (justCompletedIdx >= 0) {
+        setRecentlyCompletedIndex(justCompletedIdx)
+        setTimeout(() => setRecentlyCompletedIndex(null), 500)
+      }
+
+      // Animate the new step description in
+      setStepAnimating(true)
+      setTimeout(() => setStepAnimating(false), 300)
+    }
+
+    prevTaskIdRef.current = currentTask.id
+  }, [currentTask, currentTaskIndex])
 
   // Handle celebration when all tasks in this phase complete
   useEffect(() => {
@@ -93,7 +117,7 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
   return (
     <div
       key={currentTask.id}
-      className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl animate-slide-up"
+      className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl animate-fade-in"
     >
       <div className={`${config.bgClass} backdrop-blur-xl border border-white/60 rounded-3xl px-5 py-4 shadow-2xl`}>
         {/* Header with phase tag and progress */}
@@ -112,13 +136,14 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
             {phaseTasks.map((task, index) => {
               const isCompleted = task.completed
               const isCurrent = index === currentTaskIndex
+              const justCompleted = index === recentlyCompletedIndex
 
               return (
                 <div
                   key={task.id}
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
+                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
                     isCompleted
-                      ? 'bg-green-500'
+                      ? `bg-green-500${justCompleted ? ' animate-dot-complete' : ''}`
                       : isCurrent
                       ? `${config.bulletClass} animate-pulse`
                       : 'bg-stone-300'
@@ -130,12 +155,12 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
         </div>
 
         {/* Current step description */}
-        <p className={`text-sm font-bold ${config.textClass}`}>
+        <p className={`text-sm font-bold ${config.textClass} transition-all duration-300 ${stepAnimating ? 'animate-scale-in' : ''}`}>
           {currentTask.description}
         </p>
 
         {/* Optional details */}
-        <div className="flex flex-wrap gap-3 mt-2">
+        <div className={`flex flex-wrap gap-3 mt-2 transition-all duration-300 ${stepAnimating ? 'animate-scale-in' : ''}`}>
           {currentTask.duration && (
             <span className="text-[10px] font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded-full">
               ⏱ {currentTask.duration}

@@ -487,11 +487,17 @@
 ### Phase 7.8: UX Polish - Notifications & Timeline Overlay & Testing checkup logic
 - [ ] **Refine notification system for clearer visual hierarchy**
   - [ ] Distinguish between task completion, status change, and observation notifications - unclear what this meant
-  - [ ] Add animation polish for notification transitions - didn't do yet, Phase 1 currently just pops up when it's generated
+  - [x] Add animation polish for notification transitions - Added fade-in entrance for overlay, scale-in animation for step transitions, dot-complete pulse when task completes
   - [X] Ensure notifications don't obscure critical camera feed areas
 - [ ] **Livestream issues**
   - [ ] Validate what is passed to Gemini for livestream besides the plant ID (i.e. need to pass rest of profile like last watered date, previous heath notes, etc.) - Gemini said "sorry I can't see the last watered date" but is able to update it? 
   - [ ] Gemini doesn't always save the rescue plan to the plantdetailpage (created timeline on call, but didn't save)
+    - Root cause candidates:
+      1. Silent API failure in `useRehabSpecialist.ts:328-357` — `/api/gemini/content` fetch fails or returns empty `data.steps`, Gemini verbally confirms plan but plant never updated
+      2. Race condition on navigation — user leaves Doctor page before `setPlants()` propagates through ClientApp to PlantDetailPage, stale data rendered
+      3. `onUpdateRef` staleness in `useRehabSpecialist.ts:26-27` — parent unmount or callback identity change causes ref to point to stale/no-op function
+      4. Hydration gap — `plant.rescuePlanTasks` could be undefined after localStorage rehydration if JSON parse drops the field
+    - Fix: Add console logging around `create_rescue_plan` handler to confirm API success and `onUpdateRef.current` invocation with valid data
   - [ ] Ensure Gemini makes timeline updates in real-time as tasks are completed - had issues with this, I would say the task is done but not see the update made on the timeline overlay and was unable to move ot the next first aid task. 
   - [ ] Gemini ignores user and keeps speaking over user, idk if we can fix or if that will cause conflicts.
   - [ ] Gemini mistakes plant identification (jade plant was misidentified, vs others were fine, could be plant specific issue), or adds multiple of the same plant during inventory sweep/add plant (i.e. added jade plant twice) -- could be because this plant is tricky to identify
