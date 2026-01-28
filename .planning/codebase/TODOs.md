@@ -500,8 +500,30 @@
     - Fix: Add console logging around `create_rescue_plan` handler to confirm API success and `onUpdateRef.current` invocation with valid data
   - [ ] Ensure Gemini makes timeline updates in real-time as tasks are completed - had issues with this, I would say the task is done but not see the update made on the timeline overlay and was unable to move ot the next first aid task. 
   - [ ] Gemini ignores user and keeps speaking over user, idk if we can fix or if that will cause conflicts.
+    - Root cause: `gemini-live.ts:39-45` doesn't configure `realtimeInputConfig` — VAD is on by default but sensitivity may be too low
+    - Fix: Add `realtimeInputConfig` with high speech sensitivity to the `ai.live.connect()` config in `gemini-live.ts:41-45`:
+      ```
+      realtimeInputConfig: {
+        automaticActivityDetection: {
+          startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
+          endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
+        },
+      }
+      ```
+    - Single file change, no hook changes needed since config is centralized
   - [ ] Gemini mistakes plant identification (jade plant was misidentified, vs others were fine, could be plant specific issue), or adds multiple of the same plant during inventory sweep/add plant (i.e. added jade plant twice) -- could be because this plant is tricky to identify
+    - Misidentification: No jade-specific issues found — general accuracy limitation for visually similar species. Could improve prompt by passing existing inventory so Gemini has context.
+    - Duplicate additions: Known Gemini Live API bug — duplicate tool calls when function calling is involved (LiveKit #2884, #3870, python-genai #437).
+    - Potential fix: Client-side deduplication in `usePlantDoctor.ts` — before processing `propose_plant_to_inventory`, check if a plant with the same species was already added in the current session. Needs further analysis to determine best approach in frontend.
   - [ ] User must speak first (might be confusing to a user who expects Gemini to speak first)
+    - Root cause: `sendInitialGreet()` sends text-only via `sendRealtimeInput` but Gemini needs media frames to trigger an audio response. Audio worklet setup also happens after greeting (`usePlantDoctor.ts:160-174`).
+    - Fix (two changes):
+      1. Add "When the session begins, immediately greet the user. Do not wait for user input." to system instructions in `usePlantDoctor.ts:117` and `useRehabSpecialist.ts:129`
+      2. Send a silent audio frame after the text greeting to signal turn complete:
+         ```
+         const silentFrame = new Float32Array(480) // 30ms silence at 16kHz
+         session.sendMedia(GeminiLiveSession.encodeAudio(silentFrame), 'audio/pcm;rate=16000')
+         ```
 - [ ] **Improve timeline overlay readability during livestream**
   - [X] Optimize opacity and contrast for varying backgrounds
   - [X] Timeline focuses on Phase 1: First Aid.
