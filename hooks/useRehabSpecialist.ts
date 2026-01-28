@@ -155,7 +155,7 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
 
       const session = new GeminiLiveSession({
         apiKey,
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         systemInstruction,
         tools: [{ functionDeclarations: [createRescuePlanFunction, verifyRehabFunction, markRescueTaskCompleteFunction] }],
         callbacks: {

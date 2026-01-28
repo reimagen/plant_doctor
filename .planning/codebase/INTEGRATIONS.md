@@ -19,7 +19,7 @@
    - API Key: `GEMINI_API_KEY` (server-only, never exposed to client)
 
 2. **Gemini Live API (Client-Side)**
-   - Model: `gemini-2.0-flash-exp`
+   - Model: `gemini-2.5-flash-native-audio-preview-12-2025`
    - API Version: `v1beta`
    - Features: Bidirectional audio, video frame streaming, function calling
    - Implementation: `lib/gemini-live.ts` (`GeminiLiveSession` class)

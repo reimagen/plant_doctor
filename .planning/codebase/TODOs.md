@@ -140,7 +140,7 @@
 - [x] Investigate premature WebSocket closure with Gemini API
   - [x] Problem: WebSocket closes immediately after `onopen` and `session established` logs, preventing media transfer.
   - [x] Root cause: Invalid model name (`gemini-2.5-flash-preview-native-audio-dialog`) and API version (`v1alpha`).
-  - [x] Solution: Changed to `gemini-2.0-flash-exp` model with `v1beta` API version.
+  - [x] Solution: Changed to `gemini-2.5-flash-native-audio-preview-12-2025` model with `v1beta` API version.
   - [x] Added `isClosed` flag to prevent "WebSocket is already in CLOSING or CLOSED state" errors.
   - [x] Updated close event logging to show code, reason, and wasClean for debugging.
   - [x] Removed verbose PCM packet logging from both hooks.
