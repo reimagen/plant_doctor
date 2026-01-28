@@ -1,6 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
+import { useMemo } from 'react'
 import { HomeProfile, Plant } from '@/types'
 import { Doctor } from '@/components/Doctor'
 import { Manager } from '@/components/Manager'
@@ -16,7 +17,7 @@ interface Props {
   onUpdatePlant: (id: string, updates: Partial<Plant>) => void
   onStartStream: () => void
   onStopStream: () => void
-  plants: Plant[]
+  rehabPlant: Plant | null | undefined
 }
 
 /**
@@ -34,12 +35,10 @@ export const DoctorPage: React.FC<Props> = ({
   onUpdatePlant,
   onStartStream,
   onStopStream,
-  plants
+  rehabPlant
 }) => {
   const searchParams = useSearchParams()
-  const rehabTargetId = searchParams.get('plantId')
   const mode = searchParams.get('mode')
-  const rehabPlant = rehabTargetId ? plants.find(plant => plant.id === rehabTargetId) : null
   const isAddPlantMode = mode === 'add-plant'
 
   const handleAutoDetect = (plant: Plant) => {
@@ -48,7 +47,7 @@ export const DoctorPage: React.FC<Props> = ({
 
   // Determine welcome message based on entry route
   const getWelcomeMessage = () => {
-    if (rehabTargetId) {
+    if (rehabPlant) {
       return 'Begin livestream to start your plant\'s checkup'
     } else if (mode === 'add-plant') {
       return 'Begin a livestream to add a plant'
@@ -67,18 +66,26 @@ export const DoctorPage: React.FC<Props> = ({
   // Phase 2 and 3 are only visible in plant details
   const hasIncompletePhase1 = rehabPlant?.rescuePlanTasks?.some(t => t.phase === 'phase-1' && !t.completed) ?? false
 
+  // Memoize phase-1 tasks to prevent unnecessary re-renders of FirstAidStepOverlay
+  const phase1Tasks = useMemo(() => {
+    if (!rehabPlant?.rescuePlanTasks) return []
+    return rehabPlant.rescuePlanTasks
+      .filter(task => task.phase === 'phase-1')
+      .sort((a, b) => (a.sequencing ?? 0) - (b.sequencing ?? 0))
+  }, [rehabPlant?.rescuePlanTasks])
+
   return (
     <div className="relative min-h-screen bg-black">
       {/* Top overlay - First Aid (Phase 1) rescue steps OR How to Use */}
       {showRescueOverlay && hasIncompletePhase1 ? (
-        <FirstAidStepOverlay tasks={rehabPlant.rescuePlanTasks!} />
+        <FirstAidStepOverlay tasks={phase1Tasks} />
       ) : !isActive ? (
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl">
           <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-5 py-4 shadow-2xl">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 text-center">
               {getWelcomeMessage()}
             </p>
-            {!rehabTargetId && (
+            {!rehabPlant && (
               <>
                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 mt-3 text-left">
                   How to Use:
@@ -101,8 +108,7 @@ export const DoctorPage: React.FC<Props> = ({
       <Doctor
         stream={stream}
         homeProfile={homeProfile}
-        plants={plants}
-        rehabTargetId={rehabTargetId}
+        rehabPlant={rehabPlant}
         onAutoDetect={handleAutoDetect}
         onUpdatePlant={onUpdatePlant}
       />

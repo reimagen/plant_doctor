@@ -28,20 +28,24 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
 
   const config = PHASE_CONFIG['phase-1']
 
-  // Filter Phase 1 tasks and sort by sequencing
-  const phaseTasks = useMemo(() => {
-    return tasks
-      .filter(task => task.phase === 'phase-1')
-      .sort((a, b) => (a.sequencing ?? 0) - (b.sequencing ?? 0))
-  }, [tasks])
+  // Since parent now passes pre-filtered phase-1 tasks, just use them directly
+  const phaseTasks = tasks
 
-  const completedCount = phaseTasks.filter(task => task.completed).length
-  const totalCount = phaseTasks.length
-  const allComplete = totalCount > 0 && completedCount === totalCount
+  // Memoize expensive calculations
+  const { totalCount, allComplete, currentTaskIndex, currentTask } = useMemo(() => {
+    const completed = phaseTasks.filter(task => task.completed).length
+    const total = phaseTasks.length
+    const isAllComplete = total > 0 && completed === total
+    const currentIdx = phaseTasks.findIndex(task => !task.completed)
+    const current = currentIdx >= 0 ? phaseTasks[currentIdx] : null
 
-  // Find the current (next incomplete) task
-  const currentTaskIndex = phaseTasks.findIndex(task => !task.completed)
-  const currentTask = currentTaskIndex >= 0 ? phaseTasks[currentTaskIndex] : null
+    return {
+      totalCount: total,
+      allComplete: isAllComplete,
+      currentTaskIndex: currentIdx,
+      currentTask: current
+    }
+  }, [phaseTasks])
 
   // Detect step changes and trigger transition animation
   useEffect(() => {
@@ -116,7 +120,6 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
 
   return (
     <div
-      key={currentTask.id}
       className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl animate-fade-in"
     >
       <div className={`${config.bgClass} backdrop-blur-xl border border-white/60 rounded-3xl px-5 py-4 shadow-2xl`}>
@@ -155,22 +158,24 @@ export const FirstAidStepOverlay: React.FC<Props> = ({ tasks }) => {
         </div>
 
         {/* Current step description */}
-        <p className={`text-sm font-bold ${config.textClass} transition-all duration-300 ${stepAnimating ? 'animate-scale-in' : ''}`}>
-          {currentTask.description}
-        </p>
+        <div className={`transition-all duration-300 ${stepAnimating ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+          <p className={`text-sm font-bold ${config.textClass}`}>
+            {currentTask.description}
+          </p>
 
-        {/* Optional details */}
-        <div className={`flex flex-wrap gap-3 mt-2 transition-all duration-300 ${stepAnimating ? 'animate-scale-in' : ''}`}>
-          {currentTask.duration && (
-            <span className="text-[10px] font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded-full">
-              ⏱ {currentTask.duration}
-            </span>
-          )}
-          {currentTask.successCriteria && (
-            <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
-              ✓ {currentTask.successCriteria}
-            </span>
-          )}
+          {/* Optional details */}
+          <div className="flex flex-wrap gap-3 mt-2">
+            {currentTask.duration && (
+              <span className="text-[10px] font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded-full">
+                ⏱ {currentTask.duration}
+              </span>
+            )}
+            {currentTask.successCriteria && (
+              <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                ✓ {currentTask.successCriteria}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>

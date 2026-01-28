@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, useState, useMemo } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import { HomeProfile, Plant } from '@/types'
 import { Icons } from '@/lib/constants'
 import { usePlantDoctor } from '@/hooks/usePlantDoctor'
@@ -9,8 +9,7 @@ import { useRehabSpecialist } from '@/hooks/useRehabSpecialist'
 interface Props {
   stream: MediaStream | null
   homeProfile: HomeProfile
-  plants: Plant[]
-  rehabTargetId?: string | null
+  rehabPlant: Plant | null | undefined
   onAutoDetect: (plant: Plant) => void
   onUpdatePlant: (id: string, updates: Partial<Plant>) => void
 }
@@ -18,8 +17,7 @@ interface Props {
 export const Doctor: React.FC<Props> = ({
   stream,
   homeProfile,
-  plants,
-  rehabTargetId,
+  rehabPlant,
   onAutoDetect,
   onUpdatePlant
 }) => {
@@ -40,11 +38,8 @@ export const Doctor: React.FC<Props> = ({
     isCalling: isRehabCalling
   } = useRehabSpecialist(homeProfile, onUpdatePlant)
 
-  const activeMode = rehabTargetId ? 'rehab' : 'discovery'
+  const activeMode = rehabPlant ? 'rehab' : 'discovery'
   const isCalling = stream !== null
-  const rehabPlant = useMemo(() => {
-    return rehabTargetId ? plants.find(p => p.id === rehabTargetId) : null
-  }, [rehabTargetId, plants])
 
   // Effect to handle starting and stopping calls based on stream presence
   // Note: startCall/stopCall are now stable (memoized with no deps), so they won't trigger re-runs
@@ -57,9 +52,9 @@ export const Doctor: React.FC<Props> = ({
       setIsAudioOnly(stream.getVideoTracks().length === 0)
 
       // Start the appropriate call (guards inside hooks prevent duplicate calls)
-      if (rehabTargetId && rehabPlant) {
+      if (rehabPlant) {
         startRehabCall(stream, rehabPlant, videoRef, canvasRef)
-      } else if (!rehabTargetId) {
+      } else {
         startDiscoveryCall(stream, videoRef, canvasRef)
       }
     } else {
@@ -70,7 +65,7 @@ export const Doctor: React.FC<Props> = ({
       stopDiscoveryCall()
       stopRehabCall()
     }
-  }, [stream, rehabTargetId, rehabPlant, startDiscoveryCall, stopDiscoveryCall, startRehabCall, stopRehabCall])
+  }, [stream, rehabPlant, startDiscoveryCall, stopDiscoveryCall, startRehabCall, stopRehabCall])
 
   return (
     <div className="relative h-screen bg-black overflow-hidden flex flex-col font-sans">

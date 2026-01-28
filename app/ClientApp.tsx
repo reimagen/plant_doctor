@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import { Navigation } from '@/components/Navigation'
 import { useAppState } from '@/hooks/useAppState'
@@ -61,6 +61,12 @@ export function ClientApp() {
   const selectedPlantId = getPlantIdFromPath()
   const selectedPlant = selectedPlantId ? state.plants.find(p => p.id === selectedPlantId) : null
 
+  // Memoize rehab plant for Doctor page to prevent re-renders when other plants change
+  const rehabPlantId = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('plantId')
+  const rehabPlant = useMemo(() => {
+    return rehabPlantId ? state.plants.find(p => p.id === rehabPlantId) : null
+  }, [rehabPlantId, state.plants])
+
   return (
     <div className="min-h-screen bg-stone-50 font-sans">
       <main className="max-w-xl mx-auto pb-24">
@@ -88,7 +94,7 @@ export function ClientApp() {
               onUpdatePlant={state.updatePlant}
               onStartStream={handleStartStream}
               onStopStream={handleStopStream}
-              plants={state.plants}
+              rehabPlant={rehabPlant}
             />
           </div>
         </Suspense>
