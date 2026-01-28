@@ -136,7 +136,23 @@ export const useAppState = () => {
   }, [])
 
   const updatePlant = useCallback((id: string, updates: Partial<Plant>) => {
-    setPlants(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p))
+    console.log(`[APP_STATE] updatePlant called - ID: ${id}`)
+    console.log(`[APP_STATE] updates:`, updates)
+
+    setPlants(prev => {
+      const updated = prev.map(p => {
+        if (p.id === id) {
+          const updatedPlant = { ...p, ...updates }
+          console.log(`[APP_STATE] Plant ${id} updated:`, updatedPlant)
+          if (updates.rescuePlanTasks) {
+            console.log(`[APP_STATE] Rescue plan tasks saved for ${p.name || p.species}:`, updates.rescuePlanTasks)
+          }
+          return updatedPlant
+        }
+        return p
+      })
+      return updated
+    })
   }, [])
 
   const removePlant = useCallback((id: string) => {

@@ -314,7 +314,12 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                     message: args.confirmationMessage || "Great! I've recorded that task as complete."
                   });
                 } else if (fc.name === 'create_rescue_plan') {
+                  console.log(`[RESCUE_PLAN] Starting rescue plan creation for plant: ${plant.name || plant.species} (ID: ${plant.id})`)
+                  console.log(`[RESCUE_PLAN] onUpdateRef.current:`, typeof onUpdateRef.current, onUpdateRef.current)
+                  console.log(`[RESCUE_PLAN] homeProfileRef.current:`, homeProfileRef.current)
+
                   try {
+                    console.log(`[RESCUE_PLAN] Making API request to /api/gemini/content`)
                     const response = await fetch('/api/gemini/content', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -325,9 +330,14 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                       })
                     })
 
+                    console.log(`[RESCUE_PLAN] API response status:`, response.status, response.statusText)
+
                     if (response.ok) {
                       const data = await response.json()
+                      console.log(`[RESCUE_PLAN] API response data:`, data)
+
                       if (data.steps && data.steps.length > 0) {
+                        console.log(`[RESCUE_PLAN] Processing ${data.steps.length} steps`)
                         const tasks = data.steps.map((step: any, index: number) => ({
                           id: `task-${Date.now()}-${index}`,
                           description: typeof step === 'string' ? step : step.action || step.description || 'Unknown step',
@@ -337,26 +347,38 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                           sequencing: step.sequencing || index + 1,
                           successCriteria: step.successCriteria
                         }))
+
+                        console.log(`[RESCUE_PLAN] Generated tasks:`, tasks)
+                        console.log(`[RESCUE_PLAN] Calling onUpdateRef.current with plant ID ${plant.id}`)
+
                         onUpdateRef.current(plant.id, { rescuePlanTasks: tasks })
+
+                        console.log(`[RESCUE_PLAN] onUpdateRef.current called successfully`)
+
                         session.sendToolResponse(fc.id!, fc.name!, {
                           success: true,
                           taskCount: tasks.length,
                           message: `Rescue plan created with ${tasks.length} tasks`
                         })
                       } else {
+                        console.log(`[RESCUE_PLAN] ERROR: No steps in API response or empty steps array`)
+                        console.log(`[RESCUE_PLAN] data.steps:`, data.steps)
                         session.sendToolResponse(fc.id!, fc.name!, {
                           success: false,
                           error: 'Failed to generate rescue plan steps'
                         })
                       }
                     } else {
+                      console.log(`[RESCUE_PLAN] ERROR: API request failed with status ${response.status}`)
+                      const errorText = await response.text()
+                      console.log(`[RESCUE_PLAN] Error response:`, errorText)
                       session.sendToolResponse(fc.id!, fc.name!, {
                         success: false,
                         error: 'API error generating rescue plan'
                       })
                     }
                   } catch (error) {
-                    console.error('Error creating rescue plan:', error)
+                    console.error(`[RESCUE_PLAN] EXCEPTION:`, error)
                     session.sendToolResponse(fc.id!, fc.name!, {
                       success: false,
                       error: 'Error generating rescue plan'
