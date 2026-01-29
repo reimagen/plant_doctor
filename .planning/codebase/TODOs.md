@@ -486,17 +486,12 @@
 
 ### Phase 7.8: UX Polish - Notifications & Timeline Overlay & Testing checkup logic
 - [ ] **Refine notification system for clearer visual hierarchy**
-  - [ ] Distinguish between task completion, status change, and observation notifications - unclear what this meant
+  - [ ] Distinguish between task completion, status change, and observation notifications - adding visual feedback when plan is being generated
   - [x] Add animation polish for notification transitions - Added fade-in entrance for overlay, scale-in animation for step transitions, dot-complete pulse when task completes
   - [X] Ensure notifications don't obscure critical camera feed areas
 - [ ] **Livestream issues**
-  - [ ] Validate what is passed to Gemini for livestream besides the plant ID (i.e. need to pass rest of profile like last watered date, previous heath notes, etc.) - Gemini said "sorry I can't see the last watered date" but is able to update it? 
-  - [x] Gemini doesn't always save the rescue plan to the plantdetailpage (created timeline on call, but didn't save)
-    - Added comprehensive console logging to track rescue plan creation and state updates
-    - Logs API requests/responses, task generation, onUpdateRef calls, and state updates in both useRehabSpecialist and useAppState hooks
-    - Console debugging now reveals exact failure points for rescue plan saving issues
-  - [ ] Ensure Gemini makes timeline updates in real-time as tasks are completed - had issues with this, I would say the task is done but not see the update made on the timeline overlay and was unable to move ot the next first aid task. 
-  - [ ] Gemini ignores user and keeps speaking over user, idk if we can fix or if that will cause conflicts.
+  - [X] Validate what is passed to Gemini for livestream besides the plant ID (i.e. need to pass rest of profile like last watered date, previous heath notes, etc.) - Gemini said "sorry I can't see the last watered date" but is able to update it? 
+  - [X] Gemini ignores user and keeps speaking over user, idk if we can fix or if that will cause conflicts.
     - Root cause: `gemini-live.ts:39-45` doesn't configure `realtimeInputConfig` — VAD is on by default but sensitivity may be too low
     - Fix: Add `realtimeInputConfig` with high speech sensitivity to the `ai.live.connect()` config in `gemini-live.ts:41-45`:
       ```
@@ -508,26 +503,37 @@
       }
       ```
     - Single file change, no hook changes needed since config is centralized
-  - [ ] Gemini mistakes plant identification (jade plant was misidentified, vs others were fine, could be plant specific issue), or adds multiple of the same plant during inventory sweep/add plant (i.e. added jade plant twice) -- could be because this plant is tricky to identify
-    - Misidentification: No jade-specific issues found — general accuracy limitation for visually similar species. Could improve prompt by passing existing inventory so Gemini has context.
-    - Duplicate additions: Known Gemini Live API bug — duplicate tool calls when function calling is involved (LiveKit #2884, #3870, python-genai #437).
-    - Potential fix: Client-side deduplication in `usePlantDoctor.ts` — before processing `propose_plant_to_inventory`, check if a plant with the same species was already added in the current session. Needs further analysis to determine best approach in frontend.
-  - [ ] User must speak first (might be confusing to a user who expects Gemini to speak first)
-    - Root cause: `sendInitialGreet()` sends text-only via `sendRealtimeInput` but Gemini needs media frames to trigger an audio response. Audio worklet setup also happens after greeting (`usePlantDoctor.ts:160-174`).
-    - Fix (two changes):
-      1. Add "When the session begins, immediately greet the user. Do not wait for user input." to system instructions in `usePlantDoctor.ts:117` and `useRehabSpecialist.ts:129`
-      2. Send a silent audio frame after the text greeting to signal turn complete:
-         ```
-         const silentFrame = new Float32Array(480) // 30ms silence at 16kHz
-         session.sendMedia(GeminiLiveSession.encodeAudio(silentFrame), 'audio/pcm;rate=16000')
-         ```
+
+### Phase 8: Livestream Known Bug and UX Improvements
+  - [ ] Test Case "needs attention" plant is marked as "start checkup" but in theory just needs to be watered
+  - Duplicate additions: Known Gemini Live API bug — duplicate tool calls when function calling is involved (LiveKit #2884, #3870, python-genai #437).
+    - [ ] Potential fix: Client-side deduplication in `usePlantDoctor.ts` — before processing `propose_plant_to_inventory`, check if a plant with the same species was already added in the current session. Needs further analysis to determine best approach in frontend.
+  - [ ] User must speak first, indicate in Welcome Message "begin the chat by saying Hello" (otherwise confusing to a user who expects Gemini to speak first)
+  - [ ] Analyzing livestream button, move to bottom next to call start/stop button
+  - [ ] When rescue plan is being generated, there is a long period of silence from Gemini, so users need to know it is processing. Need to provide feedback visually that plan is being generated. Use button indicator plan is being generated, and also pulse glow the ring when model is active. 
+  - [ ] Once all Phase 1 First Aid tasks are marked as completed, Timeline should change to "First Aid Completed". Plant Doctor tells user they have completed the necessary First Aid actions and that the checkup is complete. The Doctor tells the user to follow the monitoring steps listed in the Plant Detail Page to bring the plant back to full health.  
+  - [ ] Web socket closing prematurely after plant rescue plan is generated
+  - [ ] Start checkup + plant card livestream entry points: showing wrong welcome message at the top, should say "Begin livestream checkup for X" with X as nickname of plant
+  - [ ] Basic Welcome Message: add step 4 “Start conversation by saying Hello”
+  - [ ] Add to livestream prompt: gemini must acknowledge user after greeting detected. after that, Gemini can assess plants
+  - [ ] Plant is mistakenly being marked as healthy even though rescue plan is active. In order to be classified as healthy, plant must not have any first aid or monitoring tasks active. Can only flip back to healthy when all tasks complete.
 - [ ] **Improve timeline overlay readability during livestream**
   - [X] Optimize opacity and contrast for varying backgrounds
   - [X] Timeline focuses on Phase 1: First Aid.
 - [ ] **Check-Up due logic** 
   - [ ] Ensure test data aligns with AI-generated responsibilities. Added major/minorThresholds to test data. "needs attention" in conflict with healthy but checkup due displayed. Currently status-checkup-due is driven by needsCheckIn vs. overdue thresholds. Validate logic elsewhere in app. 
 
-### Phase 8: General Improvements + Checks
+### Phase 8.1: Retest w/ Next.js backend vs mock data. Was fine for plants, didnt work on mock data 
+  - [ ] Gemini doesn't always save the rescue plan to the plantdetailpage (created timeline on call, but didn't save)
+    - Added comprehensive console logging to track rescue plan creation and state updates
+    - Logs API requests/responses, task generation, onUpdateRef calls, and state updates in both useRehabSpecialist and useAppState hooks
+    - Console debugging now reveals exact failure points for rescue plan saving issues
+  - [ ] Ensure Gemini makes timeline updates in real-time as tasks are completed - had issues with this, I would say the task is done but not see the update made on the timeline overlay and was unable to move ot the next first aid task. 
+  - [ ] Gemini mistakes plant identification (jade plant was misidentified, vs others were fine, could be plant specific issue), or adds multiple of the same plant during inventory sweep/add plant (i.e. added jade plant twice) -- could be because this plant is tricky to identify
+  - [X] Misidentification: No jade-specific issues found — general accuracy limitation for visually similar species. Could improve prompt by passing existing inventory so Gemini has context. Not relevant, model problem.
+  - [ ] Deploy to Vercel - lisa set up + add calvin
+
+### Phase 9: General Improvements + Checks
 - [X] The Navigation bar Doctor icon should be changed from a phone to a doctor icon. - used stethoscope
 - [ ] Add error boundaries (`error.tsx` files)
 - [ ] Add loading states (`loading.tsx` files)
@@ -537,7 +543,6 @@
 - [ ] Add tests for API route handlers
 - [ ] update structure documents from /Users/lisagu/Projects/plant_doctor/.planning to reflect new setup, audit folder as well.
 - [ ] User should have to tap as few buttons as possible, with the goal of the agent handling task completions, status updates, etc. so the goal is the user should only have to tap the start and end call buttons.
-- [ ] Deploy to Vercel
 
 
 ## Phase: If we have time
