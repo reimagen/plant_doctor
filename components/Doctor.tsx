@@ -12,6 +12,7 @@ interface Props {
   rehabPlant: Plant | null | undefined
   onAutoDetect: (plant: Plant) => void
   onUpdatePlant: (id: string, updates: Partial<Plant>) => void
+  onStatusChange?: (isGeneratingPlan: boolean) => void
 }
 
 export const Doctor: React.FC<Props> = ({
@@ -19,7 +20,8 @@ export const Doctor: React.FC<Props> = ({
   homeProfile,
   rehabPlant,
   onAutoDetect,
-  onUpdatePlant
+  onUpdatePlant,
+  onStatusChange
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -41,6 +43,11 @@ export const Doctor: React.FC<Props> = ({
 
   const activeMode = rehabPlant ? 'rehab' : 'discovery'
   const isCalling = stream !== null
+
+  // Notify parent of status changes
+  useEffect(() => {
+    onStatusChange?.(isGeneratingPlan)
+  }, [isGeneratingPlan, onStatusChange])
 
   // Effect to handle starting and stopping calls based on stream presence
   // Note: startCall/stopCall are now stable (memoized with no deps), so they won't trigger re-runs
@@ -124,25 +131,12 @@ export const Doctor: React.FC<Props> = ({
       )}
 
       <div className="absolute inset-0 z-10 flex flex-col justify-between p-8 pointer-events-none">
-        <header className="flex justify-between items-start pt-16">
-          <div className="bg-black/40 backdrop-blur-xl px-5 py-3 rounded-[24px] border border-white/10">
-            <h2 className="text-white font-black text-[10px] uppercase tracking-[0.2em]">
-              {activeMode === 'rehab' ? `Plant Nickname: ${rehabPlant?.name || 'Plant'}` : 'Inventory Sweep'}
-            </h2>
-          </div>
+        <header className="flex justify-between items-start pt-36">
         </header>
-        <footer className="space-y-6 pb-24 pointer-events-auto flex flex-col items-center">
-          {/* Status indicator near controls */}
-          {isCalling && (
-            <div className="flex items-center gap-2 bg-black/50 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10">
-              <div className={`w-2 h-2 rounded-full ${isGeneratingPlan ? 'bg-amber-400' : 'bg-green-400'} animate-pulse`} />
-              <p className="text-white/80 text-[9px] font-bold uppercase tracking-widest">
-                {isGeneratingPlan ? 'Generating Rescue Plan...' : 'Analyzing Stream...'}
-              </p>
-            </div>
-          )}
+        <footer className="pb-24 pointer-events-auto">
         </footer>
       </div>
-    </div>
+
+      </div>
   )
 }

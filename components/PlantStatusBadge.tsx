@@ -32,6 +32,9 @@ export const PlantStatusBadge: React.FC<Props> = ({ plant, size = 'md' }) => {
   const isCheckInNeeded = !!plant.needsCheckIn
   const daysDiff = getDaysDiff()
 
+  // Check if plant has any incomplete rescue plan tasks
+  const hasIncompleteRescueTasks = plant.rescuePlanTasks && plant.rescuePlanTasks.some(task => !task.completed)
+
   // Grace period: daysDiff >= -1 means not overdue yet (includes watering day and 1-day grace)
   const isWateringDay = daysDiff !== null && (daysDiff === 0 || daysDiff === -1)
   const isOverdue = daysDiff !== null && daysDiff < -1  // Overdue starts at -2 (after 1-day grace)
@@ -62,7 +65,7 @@ export const PlantStatusBadge: React.FC<Props> = ({ plant, size = 'md' }) => {
       dot: 'bg-green-500',
       pill: 'bg-green-100 text-green-700',
     }
-    if (isCheckInNeeded || isMajorOverdue || isMinorOverdue || isMonitoring) return {
+    if (isCheckInNeeded || isMajorOverdue || isMinorOverdue || isMonitoring || hasIncompleteRescueTasks) return {
       label: 'Monitoring',
       dot: 'bg-amber-500',
       pill: 'bg-amber-100 text-amber-700',

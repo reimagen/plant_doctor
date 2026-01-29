@@ -116,7 +116,7 @@ export const TEST_PLANTS: Plant[] = [
     overdueThresholdMinor: 2,
     overdueThresholdMajor: 5,
     status: 'warning',
-    needsCheckIn: true,
+    needsCheckIn: false,
     lightIntensity: 'Medium',
     lightQuality: 'Indirect',
     nearWindow: false,

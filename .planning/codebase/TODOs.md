@@ -505,19 +505,19 @@
     - Single file change, no hook changes needed since config is centralized
 
 ### Phase 8: Livestream Known Bug and UX Improvements
-  - [ ] Test Case "needs attention" plant is marked as "start checkup" but in theory just needs to be watered
+  - [X] Test Case "needs attention" plant is marked as "start checkup" but in theory just needs to be watered
   - Duplicate additions: Known Gemini Live API bug — duplicate tool calls when function calling is involved (LiveKit #2884, #3870, python-genai #437).
     - [ ] Potential fix: Client-side deduplication in `usePlantDoctor.ts` — before processing `propose_plant_to_inventory`, check if a plant with the same species was already added in the current session. Needs further analysis to determine best approach in frontend.
-  - [ ] User must speak first, indicate in Welcome Message "begin the chat by saying Hello" (otherwise confusing to a user who expects Gemini to speak first)
-  - [ ] Analyzing livestream button, move to bottom next to call start/stop button
-  - [ ] When rescue plan is being generated, there is a long period of silence from Gemini, so users need to know it is processing. Need to provide feedback visually that plan is being generated. Use button indicator plan is being generated, and also pulse glow the ring when model is active. 
-  - [ ] Once all Phase 1 First Aid tasks are marked as completed, Timeline should change to "First Aid Completed". Plant Doctor tells user they have completed the necessary First Aid actions and that the checkup is complete. The Doctor tells the user to follow the monitoring steps listed in the Plant Detail Page to bring the plant back to full health.  
-  - [ ] Web socket closing prematurely after plant rescue plan is generated
-  - [ ] Start checkup + plant card livestream entry points: showing wrong welcome message at the top, should say "Begin livestream checkup for X" with X as nickname of plant
-  - [ ] Basic Welcome Message: add step 4 “Start conversation by saying Hello”
-  - [ ] Add to livestream prompt: gemini must acknowledge user after greeting detected. after that, Gemini can assess plants
-  - [ ] Plant is mistakenly being marked as healthy even though rescue plan is active. In order to be classified as healthy, plant must not have any first aid or monitoring tasks active. Can only flip back to healthy when all tasks complete.
-- [ ] **Improve timeline overlay readability during livestream**
+  - [X] User must speak first, indicate in Welcome Message "begin the chat by saying Hello" (otherwise confusing to a user who expects Gemini to speak first)
+  - [X] Analyzing livestream button, move to bottom next to call start/stop button
+  - [X] When rescue plan is being generated, there is a long period of silence from Gemini, so users need to know it is processing. Need to provide feedback visually that plan is being generated. Use button indicator plan is being generated, and also pulse glow the ring when model is active. 
+  - [x] Once all Phase 1 First Aid tasks are marked as completed, Timeline should change to "First Aid Completed". Plant Doctor tells user they have completed the necessary First Aid actions and that the checkup is complete. The Doctor tells the user to follow the monitoring steps listed in the Plant Detail Page to bring the plant back to full health.  
+  - [x] Web socket closing prematurely after plant rescue plan is generated
+  - [X] Start checkup + plant card livestream entry points: showing wrong welcome message at the top, should say "Begin livestream checkup for X" with X as nickname of plant
+  - [X] Basic Welcome Message: add step 4 "Start conversation by saying Hello"
+  - [x] Add to livestream prompt: gemini must acknowledge user after greeting detected. after that, Gemini can assess plants
+  - [X] Plant is mistakenly being marked as healthy even though rescue plan is active. In order to be classified as healthy, plant must not have any first aid or monitoring tasks active. Can only flip back to healthy when all tasks complete.
+- [x] **Improve timeline overlay readability during livestream**
   - [X] Optimize opacity and contrast for varying backgrounds
   - [X] Timeline focuses on Phase 1: First Aid.
 - [ ] **Check-Up due logic** 

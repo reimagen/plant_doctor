@@ -69,7 +69,7 @@ export function ClientApp() {
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans">
-      <main className="max-w-xl mx-auto pb-24">
+      <main className={`max-w-xl mx-auto ${currentView() === 'doctor' ? '' : 'pb-24'}`}>
         <div className={currentView() === 'inventory' ? 'block' : 'hidden'}>
           <InventoryPage
             plants={state.plants}
@@ -90,6 +90,7 @@ export function ClientApp() {
               streamMode={streamMode}
               isConnecting={isConnecting}
               homeProfile={state.homeProfile}
+              plants={state.plants}
               onAutoDetect={state.addPlant}
               onUpdatePlant={state.updatePlant}
               onStartStream={handleStartStream}

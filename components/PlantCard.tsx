@@ -38,6 +38,9 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
   const isCheckInNeeded = !!plant.needsCheckIn
   const daysDiff = getDaysDiff()
 
+  // Check if plant has any incomplete rescue plan tasks
+  const hasIncompleteRescueTasks = plant.rescuePlanTasks && plant.rescuePlanTasks.some(task => !task.completed)
+
   // Grace period: daysDiff >= -1 means not overdue yet (includes watering day and 1-day grace)
   const isWateringDay = daysDiff !== null && (daysDiff === 0 || daysDiff === -1)
   const isOverdue = daysDiff !== null && daysDiff < -1  // Overdue starts at -2 (after 1-day grace)
@@ -52,7 +55,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
   const isEmergency = isCritical || daysOverdue > majorThreshold
 
   const isRed = isEmergency
-  const isYellow = !isRed && (isCheckInNeeded || isOverdue || isMonitoring || isMajorOverdue)
+  const isYellow = !isRed && (isCheckInNeeded || isOverdue || isMonitoring || isMajorOverdue || hasIncompleteRescueTasks)
 
   const getStatusConfig = () => {
     if (isPending) return {
@@ -77,7 +80,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       pill: 'bg-blue-600 text-white',
       ring: 'ring-green-100'
     }
-    if (isCheckInNeeded || isMajorOverdue || isMinorOverdue || isMonitoring) return {
+    if (isCheckInNeeded || isMajorOverdue || isMinorOverdue || isMonitoring || hasIncompleteRescueTasks) return {
       label: 'Monitoring',
       timeline: daysOverdue > 0 ? `Water now - ${daysOverdue}d overdue` : (daysDiff !== null ? (daysDiff > 0 ? `Water in ${daysDiff}d` : 'Water today') : ''),
       dot: 'bg-amber-500',
@@ -125,8 +128,8 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
     }
 
     // 3. Checkup needed (warning/critical + needsCheckIn) → "Start Checkup"
-    //    Skip if plant is healthy but just overdue — show watering button instead
-    if (isCheckInNeeded && (isMonitoring || isCritical)) {
+    //    Skip if plant is healthy but just overdue OR has active rescue tasks — show watering button instead
+    if (isCheckInNeeded && (isMonitoring || isCritical) && !hasIncompleteRescueTasks) {
       return (
         <button
           onClick={(e) => { e.stopPropagation(); onCheckIn?.(plant.id, 'rehab') }}
@@ -139,7 +142,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
     }
 
     // 4. Monitoring with future checkup → "Checkup in Xd"
-    if (isMonitoring && !isCheckInNeeded && !isOverdue && daysDiff !== null && daysDiff > 0) {
+    if (isMonitoring && !isCheckInNeeded && !isOverdue && !hasIncompleteRescueTasks && daysDiff !== null && daysDiff > 0) {
       return (
         <button
           onClick={(e) => { e.stopPropagation(); onCheckIn?.(plant.id, 'rehab') }}

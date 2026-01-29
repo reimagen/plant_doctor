@@ -78,7 +78,7 @@ export const EnvironmentSettingsSection: React.FC<Props> = ({ plant, onUpdate })
             value={plant.cadenceDays}
             onChange={e => onUpdate(plant.id, { cadenceDays: parseInt(e.target.value) || 1 })}
             className="w-full bg-white border border-stone-100 rounded-2xl px-4 py-3 text-xs font-bold text-stone-700"
-            style={{ appearance: 'auto', WebkitAppearance: 'auto', MozAppearance: 'auto' }}
+            style={{ appearance: 'auto' }}
           />
         </div>
         <div>

@@ -55,7 +55,7 @@ export const Manager: React.FC<Props> = ({
   }
 
   return (
-    <div className="space-y-8 pb-24">
+    <div className="space-y-8">
       <LastWateredSection
         plant={plant}
         isOverdue={isOverdue}
