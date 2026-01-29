@@ -1,7 +1,7 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { HomeProfile, Plant } from '@/types'
 import { Doctor } from '@/components/Doctor'
 import { Manager } from '@/components/Manager'
@@ -48,7 +48,7 @@ export const DoctorPage: React.FC<Props> = ({
   // Determine welcome message based on entry route
   const getWelcomeMessage = () => {
     if (rehabPlant) {
-      return 'Begin livestream to start your plant\'s checkup'
+      return `Begin livestream checkup for ${rehabPlant.name || rehabPlant.species}`
     } else if (mode === 'add-plant') {
       return 'Begin a livestream to add a plant'
     } else {
@@ -74,12 +74,44 @@ export const DoctorPage: React.FC<Props> = ({
       .sort((a, b) => (a.sequencing ?? 0) - (b.sequencing ?? 0))
   }, [rehabPlant?.rescuePlanTasks])
 
+  // Track phase-1 completion for celebration — lives here so it survives overlay unmount
+  const allPhase1Complete = phase1Tasks.length > 0 && phase1Tasks.every(t => t.completed)
+  const [showCelebration, setShowCelebration] = useState(false)
+  const celebrationShownRef = useRef(false)
+
+  useEffect(() => {
+    if (allPhase1Complete && !celebrationShownRef.current) {
+      celebrationShownRef.current = true
+      setShowCelebration(true)
+      const timer = setTimeout(() => setShowCelebration(false), 4000)
+      return () => clearTimeout(timer)
+    }
+  }, [allPhase1Complete])
+
   return (
     <div className="relative min-h-screen bg-black">
+      {/* Celebration overlay — rendered independently so it survives overlay unmount */}
+      {showCelebration && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl animate-slide-up">
+          <div className="bg-green-500/90 backdrop-blur-xl border border-green-400/60 rounded-3xl px-5 py-4 shadow-2xl">
+            <div className="flex items-center justify-center gap-3">
+              <div className="text-center">
+                <p className="text-sm font-black text-white">
+                  First Aid Completed!
+                </p>
+                <p className="text-xs font-bold text-white/80 mt-1">
+                  Follow the monitoring steps in your Plant Detail page
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top overlay - First Aid (Phase 1) rescue steps OR How to Use */}
-      {showRescueOverlay && hasIncompletePhase1 ? (
+      {showRescueOverlay && hasIncompletePhase1 && !showCelebration ? (
         <FirstAidStepOverlay tasks={phase1Tasks} />
-      ) : !isActive ? (
+      ) : !showCelebration && !isActive ? (
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl">
           <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-5 py-4 shadow-2xl">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 text-center">
@@ -98,6 +130,9 @@ export const DoctorPage: React.FC<Props> = ({
                 </p>
                 <p className="text-sm font-bold text-stone-800 mt-1">
                   3. The Doctor will assess your plant and add it to your Jungle
+                </p>
+                <p className="text-sm font-bold text-stone-800 mt-1">
+                  4. Begin the chat by saying Hello
                 </p>
               </>
             )}

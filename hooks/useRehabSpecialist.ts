@@ -10,6 +10,7 @@ import { ToolCallRateLimiter } from '@/lib/rate-limiter'
 export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: string, updates: Partial<Plant>) => void) => {
   const [isCalling, setIsCalling] = useState(false)
   const [lastVerifiedId, setLastVerifiedId] = useState<string | null>(null)
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
 
   const sessionRef = useRef<GeminiLiveSession | null>(null)
   const audioServiceRef = useRef(new AudioService(24000))
@@ -25,6 +26,9 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
 
   const onUpdateRef = useRef(onUpdate)
   onUpdateRef.current = onUpdate
+
+  // Live-updated rescue tasks ref to avoid stale closure in mark_rescue_task_complete
+  const rescueTasksRef = useRef<Plant['rescuePlanTasks']>(undefined)
 
   const verifyRehabFunction: FunctionDeclaration = {
     name: 'verify_rehab_success',
@@ -112,6 +116,7 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
     console.log('[useRehabSpecialist] startRehabCall invoked');
     isConnectingRef.current = true
     setIsCalling(true)
+    rescueTasksRef.current = plant.rescuePlanTasks
 
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
     if (!apiKey) {
@@ -143,11 +148,15 @@ Plant Context:
  - Near Window: ${plant.nearWindow ? `Yes (${plant.windowDirection || 'unknown'})` : 'No'}
  - Watering Cadence: every ${plant.cadenceDays} days
 
+GREETING PROTOCOL:
+- Wait for the user to greet you. Acknowledge their greeting warmly before beginning any assessment.
+
 Instructions:
 - Analyze the video feed for leaves, soil, stems, and overall plant condition
 - If there is no rescue plan yet (Current Tasks: None), assess the plant and then use create_rescue_plan to generate a detailed recovery plan
 - If the plant appears to have recovered, use verify_rehab_success
 - When the user mentions completing any rescue plan task, use mark_rescue_task_complete
+- When all Phase 1 (First Aid) tasks are completed, congratulate the user and tell them: "Your first aid is complete! Check your Plant Detail page for the monitoring steps to continue your plant's recovery."
 - Ask clarifying questions about the plant's appearance and care activities
 - Provide encouragement and plant-specific guidance
 
@@ -247,7 +256,8 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                   let bestMatch: { task: any; score: number } | null = null
                   const taskLower = taskDescription.toLowerCase()
 
-                  for (const task of (plant.rescuePlanTasks || [])) {
+                  const currentTasks = rescueTasksRef.current || plant.rescuePlanTasks || []
+                  for (const task of currentTasks) {
                     if (task.completed) continue // Skip already-completed tasks
 
                     const descLower = task.description.toLowerCase()
@@ -281,9 +291,10 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                   }
 
                   const completedTask = bestMatch?.task
-                  const updatedTasks = (plant.rescuePlanTasks || []).map(task =>
+                  const updatedTasks = currentTasks.map(task =>
                     task.id === completedTask?.id ? { ...task, completed: true } : task
                   )
+                  rescueTasksRef.current = updatedTasks
 
                   const updates: Partial<Plant> = { rescuePlanTasks: updatedTasks }
 
@@ -317,8 +328,18 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                   console.log(`[RESCUE_PLAN] Starting rescue plan creation for plant: ${plant.name || plant.species} (ID: ${plant.id})`)
                   console.log(`[RESCUE_PLAN] onUpdateRef.current:`, typeof onUpdateRef.current, onUpdateRef.current)
                   console.log(`[RESCUE_PLAN] homeProfileRef.current:`, homeProfileRef.current)
-
+                  let keepaliveInterval;
                   try {
+                    setIsGeneratingPlan(true)
+                    // Send keepalive pings to prevent WebSocket timeout during long API call
+                    keepaliveInterval = window.setInterval(() => {
+                      if (session.session) {
+                        try {
+                          session.session.sendRealtimeInput({ parts: [{ text: ' ' }] })
+                        } catch { /* ignore keepalive failures */ }
+                      }
+                    }, 15000)
+
                     console.log(`[RESCUE_PLAN] Making API request to /api/gemini/content`)
                     const response = await fetch('/api/gemini/content', {
                       method: 'POST',
@@ -351,6 +372,7 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                         console.log(`[RESCUE_PLAN] Generated tasks:`, tasks)
                         console.log(`[RESCUE_PLAN] Calling onUpdateRef.current with plant ID ${plant.id}`)
 
+                        rescueTasksRef.current = tasks
                         onUpdateRef.current(plant.id, { rescuePlanTasks: tasks })
 
                         console.log(`[RESCUE_PLAN] onUpdateRef.current called successfully`)
@@ -383,6 +405,9 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                       success: false,
                       error: 'Error generating rescue plan'
                     })
+                  } finally {
+                    clearInterval(keepaliveInterval)
+                    setIsGeneratingPlan(false)
                   }
                 }
               }
@@ -407,5 +432,5 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
     }
   }, [stopCall]) // stopCall is stable (no deps)
 
-  return { isCalling, lastVerifiedId, startRehabCall, stopCall }
+  return { isCalling, lastVerifiedId, isGeneratingPlan, startRehabCall, stopCall }
 }

@@ -194,7 +194,14 @@ export const useAppState = () => {
         }
       }
 
-      // Normal watering - flip to healthy
+      // Normal watering - flip to healthy only if no incomplete rescue tasks
+      const hasIncompleteRescueTasks = p.rescuePlanTasks?.some(t => !t.completed) ?? false
+      if (hasIncompleteRescueTasks) {
+        return {
+          ...p,
+          lastWateredAt: new Date().toISOString()
+        }
+      }
       return {
         ...p,
         lastWateredAt: new Date().toISOString(),

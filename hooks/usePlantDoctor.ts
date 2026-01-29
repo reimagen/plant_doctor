@@ -24,6 +24,9 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
   const onPlantDetectedRef = useRef(onPlantDetected)
   onPlantDetectedRef.current = onPlantDetected
 
+  // Session-level dedup: track species already proposed in this session
+  const proposedSpeciesRef = useRef<Set<string>>(new Set())
+
   const homeProfileRef = useRef(homeProfile)
   homeProfileRef.current = homeProfile
 
@@ -97,6 +100,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
     isConnectingRef.current = true
     setIsCalling(true)
     setDiscoveryLog([])
+    proposedSpeciesRef.current.clear()
 
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
     if (!apiKey) {
@@ -121,6 +125,9 @@ CRITICAL RULES:
 2. If the user asks about anything unrelated to plants, politely redirect: "Let's focus on cataloging your amazing plants!"
 3. Do NOT engage with requests about other topics.
 4. When multiple plants are visible, focus on the plant centered in the on-screen targeting reticle.
+
+GREETING PROTOCOL:
+- Wait for the user to greet you. Acknowledge their greeting warmly before beginning any assessment.
 
 INVENTORY MODE:
 - The user will show you many plants one by one
@@ -214,6 +221,14 @@ Output Format: Always call propose_plant_to_inventory with:
 
                 if (fc.name === 'propose_plant_to_inventory') {
                   const args = fc.args as Record<string, unknown>
+                  const speciesKey = (args.commonName as string || '').toLowerCase().trim()
+                  if (proposedSpeciesRef.current.has(speciesKey)) {
+                    console.warn(`[DEDUP] Skipping duplicate plant: ${args.commonName}`)
+                    session.sendToolResponse(fc.id!, fc.name!, { success: true, acknowledged: args.commonName, duplicate: true })
+                    continue
+                  }
+                  proposedSpeciesRef.current.add(speciesKey)
+
                   let capturedPhoto = ''
                   if (stream.getVideoTracks().length > 0 && videoRef.current && canvasRef.current) {
                     const vid = videoRef.current

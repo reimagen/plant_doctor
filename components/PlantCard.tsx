@@ -79,7 +79,7 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
     }
     if (isCheckInNeeded || isMajorOverdue || isMinorOverdue || isMonitoring) return {
       label: 'Monitoring',
-      timeline: daysDiff !== null ? (daysDiff > 0 ? `Water in ${daysDiff}d` : 'Water today') : '',
+      timeline: daysOverdue > 0 ? `Water now - ${daysOverdue}d overdue` : (daysDiff !== null ? (daysDiff > 0 ? `Water in ${daysDiff}d` : 'Water today') : ''),
       dot: 'bg-amber-500',
       pill: 'bg-amber-100 text-amber-700',
       ring: 'ring-amber-200'
@@ -124,8 +124,9 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       )
     }
 
-    // 3. Checkup needed (warning + needsCheckIn) → "Start Checkup"
-    if (isCheckInNeeded) {
+    // 3. Checkup needed (warning/critical + needsCheckIn) → "Start Checkup"
+    //    Skip if plant is healthy but just overdue — show watering button instead
+    if (isCheckInNeeded && (isMonitoring || isCritical)) {
       return (
         <button
           onClick={(e) => { e.stopPropagation(); onCheckIn?.(plant.id, 'rehab') }}

@@ -35,7 +35,8 @@ export const Doctor: React.FC<Props> = ({
   const {
     startRehabCall,
     stopCall: stopRehabCall,
-    isCalling: isRehabCalling
+    isCalling: isRehabCalling,
+    isGeneratingPlan
   } = useRehabSpecialist(homeProfile, onUpdatePlant)
 
   const activeMode = rehabPlant ? 'rehab' : 'discovery'
@@ -92,10 +93,10 @@ export const Doctor: React.FC<Props> = ({
 
       {!isAudioOnly && (
         <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-          <div className="relative w-[40vmin] h-[40vmin] max-w-[320px] max-h-[320px] rounded-full">
-            <div className="absolute inset-0 rounded-full border border-white/50" />
-            <div className="absolute inset-3 rounded-full border border-white/20" />
-            <div className="absolute inset-0 rounded-full shadow-[0_0_30px_rgba(255,255,255,0.25)]" />
+          <div className={`relative w-[40vmin] h-[40vmin] max-w-[320px] max-h-[320px] rounded-full ${isGeneratingPlan ? 'animate-pulse' : ''}`}>
+            <div className={`absolute inset-0 rounded-full border ${isGeneratingPlan ? 'border-amber-400/70' : 'border-white/50'}`} />
+            <div className={`absolute inset-3 rounded-full border ${isGeneratingPlan ? 'border-amber-400/30' : 'border-white/20'}`} />
+            <div className={`absolute inset-0 rounded-full ${isGeneratingPlan ? 'shadow-[0_0_40px_rgba(251,191,36,0.4)]' : 'shadow-[0_0_30px_rgba(255,255,255,0.25)]'}`} />
           </div>
         </div>
       )}
@@ -125,23 +126,21 @@ export const Doctor: React.FC<Props> = ({
       <div className="absolute inset-0 z-10 flex flex-col justify-between p-8 pointer-events-none">
         <header className="flex justify-between items-start pt-16">
           <div className="bg-black/40 backdrop-blur-xl px-5 py-3 rounded-[24px] border border-white/10">
-            <h2 className="text-white font-black text-[10px] uppercase tracking-[0.2em] mb-1">
+            <h2 className="text-white font-black text-[10px] uppercase tracking-[0.2em]">
               {activeMode === 'rehab' ? `Plant Nickname: ${rehabPlant?.name || 'Plant'}` : 'Inventory Sweep'}
             </h2>
-            <div className="flex items-center gap-2">
-              <div
-                className={`w-1.5 h-1.5 rounded-full ${
-                  isCalling ? 'bg-green-400 animate-pulse' : 'bg-white/20'
-                }`}
-              />
-              <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest">
-                {isCalling ? 'Analyzing Stream...' : 'Camera Standby'}
-              </p>
-            </div>
           </div>
         </header>
         <footer className="space-y-6 pb-24 pointer-events-auto flex flex-col items-center">
-          {/* The main call button is now in the central Navigation component */}
+          {/* Status indicator near controls */}
+          {isCalling && (
+            <div className="flex items-center gap-2 bg-black/50 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10">
+              <div className={`w-2 h-2 rounded-full ${isGeneratingPlan ? 'bg-amber-400' : 'bg-green-400'} animate-pulse`} />
+              <p className="text-white/80 text-[9px] font-bold uppercase tracking-widest">
+                {isGeneratingPlan ? 'Generating Rescue Plan...' : 'Analyzing Stream...'}
+              </p>
+            </div>
+          )}
         </footer>
       </div>
     </div>
