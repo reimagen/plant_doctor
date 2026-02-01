@@ -54,39 +54,39 @@ export const TEST_PLANTS: Plant[] = [
     careGuideGeneratedAt: new Date(Date.now() - (3 * oneDayMs)).toISOString()
   },
 
-  // MONITORING - Yellow badge, warning status, water in 3 days, no checkup yet
+  // HEALTHY - Green badge, healthy status, water today (watering day)
   {
     id: 'status-monitoring',
     name: 'Amber Alert',
     species: 'Calathea Orbifolia',
     photoUrl: 'https://images.unsplash.com/photo-1614594975525-e45190c55d0b?q=80&w=800&auto=format&fit=crop',
     location: 'Bedroom',
-    lastWateredAt: new Date(Date.now() - (4 * oneDayMs)).toISOString(),
+    lastWateredAt: new Date(Date.now() - (7 * oneDayMs)).toISOString(),
     cadenceDays: 7,
     overdueThresholdMinor: 2,
     overdueThresholdMajor: 5,
-    status: 'warning',
+    status: 'healthy',
     needsCheckIn: false,
     lightIntensity: 'Low',
     lightQuality: 'Indirect',
     nearWindow: true,
     windowDirection: 'North',
     careGuide: [
-      'Plant is in monitoring status.',
-      'Shows minor stress signs.',
-      'Checkup will be due soon when water is needed.'
+      'Plant is healthy and on schedule.',
+      'Water today to keep it thriving.',
+      'Tap "Mark as Watered" after watering.'
     ],
-    careGuideGeneratedAt: new Date(Date.now() - (4 * oneDayMs)).toISOString()
+    careGuideGeneratedAt: new Date(Date.now() - (7 * oneDayMs)).toISOString()
   },
 
-  // WATER IN 1D - Yellow badge, warning status, water due tomorrow, checkup not yet triggered
+  // MONITORING - Yellow badge, warning status, water in 3 days, no checkup yet
   {
     id: 'status-water-1d',
     name: 'Almost There',
     species: 'Alocasia Amazonica',
     photoUrl: 'https://images.unsplash.com/photo-1630627829883-f76fc44ff4e8?q=80&w=800&auto=format&fit=crop',
     location: 'Living Room Corner',
-    lastWateredAt: new Date(Date.now() - (6 * oneDayMs)).toISOString(),
+    lastWateredAt: new Date(Date.now() - (4 * oneDayMs)).toISOString(),
     cadenceDays: 7,
     overdueThresholdMinor: 2,
     overdueThresholdMajor: 5,
@@ -97,11 +97,37 @@ export const TEST_PLANTS: Plant[] = [
     nearWindow: true,
     windowDirection: 'South',
     careGuide: [
-      'Plant needs attention soon.',
-      'Checkup will be prompted when watering becomes due.',
-      'Keep monitoring the status.'
+      'Plant is in monitoring status.',
+      'Shows minor stress signs.',
+      'Checkup will be due soon when water is needed.'
     ],
-    careGuideGeneratedAt: new Date(Date.now() - oneDayMs).toISOString()
+    careGuideGeneratedAt: new Date(Date.now() - (4 * oneDayMs)).toISOString()
+  },
+
+  // MONITORING ON WATERING DAY - Yellow badge, warning status, water today, checkup not yet triggered
+  // This tests the priority fix: monitoring should show even on watering day
+  {
+    id: 'status-monitoring-watering-day',
+    name: 'Checkup Pending',
+    species: 'Anthurium Warocqueanum',
+    photoUrl: 'https://images.unsplash.com/photo-1599599810694-b5ac4dd84e2f?q=80&w=800&auto=format&fit=crop',
+    location: 'Bathroom',
+    lastWateredAt: new Date(Date.now() - (7 * oneDayMs)).toISOString(),
+    cadenceDays: 7,
+    overdueThresholdMinor: 2,
+    overdueThresholdMajor: 5,
+    status: 'warning',
+    needsCheckIn: false,
+    lightIntensity: 'Medium',
+    lightQuality: 'Indirect',
+    nearWindow: false,
+    windowDirection: 'East',
+    careGuide: [
+      'Plant is in monitoring status and needs water today.',
+      'Even though it is watering day, the monitoring status takes priority.',
+      'Badge shows MONITORING (amber), not HEALTHY (green).'
+    ],
+    careGuideGeneratedAt: new Date(Date.now() - (7 * oneDayMs)).toISOString()
   },
 
   // CHECK-UP DUE - Amber badge, warning status, water due today, checkup triggered

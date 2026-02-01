@@ -59,16 +59,17 @@ export const PlantStatusBadge: React.FC<Props> = ({ plant, size = 'md' }) => {
       dot: 'bg-red-500',
       pill: 'bg-red-100 text-red-700',
     }
-    // Watering day check BEFORE overdue checks
-    if (isWateringDay) return {
-      label: 'Healthy',
-      dot: 'bg-green-500',
-      pill: 'bg-green-100 text-green-700',
-    }
+    // Monitoring/checkup conditions take precedence over watering day
     if (isCheckInNeeded || isMajorOverdue || isMinorOverdue || isMonitoring || hasIncompleteRescueTasks) return {
       label: 'Monitoring',
       dot: 'bg-amber-500',
       pill: 'bg-amber-100 text-amber-700',
+    }
+    // Watering day check AFTER monitoring checks
+    if (isWateringDay) return {
+      label: 'Healthy',
+      dot: 'bg-green-500',
+      pill: 'bg-green-100 text-green-700',
     }
     return {
       label: 'Healthy',

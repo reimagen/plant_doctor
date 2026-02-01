@@ -72,20 +72,21 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
       pill: 'bg-red-100 text-red-700',
       ring: 'ring-red-200'
     }
-    // Watering day check BEFORE overdue checks (watering day can be slightly overdue)
-    if (isWateringDay) return {
-      label: 'Healthy',
-      timeline: 'Water today',
-      dot: 'bg-green-500',
-      pill: 'bg-blue-600 text-white',
-      ring: 'ring-green-100'
-    }
+    // Monitoring/checkup conditions take precedence over watering day
     if (isCheckInNeeded || isMajorOverdue || isMinorOverdue || isMonitoring || hasIncompleteRescueTasks) return {
       label: 'Monitoring',
       timeline: daysOverdue > 0 ? `Water now - ${daysOverdue}d overdue` : (daysDiff !== null ? (daysDiff > 0 ? `Water in ${daysDiff}d` : 'Water today') : ''),
       dot: 'bg-amber-500',
       pill: 'bg-amber-100 text-amber-700',
       ring: 'ring-amber-200'
+    }
+    // Watering day check AFTER monitoring checks (watering day can be slightly overdue)
+    if (isWateringDay) return {
+      label: 'Healthy',
+      timeline: 'Water today',
+      dot: 'bg-green-500',
+      pill: 'bg-blue-600 text-white',
+      ring: 'ring-green-100'
     }
     // All other healthy plants show Healthy badge with watering schedule
     return {

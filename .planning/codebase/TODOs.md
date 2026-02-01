@@ -506,8 +506,8 @@
 
 ### Phase 8: Livestream Known Bug and UX Improvements
   - [X] Test Case "needs attention" plant is marked as "start checkup" but in theory just needs to be watered
-  - Duplicate additions: Known Gemini Live API bug — duplicate tool calls when function calling is involved (LiveKit #2884, #3870, python-genai #437).
-    - [ ] Potential fix: Client-side deduplication in `usePlantDoctor.ts` — before processing `propose_plant_to_inventory`, check if a plant with the same species was already added in the current session. Needs further analysis to determine best approach in frontend.
+  - [x] Duplicate additions: Known Gemini Live API bug — duplicate tool calls when function calling is involved (LiveKit #2884, #3870, python-genai #437). ✅ RESOLVED
+    - [x] Client-side deduplication in `usePlantDoctor.ts` — tracks proposed species in a Set per session, skips duplicates with warning log, clears on session start (lines 27-28, 103, 222-230).
   - [X] User must speak first, indicate in Welcome Message "begin the chat by saying Hello" (otherwise confusing to a user who expects Gemini to speak first)
   - [X] Analyzing livestream button, move to bottom next to call start/stop button
   - [X] When rescue plan is being generated, there is a long period of silence from Gemini, so users need to know it is processing. Need to provide feedback visually that plan is being generated. Use button indicator plan is being generated, and also pulse glow the ring when model is active. 
@@ -520,32 +520,44 @@
 - [x] **Improve timeline overlay readability during livestream**
   - [X] Optimize opacity and contrast for varying backgrounds
   - [X] Timeline focuses on Phase 1: First Aid.
-- [ ] **Check-Up due logic** 
-  - [ ] Ensure test data aligns with AI-generated responsibilities. Added major/minorThresholds to test data. "needs attention" in conflict with healthy but checkup due displayed. Currently status-checkup-due is driven by needsCheckIn vs. overdue thresholds. Validate logic elsewhere in app. 
+- [x] **Check-Up due logic** ✅ RESOLVED
+  - [x] Ensure test data aligns with AI-generated responsibilities. Fixed logic to prevent healthy plants on watering day from being misflagged as "Monitoring". Now correctly distinguishes: plants on regular watering schedule show "Healthy" (green badge) with blue action tag, while plants with actual health concerns (minor/major overdue, checkup needed, rescue plan) show "Monitoring" (amber badge). Test data properly aligned with overdueThresholdMinor/Major values. 
 
-### Phase 8.1: Retest w/ Next.js backend vs mock data. Was fine for plants, didnt work on mock data 
+### Phase 8.1: Retest w/ Next.js backend vs mock data. Was fine for plants, didnt work on mock data
+  - [ ] **DECISION NEEDED: API Key Security Architecture**
+    - **Current Issue:** `NEXT_PUBLIC_GEMINI_API_KEY` is exposed client-side in both `usePlantDoctor.ts` and `useRehabSpecialist.ts` hooks. These hooks make direct WebSocket connections to Gemini Live API, exposing the key in the browser.
+    - **Risk:** API key visible in network traffic, bundled JavaScript, and browser DevTools. Anyone can intercept and abuse it.
+    - **Current Pattern:** Backend API route (`/api/gemini/content`) correctly uses server-only `GEMINI_API_KEY`, but Gemini Live sessions bypass this.
+    - **Options to Decide:**
+      1. **Keep current (accept risk--UNACCEPTABLE):** Live sessions stay client-side, accept public key exposure, rely on Google's API key restrictions -- this is not an option. 
+      2. **Backend WebSocket Proxy:** Move Gemini Live session logic to backend, proxy bidirectional communication, client connects to secure backend endpoint
+      3. **Backend Session Management:** Backend creates Gemini Live session, returns session token to client, client streams through authenticated backend endpoint
+    - **Recommendation:** Option 2 or 3 to eliminate key exposure. Requires refactoring `usePlantDoctor.ts` and `useRehabSpecialist.ts` to call backend instead of connecting directly.
+    - **Files Affected:** `hooks/usePlantDoctor.ts`, `hooks/useRehabSpecialist.ts`, `app/api/gemini/content/route.ts`, potentially new `app/api/gemini/stream/route.ts`
   - [ ] Gemini doesn't always save the rescue plan to the plantdetailpage (created timeline on call, but didn't save)
     - Added comprehensive console logging to track rescue plan creation and state updates
     - Logs API requests/responses, task generation, onUpdateRef calls, and state updates in both useRehabSpecialist and useAppState hooks
     - Console debugging now reveals exact failure points for rescue plan saving issues
-  - [ ] Ensure Gemini makes timeline updates in real-time as tasks are completed - had issues with this, I would say the task is done but not see the update made on the timeline overlay and was unable to move ot the next first aid task. 
+  - [ ] Ensure Gemini makes timeline updates in real-time as tasks are completed - had issues with this, I would say the task is done but not see the update made on the timeline overlay and was unable to move ot the next first aid task. -- was fine, got this to work on subsequent testing.
   - [ ] Gemini mistakes plant identification (jade plant was misidentified, vs others were fine, could be plant specific issue), or adds multiple of the same plant during inventory sweep/add plant (i.e. added jade plant twice) -- could be because this plant is tricky to identify
   - [X] Misidentification: No jade-specific issues found — general accuracy limitation for visually similar species. Could improve prompt by passing existing inventory so Gemini has context. Not relevant, model problem.
-  - [ ] Deploy to Vercel - lisa set up + add calvin
+  - [ ] Deploy to Vercel - lisa set up + add calvin. Pending API key security decision.
 
 ### Phase 9: General Improvements + Checks
 - [X] The Navigation bar Doctor icon should be changed from a phone to a doctor icon. - used stethoscope
-- [ ] Add error boundaries (`error.tsx` files)
-- [ ] Add loading states (`loading.tsx` files)
-- [ ] Evaluate Plant Manager vs. Plant Doctor responsibilities for any remaining overlap or refactoring opportunities
-- [ ] Double check rehabspecialist vs. plantdoctor (difference should be passing plant id)
-- [ ] Set up Vitest for testing
-- [ ] Add tests for API route handlers
+- [X] Evaluate Plant Manager vs. Plant Doctor responsibilities for any remaining overlap or refactoring opportunities
+  - **Summary**: Manager (settings UI) and Doctor (livestream video) are complementary, not redundant. Manager displays plant config/care guide; Doctor provides AI analysis. Two pathways update same data (voice via useRehabSpecialist, UI via Manager). No refactoring needed.
+- [X] Double check rehabspecialist vs. plantdoctor 
+  - **Summary**: Hypothesis incomplete. Plant ID is one difference, but they're fundamentally different tools. useRehabSpecialist modifies existing plants (tools: verify_rehab_success, mark_rescue_task_complete, create_rescue_plan); usePlantDoctor creates new plants (tool: propose_plant_to_inventory). Different system instructions, callbacks (onUpdate vs onPlantDetected), rate limits (10/min vs 15/min), state tracking. Correctly separated—no consolidation needed.
 - [ ] update structure documents from /Users/lisagu/Projects/plant_doctor/.planning to reflect new setup, audit folder as well.
-- [ ] User should have to tap as few buttons as possible, with the goal of the agent handling task completions, status updates, etc. so the goal is the user should only have to tap the start and end call buttons.
 
 
-## Phase: If we have time
+## Phase X: If we have time
+- [ ] User should have to tap as few buttons as possible, with the goal of the agent handling task completions, status updates, etc. so the goal is the user should only have to tap the start and end call buttons, mark as watered buttons, start checkup button, and the plant detail page should have a button to mark as watered (decision: keep date selector or just use mark as watered button?)
+- [ ] Set up Vitest for testing
+  - **Assessment**: Deprioritize. No existing test infrastructure/dependencies. Would require mocking Gemini API, AudioContext, MediaStream, WebRTC. Setup complexity high; payoff low before deployment. Better to deploy first, add targeted tests if bugs emerge in production.
+- [ ] Add tests for API route handlers
+  - **Assessment**: Same as above. API routes call external Gemini service, requires comprehensive mocking. Start with E2E testing via Playwright post-deployment if needed. Infrastructure not ready yet.
 - [ ] Audio with inventory
   1. Perform an action e.g. Watered plant
   2. Ask for status update and things to do today, and future tasks
@@ -560,3 +572,7 @@
 - [ ] Data export/import functionality
 - [ ] Permission handling UI for camera/microphone
 - [ ] Error UI for user visibility into failures
+- [ ] Add error boundaries (`error.tsx` files)
+  - **Assessment**: Lower priority. App is client-side SPA with no page-level data fetching. Errors already handled in components (e.g., careGuideError in Manager). Error boundaries would only catch rare component rendering errors. Good-to-have for robustness, not critical.
+- [ ] Add loading states (`loading.tsx` files)
+  - **Assessment**: Not needed. All pages delegate to ClientApp (return null). No server-side data fetching on route transitions. Loading indicators already in components (isGenerating, isCalling). Won't improve UX since users won't see blank screens.
