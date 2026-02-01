@@ -102,9 +102,10 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
     setDiscoveryLog([])
     proposedSpeciesRef.current.clear()
 
+    const proxyUrl = process.env.NEXT_PUBLIC_CLOUD_RUN_URL
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
-    if (!apiKey) {
-      console.error('NEXT_PUBLIC_GEMINI_API_KEY not configured')
+    if (!proxyUrl && !apiKey) {
+      console.error('NEXT_PUBLIC_CLOUD_RUN_URL or NEXT_PUBLIC_GEMINI_API_KEY must be configured')
       setIsCalling(false)
       return
     }
@@ -116,7 +117,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
       await audioServiceRef.current.ensureContext()
 
       const session = new GeminiLiveSession({
-        apiKey,
+        ...(proxyUrl ? { proxyUrl: `${proxyUrl}/plant-doctor` } : { apiKey }),
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         systemInstruction: `You are the Plant Doctor performing a "Jungle Inventory" - PLANT-ONLY MODE.
 

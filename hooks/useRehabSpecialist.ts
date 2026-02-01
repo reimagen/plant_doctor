@@ -118,9 +118,10 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
     setIsCalling(true)
     rescueTasksRef.current = plant.rescuePlanTasks
 
+    const proxyUrl = process.env.NEXT_PUBLIC_CLOUD_RUN_URL
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
-    if (!apiKey) {
-      console.error('NEXT_PUBLIC_GEMINI_API_KEY not configured')
+    if (!proxyUrl && !apiKey) {
+      console.error('NEXT_PUBLIC_CLOUD_RUN_URL or NEXT_PUBLIC_GEMINI_API_KEY must be configured')
       setIsCalling(false)
       return
     }
@@ -163,7 +164,7 @@ Instructions:
 Home Environment: ${JSON.stringify(homeProfileRef.current)}`
 
       const session = new GeminiLiveSession({
-        apiKey,
+        ...(proxyUrl ? { proxyUrl: `${proxyUrl}/rehab-specialist` } : { apiKey }),
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         systemInstruction,
         tools: [{ functionDeclarations: [createRescuePlanFunction, verifyRehabFunction, markRescueTaskCompleteFunction] }],

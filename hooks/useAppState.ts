@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Plant, HomeProfile } from '@/types'
-import { StorageService } from '@/lib/storage-service'
+import { FirestoreService } from '@/lib/firestore-service'
+import { ensureUser } from '@/lib/firebase-auth'
 import { getCurrentSeason } from '@/lib/season'
 import { DEFAULT_HOME_PROFILE } from '@/lib/constants'
 
@@ -11,17 +12,42 @@ export const useAppState = () => {
   const [homeProfile, setHomeProfile] = useState<HomeProfile>(DEFAULT_HOME_PROFILE)
   const [isHydrated, setIsHydrated] = useState(false)
   const careGuideRequestsRef = useRef(new Set<string>())
+  const userIdRef = useRef<string | null>(null)
 
-  // Hydrate from localStorage on mount
+  // Hydrate from Firestore on mount (with localStorage migration)
   useEffect(() => {
-    const savedPlants = StorageService.getPlants()
-    const savedProfile = StorageService.getHomeProfile()
-    const hemisphere = savedProfile.hemisphere || 'Northern'
-    const profileWithSeason = { ...savedProfile, hemisphere, seasonMode: getCurrentSeason(hemisphere) }
+    let cancelled = false
 
-    setPlants(savedPlants)
-    setHomeProfile(profileWithSeason)
-    setIsHydrated(true)
+    async function hydrate() {
+      try {
+        const user = await ensureUser()
+        if (cancelled) return
+        userIdRef.current = user.uid
+
+        // Attempt localStorage → Firestore migration on first load
+        await FirestoreService.migrateFromLocalStorage(user.uid)
+
+        const [savedPlants, savedProfile] = await Promise.all([
+          FirestoreService.getPlants(user.uid),
+          FirestoreService.getHomeProfile(user.uid),
+        ])
+        if (cancelled) return
+
+        const hemisphere = savedProfile.hemisphere || 'Northern'
+        const profileWithSeason = { ...savedProfile, hemisphere, seasonMode: getCurrentSeason(hemisphere) }
+
+        setPlants(savedPlants)
+        setHomeProfile(profileWithSeason)
+        setIsHydrated(true)
+      } catch (err) {
+        console.error('[useAppState] Hydration failed:', err)
+        // Fallback so the app still works
+        setIsHydrated(true)
+      }
+    }
+
+    hydrate()
+    return () => { cancelled = true }
   }, [])
 
   const updateHomeProfile = useCallback((profile: HomeProfile) => {
@@ -29,37 +55,37 @@ export const useAppState = () => {
     setHomeProfile({ ...profile, seasonMode: correctSeason })
   }, [])
 
-  // Persistence
+  // Persistence — save to Firestore when state changes
   useEffect(() => {
-    if (isHydrated) {
-      StorageService.savePlants(plants)
+    if (isHydrated && userIdRef.current) {
+      FirestoreService.savePlants(userIdRef.current, plants).catch((err) =>
+        console.error('[useAppState] Failed to save plants:', err)
+      )
     }
   }, [plants, isHydrated])
 
   useEffect(() => {
-    if (isHydrated) {
-      StorageService.saveHomeProfile(homeProfile)
+    if (isHydrated && userIdRef.current) {
+      FirestoreService.saveHomeProfile(userIdRef.current, homeProfile).catch((err) =>
+        console.error('[useAppState] Failed to save profile:', err)
+      )
     }
   }, [homeProfile, isHydrated])
 
   // Health Simulation: Check-in logic
-  // Show "Check-up Due" when plant is in warning status AND water is due within 24 hours (daysDiff <= 1)
   useEffect(() => {
     const timer = setInterval(() => {
       setPlants(prev => prev.map(p => {
         if (p.status === 'warning' && p.lastWateredAt) {
-          // Calculate next watering date
           const lastDate = new Date(p.lastWateredAt)
           const nextDate = new Date(lastDate)
           nextDate.setDate(lastDate.getDate() + (p.cadenceDays || 7))
 
-          // Calculate days until next watering
           const now = new Date()
           nextDate.setHours(0, 0, 0, 0)
           now.setHours(0, 0, 0, 0)
           const daysDiff = Math.ceil((nextDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 
-          // Set needsCheckIn when water is due within 24 hours
           if (daysDiff <= 1) {
             return { ...p, needsCheckIn: true }
           } else {
@@ -163,7 +189,6 @@ export const useAppState = () => {
     setPlants(prev => prev.map(p => {
       if (p.id !== id) return p
 
-      // Calculate if this was a major overdue watering
       const getDaysDiff = () => {
         if (!p.lastWateredAt) return null
         const lastDate = new Date(p.lastWateredAt)
@@ -177,12 +202,10 @@ export const useAppState = () => {
 
       const daysDiff = getDaysDiff()
       const majorThreshold = p.overdueThresholdMajor ?? 5
-      // daysOverdue: -2 = 1 day overdue (after 1-day grace period)
       const daysOverdue = daysDiff !== null && daysDiff < -1 ? Math.abs(daysDiff) - 1 : 0
       const wasMajorOverdue = daysOverdue > majorThreshold
 
       if (wasMajorOverdue && p.status !== 'critical') {
-        // Water + flip to monitoring with checkup needed in 3 days
         const checkupDate = new Date()
         checkupDate.setDate(checkupDate.getDate() + 3)
         return {
@@ -194,7 +217,6 @@ export const useAppState = () => {
         }
       }
 
-      // Normal watering - flip to healthy only if no incomplete rescue tasks
       const hasIncompleteRescueTasks = p.rescuePlanTasks?.some(t => !t.completed) ?? false
       if (hasIncompleteRescueTasks) {
         return {
@@ -213,7 +235,6 @@ export const useAppState = () => {
   }, [])
 
   const adoptPlant = useCallback((id: string) => {
-    // Immediately update the plant's status for instant UI feedback.
     setPlants(prevPlants => {
       const plantToAdopt = prevPlants.find(p => p.id === id)
       if (!plantToAdopt) {
@@ -221,13 +242,11 @@ export const useAppState = () => {
         return prevPlants
       }
 
-      // Guard: must have lastWateredAt set before adoption
       if (!plantToAdopt.lastWateredAt) {
         console.error("Cannot adopt plant without lastWateredAt set.")
         return prevPlants
       }
 
-      // Return the immediately updated list - don't auto-set lastWateredAt
       return prevPlants.map(p =>
         p.id === id ? { ...p, status: 'healthy' } : p
       )

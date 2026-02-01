@@ -1,7 +1,8 @@
 import { GoogleGenAI, LiveServerMessage, Modality, FunctionDeclaration } from '@google/genai'
 
 export interface GeminiLiveConfig {
-  apiKey: string
+  apiKey?: string
+  proxyUrl?: string
   model: string
   systemInstruction: string
   tools?: { functionDeclarations: FunctionDeclaration[] }[]
@@ -19,6 +20,7 @@ export class GeminiLiveSession {
   private config: GeminiLiveConfig
   private isClosing: boolean = false
   private isClosed: boolean = false
+  private proxyWs: WebSocket | null = null
 
   constructor(config: GeminiLiveConfig) {
     this.config = config
@@ -27,12 +29,103 @@ export class GeminiLiveSession {
   async connect() {
     this.isClosing = false
     this.isClosed = false
+
+    // Use proxy mode if proxyUrl is provided
+    if (this.config.proxyUrl) {
+      return this.connectViaProxy()
+    }
+
+    return this.connectDirect()
+  }
+
+  private async connectViaProxy() {
+    const url = this.config.proxyUrl!
+    console.log('[GeminiLiveSession] Connecting via proxy:', url)
+
+    return new Promise<void>((resolve, reject) => {
+      const ws = new WebSocket(url)
+      this.proxyWs = ws
+
+      ws.onopen = () => {
+        console.log('[GeminiLiveSession] Proxy WebSocket opened, sending setup...')
+        // Send setup message with config
+        ws.send(JSON.stringify({
+          type: 'setup',
+          systemInstruction: this.config.systemInstruction,
+          tools: this.config.tools,
+        }))
+      }
+
+      ws.onclose = (e) => {
+        console.log('[GeminiLiveSession] Proxy WebSocket closed:', e.code, e.reason)
+        this.isClosed = true
+        this.proxyWs = null
+        this.session = null
+        this.config.callbacks.onClose?.()
+      }
+
+      ws.onerror = (e) => {
+        console.error('[GeminiLiveSession] Proxy WebSocket error:', e)
+        if (this.isClosing) return
+        this.config.callbacks.onError?.(e)
+      }
+
+      ws.onmessage = (event) => {
+        if (this.isClosing) return
+
+        let msg
+        try {
+          msg = JSON.parse(event.data as string)
+        } catch {
+          return
+        }
+
+        if (msg.type === 'open') {
+          console.log('[GeminiLiveSession] Gemini session ready via proxy')
+          // Create a proxy session object that mimics the SDK session interface
+          this.session = {
+            sendRealtimeInput: (data: unknown) => {
+              if (this.proxyWs?.readyState === WebSocket.OPEN) {
+                this.proxyWs.send(JSON.stringify({ type: 'realtimeInput', data }))
+              }
+            },
+            sendToolResponse: (data: unknown) => {
+              if (this.proxyWs?.readyState === WebSocket.OPEN) {
+                this.proxyWs.send(JSON.stringify({ type: 'toolResponse', data }))
+              }
+            },
+          }
+          this.config.callbacks.onOpen?.()
+          resolve()
+        } else if (msg.type === 'message') {
+          this.config.callbacks.onMessage?.(msg.data as LiveServerMessage)
+        } else if (msg.type === 'error') {
+          this.config.callbacks.onError?.(new Error(msg.message))
+        } else if (msg.type === 'close') {
+          // Gemini closed server-side; the ws.onclose handler will fire next
+        }
+      }
+
+      // Timeout after 15s
+      setTimeout(() => {
+        if (!this.session && !this.isClosed) {
+          reject(new Error('Proxy connection timeout'))
+          ws.close()
+        }
+      }, 15000)
+    })
+  }
+
+  private async connectDirect() {
+    if (!this.config.apiKey) {
+      throw new Error('apiKey is required for direct connection')
+    }
+
     const ai = new GoogleGenAI({ apiKey: this.config.apiKey, apiVersion: 'v1beta' })
 
     try {
       console.log('[GeminiLiveSession] Attempting to connect to Gemini API...');
 
-      // Track if WebSocket opened so we can fire onOpen after session is ready
       let wsOpened = false
       let closeEvent: (() => void) | null = null;
 
@@ -47,12 +140,10 @@ export class GeminiLiveSession {
           onopen: () => {
             console.log('[GeminiLiveSession] WebSocket connection opened successfully!');
             wsOpened = true
-            // Don't fire onOpen yet - wait until session is assigned
           },
           onclose: (e: CloseEvent) => {
             console.log('[GeminiLiveSession] WebSocket connection closed. Code:', e.code, 'Reason:', e.reason, 'Clean:', e.wasClean);
             this.isClosed = true
-            // If session not yet assigned, defer the close callback
             if (!this.session) {
               closeEvent = () => {
                 this.session = null
@@ -78,14 +169,12 @@ export class GeminiLiveSession {
       this.session = await sessionPromise
       console.log('[GeminiLiveSession] Session established, this.session is now set.');
 
-      // If WebSocket closed before we got here, fire the deferred close
       if (closeEvent) {
         console.log('[GeminiLiveSession] WebSocket closed during connect, firing deferred close.');
         (closeEvent as () => void)()
         return this.session
       }
 
-      // Now that session is assigned, fire onOpen callback
       if (wsOpened && !this.isClosing) {
         console.log('[GeminiLiveSession] Firing onOpen callback now that session is ready.');
         this.config.callbacks.onOpen?.()
@@ -142,6 +231,10 @@ export class GeminiLiveSession {
   close() {
     this.isClosing = true
     this.isClosed = true
+    if (this.proxyWs) {
+      this.proxyWs.close()
+      this.proxyWs = null
+    }
     if (this.session) {
       this.session = null
     }
