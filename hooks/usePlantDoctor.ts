@@ -20,6 +20,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
   const audioContextRef = useRef<AudioContext | null>(null)
   const toolCallLimiterRef = useRef(new ToolCallRateLimiter(15, 60000))
   const isConnectingRef = useRef(false) // Guard against multiple connection attempts
+  const keepaliveIntervalRef = useRef<number | null>(null) // Keepalive to prevent proxy timeout
 
   const onPlantDetectedRef = useRef(onPlantDetected)
   onPlantDetectedRef.current = onPlantDetected
@@ -66,6 +67,10 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
       intervalRef.current = null
+    }
+    if (keepaliveIntervalRef.current) {
+      clearInterval(keepaliveIntervalRef.current)
+      keepaliveIntervalRef.current = null
     }
     if (workletRef.current) {
       workletRef.current.port.onmessage = null
@@ -165,6 +170,15 @@ Output Format: Always call propose_plant_to_inventory with:
           onOpen: async () => {
             session.sendInitialGreet("I'm ready for the grand tour! Show me your plants one by one, and I'll catalog your whole jungle.")
 
+            // Start keepalive pings to prevent proxy timeout during setup
+            keepaliveIntervalRef.current = window.setInterval(() => {
+              if (sessionRef.current?.session) {
+                try {
+                  sessionRef.current.session.sendRealtimeInput({ parts: [{ text: ' ' }] })
+                } catch { /* ignore keepalive failures */ }
+              }
+            }, 15000)
+
             const source = audioCtx.createMediaStreamSource(stream)
             await audioCtx.audioWorklet.addModule('/pcm-capture-worklet.js')
             const worklet = new AudioWorkletNode(audioCtx, 'pcm-capture-processor')
@@ -246,7 +260,12 @@ Output Format: Always call propose_plant_to_inventory with:
                   session.sendToolResponse(fc.id!, fc.name!, { success: true, acknowledged: args.commonName })
                   setLastDetectedName(args.commonName as string)
                   setDiscoveryLog(prev => [args.commonName as string, ...prev].slice(0, 5))
-                  onPlantDetectedRef.current({
+                  // Validate enum values from Gemini
+                  const validIntensities = ['Low', 'Medium', 'Bright']
+                  const validQualities = ['Indirect', 'Direct']
+                  const validDirections = ['North', 'South', 'East', 'West']
+
+                  const newPlant: Plant = {
                     id: crypto.randomUUID(),
                     name: '',
                     species: args.commonName as string,
@@ -255,17 +274,27 @@ Output Format: Always call propose_plant_to_inventory with:
                     lastWateredAt: new Date().toISOString(),
                     cadenceDays: (args.cadenceDays as number) || 7,
                     status: 'pending',
-                    idealConditions: args.idealConditions as string,
-                    lightIntensity: args.lightIntensity as Plant['lightIntensity'],
-                    lightQuality: args.lightQuality as Plant['lightQuality'],
-                    nearWindow: args.nearWindow as boolean | undefined,
-                    windowDirection: args.nearWindow ? (args.windowDirection as Plant['windowDirection']) : undefined,
                     notes: [`Health: ${args.healthIssues}`, `Habit Grade: ${args.habitGrade}`, args.habitFeedback as string],
                     notesSessions: [[`Health: ${args.healthIssues}`, `Habit Grade: ${args.habitGrade}`, args.habitFeedback as string]],
                     notesUpdatedAt: new Date().toISOString(),
                     overdueThresholdMinor: (args.overdueThresholdMinor as number) || 2,
                     overdueThresholdMajor: (args.overdueThresholdMajor as number) || 5,
-                  });
+                  }
+
+                  // Only add optional fields if they have valid values
+                  if (args.idealConditions) newPlant.idealConditions = args.idealConditions as string
+                  if (args.lightIntensity && validIntensities.includes(args.lightIntensity as string)) {
+                    newPlant.lightIntensity = args.lightIntensity as Plant['lightIntensity']
+                  }
+                  if (args.lightQuality && validQualities.includes(args.lightQuality as string)) {
+                    newPlant.lightQuality = args.lightQuality as Plant['lightQuality']
+                  }
+                  if (args.nearWindow) newPlant.nearWindow = args.nearWindow as boolean
+                  if (args.nearWindow && args.windowDirection && validDirections.includes(args.windowDirection as string)) {
+                    newPlant.windowDirection = args.windowDirection as Plant['windowDirection']
+                  }
+
+                  onPlantDetectedRef.current(newPlant);
                 }
               }
             }

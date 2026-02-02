@@ -132,7 +132,8 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
       audioContextRef.current = audioCtx
       await audioServiceRef.current.ensureContext()
 
-      const systemInstruction = `REHAB CLINIC MODE - PLANT-ONLY FOCUS. You are verifying the recovery of "${plant.name || plant.species}".
+      const plantLabel = plant.name || plant.species || 'Unknown Plant'
+      const systemInstruction = `REHAB CLINIC MODE - PLANT-ONLY FOCUS. You are verifying the recovery of "${plantLabel}".
 
 CRITICAL RULES:
 1. ONLY discuss plant health, recovery, and care. Immediately decline any non-plant topics.
@@ -170,7 +171,8 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
         tools: [{ functionDeclarations: [createRescuePlanFunction, verifyRehabFunction, markRescueTaskCompleteFunction] }],
         callbacks: {
           onOpen: async () => {
-            session.sendInitialGreet(`Hello! I'm here to check on ${plant.name || plant.species}. Please show me its current condition.`)
+            const plantLabel = plant.name || plant.species || 'your plant'
+            session.sendInitialGreet(`Hello! I'm here to check on ${plantLabel}. Please show me its current condition.`)
 
             const source = audioCtx.createMediaStreamSource(stream)
             await audioCtx.audioWorklet.addModule('/pcm-capture-worklet.js')
@@ -360,15 +362,18 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
 
                       if (data.steps && data.steps.length > 0) {
                         console.log(`[RESCUE_PLAN] Processing ${data.steps.length} steps`)
-                        const tasks = data.steps.map((step: any, index: number) => ({
-                          id: `task-${Date.now()}-${index}`,
-                          description: typeof step === 'string' ? step : step.action || step.description || 'Unknown step',
-                          completed: false,
-                          phase: step.phase,
-                          duration: step.duration,
-                          sequencing: step.sequencing || index + 1,
-                          successCriteria: step.successCriteria
-                        }))
+                        const tasks = data.steps.map((step: any, index: number) => {
+                          const task: any = {
+                            id: crypto.randomUUID(),
+                            description: typeof step === 'string' ? step : step.action || step.description || 'Unknown step',
+                            completed: false,
+                            sequencing: step.sequencing || index + 1
+                          }
+                          if (step.phase) task.phase = step.phase
+                          if (step.duration) task.duration = step.duration
+                          if (step.successCriteria) task.successCriteria = step.successCriteria
+                          return task
+                        })
 
                         console.log(`[RESCUE_PLAN] Generated tasks:`, tasks)
                         console.log(`[RESCUE_PLAN] Calling onUpdateRef.current with plant ID ${plant.id}`)

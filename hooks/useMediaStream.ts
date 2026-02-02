@@ -14,7 +14,11 @@ export const useMediaStream = () => {
     try {
       // Check if mediaDevices API is available (requires secure context: HTTPS or localhost)
       if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-        throw new Error('Camera access not available. Ensure you are using HTTPS.')
+        const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        const message = isLocalhost
+          ? 'Camera access not available. Your browser may have denied permission.'
+          : 'Camera access requires HTTPS. Use localhost:3000 or deploy with HTTPS.'
+        throw new Error(message)
       }
 
       const newStream = await navigator.mediaDevices.getUserMedia({

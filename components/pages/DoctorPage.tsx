@@ -4,7 +4,6 @@ import { useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { HomeProfile, Plant } from '@/types'
 import { Doctor } from '@/components/Doctor'
-import { Manager } from '@/components/Manager'
 import { FirstAidStepOverlay } from '@/components/plant-details/FirstAidStepOverlay'
 import { Icons } from '@/lib/constants'
 
@@ -44,6 +43,7 @@ export const DoctorPage: React.FC<Props> = ({
   const plantId = searchParams.get('plantId')
   const isAddPlantMode = mode === 'add-plant'
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
+  const [geminiActive, setGeminiActive] = useState(false)
 
   // Look up plant by ID directly from plants array
   const currentPlant = plantId ? plants.find(p => p.id === plantId) : null
@@ -55,7 +55,8 @@ export const DoctorPage: React.FC<Props> = ({
   // Determine welcome message based on entry route
   const getWelcomeMessage = () => {
     if (currentPlant) {
-      return `Begin livestream checkup for ${currentPlant.name || currentPlant.species}`
+      const plantLabel = currentPlant.name || currentPlant.species || 'Unknown Plant'
+      return `Begin livestream checkup for ${plantLabel}`
     } else if (mode === 'add-plant') {
       return 'Begin a livestream to add a plant'
     } else {
@@ -132,32 +133,32 @@ export const DoctorPage: React.FC<Props> = ({
         <FirstAidStepOverlay tasks={phase1Tasks} />
       ) : !showCelebration && !isActive && !plantId ? (
         /* Discovery mode welcome with instructions */
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[80%] max-w-sm sm:max-w-xl">
-          <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-3 py-2 sm:px-5 sm:py-4 shadow-2xl">
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[80%] max-w-sm">
+          <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-3 py-2 shadow-2xl">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 text-center">
               {getWelcomeMessage()}
             </p>
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 mt-3 text-left">
               How to Use:
             </p>
-            <p className="text-xs sm:text-sm font-bold text-stone-800 mt-2">
-              1. First timers, start a video session to inventory all of your plants
+            <p className="text-xs font-bold text-stone-800 mt-2">
+              1. Start a video livestream to inventory all of your plants
             </p>
-            <p className="text-xs sm:text-sm font-bold text-stone-800 mt-1">
-              2. Focus your camera, showing your plant in the ring below
+            <p className="text-xs font-bold text-stone-800 mt-1">
+              2. Focus your plant in the ring below
             </p>
-            <p className="text-xs sm:text-sm font-bold text-stone-800 mt-1">
-              3. The Doctor will assess your plant and add it to your Jungle
+            <p className="text-xs font-bold text-stone-800 mt-1">
+              3. Begin the chat by saying "Hello"
             </p>
-            <p className="text-xs sm:text-sm font-bold text-stone-800 mt-1">
-              4. Begin the chat by saying Hello
+            <p className="text-xs font-bold text-stone-800 mt-1">
+              4. The Doctor will identify and add plants to your Jungle
             </p>
           </div>
         </div>
       ) : !showCelebration && !isActive && plantId ? (
         /* Plant checkup mode - smaller message */
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[80%] max-w-sm sm:max-w-xl">
-          <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-3 py-2 sm:px-5 sm:py-3 shadow-2xl">
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[80%] max-w-sm">
+          <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-3 py-2 shadow-2xl">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 text-center">
               {getWelcomeMessage()}
             </p>
@@ -172,6 +173,7 @@ export const DoctorPage: React.FC<Props> = ({
         onAutoDetect={handleAutoDetect}
         onUpdatePlant={onUpdatePlant}
         onStatusChange={setIsGeneratingPlan}
+        onGeminiActiveChange={setGeminiActive}
       />
 
       {/* Stream Controls Overlay - centered column */}
@@ -183,6 +185,13 @@ export const DoctorPage: React.FC<Props> = ({
               <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
               <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
                 Generating Plan...
+              </span>
+            </div>
+          ) : isActive && geminiActive ? (
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
+                Doctor Active
               </span>
             </div>
           ) : (

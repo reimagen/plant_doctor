@@ -13,6 +13,7 @@ interface Props {
   onAutoDetect: (plant: Plant) => void
   onUpdatePlant: (id: string, updates: Partial<Plant>) => void
   onStatusChange?: (isGeneratingPlan: boolean) => void
+  onGeminiActiveChange?: (isActive: boolean) => void
 }
 
 export const Doctor: React.FC<Props> = ({
@@ -21,7 +22,8 @@ export const Doctor: React.FC<Props> = ({
   rehabPlant,
   onAutoDetect,
   onUpdatePlant,
-  onStatusChange
+  onStatusChange,
+  onGeminiActiveChange
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -48,6 +50,12 @@ export const Doctor: React.FC<Props> = ({
   useEffect(() => {
     onStatusChange?.(isGeneratingPlan)
   }, [isGeneratingPlan, onStatusChange])
+
+  // Notify parent when Gemini becomes active
+  useEffect(() => {
+    const isGeminiActive = isDiscoveryCalling || isRehabCalling
+    onGeminiActiveChange?.(isGeminiActive)
+  }, [isDiscoveryCalling, isRehabCalling, onGeminiActiveChange])
 
   // Effect to handle starting and stopping calls based on stream presence
   // Note: startCall/stopCall are now stable (memoized with no deps), so they won't trigger re-runs

@@ -27,7 +27,18 @@ export const FirestoreService = {
   async getPlants(userId: string): Promise<Plant[]> {
     const snap = await getDocs(userPlantsCol(userId))
     if (snap.empty) return TEST_PLANTS
-    return snap.docs.map((d) => d.data() as Plant)
+    return snap.docs.map((d) => {
+      const plant = d.data() as Plant
+      // Deserialize nested array from JSON string
+      if (typeof plant.notesSessions === 'string') {
+        try {
+          plant.notesSessions = JSON.parse(plant.notesSessions)
+        } catch {
+          plant.notesSessions = undefined
+        }
+      }
+      return plant
+    })
   },
 
   async savePlants(userId: string, plants: Plant[]): Promise<void> {
@@ -37,7 +48,18 @@ export const FirestoreService = {
     existing.docs.forEach((d) => batch.delete(d.ref))
     plants.forEach((p) => {
       const ref = doc(userPlantsCol(userId), p.id)
-      batch.set(ref, p)
+      // Serialize nested array to avoid Firestore nested array limitation
+      const plantData = { ...p }
+      if (p.notesSessions) {
+        plantData.notesSessions = JSON.stringify(p.notesSessions) as any
+      }
+      // Remove undefined values - Firestore doesn't accept them
+      Object.keys(plantData).forEach(key => {
+        if (plantData[key as keyof typeof plantData] === undefined) {
+          delete plantData[key as keyof typeof plantData]
+        }
+      })
+      batch.set(ref, plantData)
     })
     await batch.commit()
   },
@@ -48,7 +70,18 @@ export const FirestoreService = {
         cb(TEST_PLANTS)
         return
       }
-      cb(snap.docs.map((d) => d.data() as Plant))
+      cb(snap.docs.map((d) => {
+        const plant = d.data() as Plant
+        // Deserialize nested array from JSON string
+        if (typeof plant.notesSessions === 'string') {
+          try {
+            plant.notesSessions = JSON.parse(plant.notesSessions)
+          } catch {
+            plant.notesSessions = undefined
+          }
+        }
+        return plant
+      }))
     })
   },
 
@@ -60,7 +93,14 @@ export const FirestoreService = {
   },
 
   async saveHomeProfile(userId: string, profile: HomeProfile): Promise<void> {
-    await setDoc(userProfileDoc(userId), profile)
+    const profileData = { ...profile }
+    // Remove undefined values - Firestore doesn't accept them
+    Object.keys(profileData).forEach(key => {
+      if (profileData[key as keyof typeof profileData] === undefined) {
+        delete profileData[key as keyof typeof profileData]
+      }
+    })
+    await setDoc(userProfileDoc(userId), profileData)
   },
 
   // ── Migration: localStorage → Firestore ─────────────────

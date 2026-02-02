@@ -541,7 +541,6 @@
   - [ ] Ensure Gemini makes timeline updates in real-time as tasks are completed - had issues with this, I would say the task is done but not see the update made on the timeline overlay and was unable to move ot the next first aid task. -- was fine, got this to work on subsequent testing.
   - [ ] Gemini mistakes plant identification (jade plant was misidentified, vs others were fine, could be plant specific issue), or adds multiple of the same plant during inventory sweep/add plant (i.e. added jade plant twice) -- could be because this plant is tricky to identify
   - [X] Misidentification: No jade-specific issues found — general accuracy limitation for visually similar species. Could improve prompt by passing existing inventory so Gemini has context. Not relevant, model problem.
-  - [ ] Deploy to Vercel - lisa set up + add calvin. Pending API key security decision.
 
 ### Phase 9: General Improvements + Checks
 - [X] The Navigation bar Doctor icon should be changed from a phone to a doctor icon. - used stethoscope
