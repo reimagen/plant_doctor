@@ -132,32 +132,32 @@ export const DoctorPage: React.FC<Props> = ({
         <FirstAidStepOverlay tasks={phase1Tasks} />
       ) : !showCelebration && !isActive && !plantId ? (
         /* Discovery mode welcome with instructions */
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl">
-          <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-5 py-4 shadow-2xl">
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[80%] max-w-sm sm:max-w-xl">
+          <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-3 py-2 sm:px-5 sm:py-4 shadow-2xl">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 text-center">
               {getWelcomeMessage()}
             </p>
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 mt-3 text-left">
               How to Use:
             </p>
-            <p className="text-sm font-bold text-stone-800 mt-2">
+            <p className="text-xs sm:text-sm font-bold text-stone-800 mt-2">
               1. First timers, start a video session to inventory all of your plants
             </p>
-            <p className="text-sm font-bold text-stone-800 mt-1">
+            <p className="text-xs sm:text-sm font-bold text-stone-800 mt-1">
               2. Focus your camera, showing your plant in the ring below
             </p>
-            <p className="text-sm font-bold text-stone-800 mt-1">
+            <p className="text-xs sm:text-sm font-bold text-stone-800 mt-1">
               3. The Doctor will assess your plant and add it to your Jungle
             </p>
-            <p className="text-sm font-bold text-stone-800 mt-1">
+            <p className="text-xs sm:text-sm font-bold text-stone-800 mt-1">
               4. Begin the chat by saying Hello
             </p>
           </div>
         </div>
       ) : !showCelebration && !isActive && plantId ? (
         /* Plant checkup mode - smaller message */
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl">
-          <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-5 py-3 shadow-2xl">
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[80%] max-w-sm sm:max-w-xl">
+          <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-3 py-2 sm:px-5 sm:py-3 shadow-2xl">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 text-center">
               {getWelcomeMessage()}
             </p>
@@ -174,66 +174,48 @@ export const DoctorPage: React.FC<Props> = ({
         onStatusChange={setIsGeneratingPlan}
       />
 
-      {/* Stream Controls Overlay - 3 column grid */}
-      <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-40 grid grid-cols-3 items-center gap-3 min-w-0">
-        {/* Left: Plant Nickname or Inventory Sweep */}
-        <div className="justify-self-start">
-          {plantId ? (
-            <div className="bg-black/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 pointer-events-none">
+      {/* Stream Controls Overlay - centered column */}
+      <div className="absolute bottom-32 w-full left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-3">
+        {/* Label: status or plant name */}
+        <div className="bg-black/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 pointer-events-none">
+          {isActive && isGeneratingPlan ? (
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
               <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
-                {currentPlant?.name || currentPlant?.species || 'Plant Checkup'}
+                Generating Plan...
               </span>
             </div>
           ) : (
-            <div className="bg-black/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 pointer-events-none">
-              <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
-                Inventory Sweep
-              </span>
-            </div>
+            <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
+              {plantId ? (currentPlant?.name || currentPlant?.species || 'Plant Checkup') : 'Inventory Sweep'}
+            </span>
           )}
         </div>
 
-        {/* Center: Call Button */}
-        <div className="justify-self-center">
-          {!isActive ? (
-            <button
-              onClick={onStartStream}
-              disabled={isConnecting || streamMode !== null}
-              className={`flex flex-col items-center gap-2 px-4 py-3 rounded-2xl transition-all ${isConnecting || streamMode !== null
-                ? 'bg-stone-500/50 cursor-not-allowed opacity-50'
-                : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
-              title="Start video stream"
-            >
-              <Icons.Video />
-              <span className="text-xs font-bold uppercase">Start</span>
-            </button>
-          ) : (
-            /* Stop Button */
-            <button
-              onClick={onStopStream}
-              className="flex flex-col items-center gap-2 px-4 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white transition-all animate-pulse"
-              title="Stop stream"
-            >
-              <Icons.Stop />
-              <span className="text-xs font-bold uppercase">Stop</span>
-            </button>
-          )}
-        </div>
-
-        {/* Right: Status indicator */}
-        <div className="justify-self-end">
-          {isActive && (
-            <div className="bg-black/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 pointer-events-none">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isGeneratingPlan ? 'bg-amber-400' : 'bg-green-400'} animate-pulse`} />
-                <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
-                  {isGeneratingPlan ? 'Generating Plan...' : 'Analyzing...'}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Call Button */}
+        {!isActive ? (
+          <button
+            onClick={onStartStream}
+            disabled={isConnecting || streamMode !== null}
+            className={`flex flex-col items-center gap-2 px-4 py-3 rounded-2xl transition-all ${isConnecting || streamMode !== null
+              ? 'bg-stone-500/50 cursor-not-allowed opacity-50'
+              : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+            title="Start video stream"
+          >
+            <Icons.Video />
+            <span className="text-xs font-bold uppercase">Start</span>
+          </button>
+        ) : (
+          <button
+            onClick={onStopStream}
+            className="flex flex-col items-center gap-2 px-4 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white transition-all animate-pulse"
+            title="Stop stream"
+          >
+            <Icons.Stop />
+            <span className="text-xs font-bold uppercase">Stop</span>
+          </button>
+        )}
       </div>
     </div>
   )
