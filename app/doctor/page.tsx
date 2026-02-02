@@ -1,7 +1,51 @@
-/**
- * Doctor page route - rendering is handled by ClientApp in root layout
- * This file exists for Next.js routing but returns null since ClientApp manages all content
- */
+'use client'
+
+import { Suspense, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { useApp } from '@/contexts/AppContext'
+import { DoctorPage as DoctorPageComponent } from '@/components/pages/DoctorPage'
+
+function DoctorPageInner() {
+  const searchParams = useSearchParams()
+  const {
+    stream, streamMode, isConnecting, homeProfile, plants,
+    addPlant, updatePlant, handleStartStream, handleStopStream,
+  } = useApp()
+
+  const rehabPlantId = searchParams.get('plantId')
+  const rehabPlant = useMemo(
+    () => rehabPlantId ? plants.find(p => p.id === rehabPlantId) : null,
+    [rehabPlantId, plants]
+  )
+
+  // Stop stream when navigating away (unmount)
+  useEffect(() => {
+    return () => {
+      handleStopStream()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <DoctorPageComponent
+      stream={stream}
+      streamMode={streamMode}
+      isConnecting={isConnecting}
+      homeProfile={homeProfile}
+      plants={plants}
+      onAutoDetect={addPlant}
+      onUpdatePlant={updatePlant}
+      onStartStream={handleStartStream}
+      onStopStream={handleStopStream}
+      rehabPlant={rehabPlant}
+    />
+  )
+}
+
 export default function DoctorPage() {
-  return null
+  return (
+    <Suspense fallback={null}>
+      <DoctorPageInner />
+    </Suspense>
+  )
 }

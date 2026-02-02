@@ -1,7 +1,21 @@
-/**
- * Home page route - rendering is handled by ClientApp in root layout
- * This file exists for Next.js routing but returns null since ClientApp manages all content
- */
+'use client'
+
+import { useApp } from '@/contexts/AppContext'
+import { InventoryPage } from '@/components/pages/InventoryPage'
+
 export default function HomePage() {
-  return null
+  const { plants, homeProfile, waterPlant, adoptPlant, removePlant, updatePlant } = useApp()
+
+  return (
+    <div className="pb-24">
+      <InventoryPage
+        plants={plants}
+        homeProfile={homeProfile}
+        onWater={waterPlant}
+        onAdopt={adoptPlant}
+        onDelete={removePlant}
+        onUpdate={updatePlant}
+      />
+    </div>
+  )
 }

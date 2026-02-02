@@ -2,17 +2,27 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useApp } from '@/contexts/AppContext'
 import { Icons } from '@/lib/constants'
 
-interface Props {}
-
-export const Navigation: React.FC<Props> = () => {
+export const Navigation: React.FC = () => {
   const pathname = usePathname()
+  const { isStreamActive } = useApp()
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (isStreamActive && pathname === '/doctor' && href !== '/doctor') {
+      const confirmed = window.confirm('You have an active stream. Leaving will end it. Continue?')
+      if (!confirmed) {
+        e.preventDefault()
+      }
+    }
+  }
 
   return (
     <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl rounded-3xl p-2 flex justify-around items-center z-40">
       <Link
         href="/"
+        onClick={(e) => handleClick(e, '/')}
         className={`flex flex-col items-center gap-1 py-2 px-3 transition-all ${
           pathname === '/' ? 'text-green-600 scale-110' : 'text-stone-400'
         }`}
@@ -23,6 +33,7 @@ export const Navigation: React.FC<Props> = () => {
 
       <Link
         href="/doctor"
+        onClick={(e) => handleClick(e, '/doctor')}
         className={`flex flex-col items-center gap-1 py-2 px-3 transition-all ${
           pathname === '/doctor' ? 'text-green-600 scale-110' : 'text-stone-400'
         }`}
@@ -33,6 +44,7 @@ export const Navigation: React.FC<Props> = () => {
 
       <Link
         href="/settings"
+        onClick={(e) => handleClick(e, '/settings')}
         className={`flex flex-col items-center gap-1 py-2 px-3 transition-all ${
           pathname === '/settings' ? 'text-green-600 scale-110' : 'text-stone-400'
         }`}

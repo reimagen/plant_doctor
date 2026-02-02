@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+
 import { Plant, HomeProfile } from '@/types'
 import { PlantCard } from '@/components/PlantCard'
 import { Icons } from '@/lib/constants'
@@ -137,13 +138,13 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
           </div>
           <div className="grid gap-4">
             {pendingPlants.map((plant) => (
-              <div key={plant.id} onClick={() => router.push(`/plants/${plant.id}`)} className="cursor-pointer">
+              <div key={plant.id} onClick={() => router.push(`/plants?id=${plant.id}`)} className="cursor-pointer">
                 <PlantCard
                   plant={plant}
                   onWater={onWater}
                   onAdopt={onAdopt}
                   onDelete={onDelete}
-                  onReview={(id) => router.push(`/plants/${id}`)}
+                  onReview={(id) => router.push(`/plants?id=${id}`)}
                 />
               </div>
             ))}
@@ -187,7 +188,7 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
         ) : (
           <div className="grid gap-6">
             {sortedJunglePlants.map((plant) => (
-              <div key={plant.id} onClick={() => router.push(`/plants/${plant.id}`)} className="cursor-pointer">
+              <div key={plant.id} onClick={() => router.push(`/plants?id=${plant.id}`)} className="cursor-pointer">
                 <PlantCard
                   plant={plant}
                   onWater={onWater}

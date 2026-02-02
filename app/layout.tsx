@@ -1,18 +1,23 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { ClientApp } from './ClientApp'
+import { AppProvider } from '@/contexts/AppContext'
+import { Navigation } from '@/components/Navigation'
 
 export const metadata: Metadata = {
   title: 'Plant Doctor AI',
   description: 'AI-powered plant identification, health assessment, and care recommendations',
 }
 
-export default function RootLayout() {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        {/* ClientApp persists across all route navigation to maintain stream state */}
-        <ClientApp />
+        <AppProvider>
+          <main className="min-h-screen bg-stone-50 max-w-xl mx-auto">
+            {children}
+          </main>
+          <Navigation />
+        </AppProvider>
       </body>
     </html>
   )

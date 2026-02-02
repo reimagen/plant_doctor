@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+
 import { Plant, HomeProfile } from '@/types'
 import { Icons } from '@/lib/constants'
 import { Manager } from '@/components/Manager'
