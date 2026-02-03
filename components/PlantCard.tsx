@@ -2,6 +2,7 @@
 
 import { memo } from 'react'
 import { Plant } from '@/types'
+import { getWateringDaysDiff } from '@/lib/date-utils'
 import { Icons } from '@/lib/constants'
 import { PlantStatusBadge } from '@/components/PlantStatusBadge'
 
@@ -15,29 +16,11 @@ interface Props {
 }
 
 const PlantCardComponent: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, onReview, onCheckIn }) => {
-  const getNextWaterDate = () => {
-    if (!plant.lastWateredAt) return null
-    const lastDate = new Date(plant.lastWateredAt)
-    const nextDate = new Date(lastDate)
-    nextDate.setDate(lastDate.getDate() + (plant.cadenceDays || 7))
-    return nextDate
-  }
-
-  const getDaysDiff = () => {
-    const next = getNextWaterDate()
-    if (!next) return null
-    const now = new Date()
-    next.setHours(0, 0, 0, 0)
-    now.setHours(0, 0, 0, 0)
-    const diff = next.getTime() - now.getTime()
-    return Math.ceil(diff / (1000 * 60 * 60 * 24))
-  }
-
   const isPending = plant.status === 'pending'
   const isMonitoring = plant.status === 'warning'
   const isCritical = plant.status === 'critical'
   const isCheckInNeeded = !!plant.needsCheckIn
-  const daysDiff = getDaysDiff()
+  const daysDiff = getWateringDaysDiff(plant.lastWateredAt, plant.cadenceDays || 7)
 
   // Check if plant has any incomplete rescue plan tasks
   const hasIncompleteRescueTasks = plant.rescuePlanTasks && plant.rescuePlanTasks.some(task => !task.completed)

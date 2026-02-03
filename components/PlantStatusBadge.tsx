@@ -1,6 +1,7 @@
 'use client'
 
 import { Plant } from '@/types'
+import { getWateringDaysDiff } from '@/lib/date-utils'
 
 interface Props {
   plant: Plant
@@ -8,29 +9,11 @@ interface Props {
 }
 
 export const PlantStatusBadge: React.FC<Props> = ({ plant, size = 'md' }) => {
-  const getNextWaterDate = () => {
-    if (!plant.lastWateredAt) return null
-    const lastDate = new Date(plant.lastWateredAt)
-    const nextDate = new Date(lastDate)
-    nextDate.setDate(lastDate.getDate() + (plant.cadenceDays || 7))
-    return nextDate
-  }
-
-  const getDaysDiff = () => {
-    const next = getNextWaterDate()
-    if (!next) return null
-    const now = new Date()
-    next.setHours(0, 0, 0, 0)
-    now.setHours(0, 0, 0, 0)
-    const diff = next.getTime() - now.getTime()
-    return Math.ceil(diff / (1000 * 60 * 60 * 24))
-  }
-
   const isPending = plant.status === 'pending'
   const isMonitoring = plant.status === 'warning'
   const isCritical = plant.status === 'critical'
   const isCheckInNeeded = !!plant.needsCheckIn
-  const daysDiff = getDaysDiff()
+  const daysDiff = getWateringDaysDiff(plant.lastWateredAt, plant.cadenceDays || 7)
 
   // Check if plant has any incomplete rescue plan tasks
   const hasIncompleteRescueTasks = plant.rescuePlanTasks && plant.rescuePlanTasks.some(task => !task.completed)

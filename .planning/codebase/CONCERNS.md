@@ -25,6 +25,10 @@
 
 ## Remaining Checklist (Verified With Evidence)
 
+**Review Links**
+- Strategy decisions: `strategy-concerns.md`
+- Execution tasks: `executions-concerns.md`
+
 **Security & Ops**
 - [ ] Client Gemini Live key exposure still possible (direct WebSocket allowed). Evidence: `hooks/usePlantDoctor.ts`, `hooks/useRehabSpecialist.ts` accept `NEXT_PUBLIC_GEMINI_API_KEY` when `NEXT_PUBLIC_CLOUD_RUN_URL` is absent.
 - [ ] WebSocket proxy has no auth/rate limiting. Evidence: `websocket-proxy/index.js` has no auth middleware or rate controls.
@@ -32,11 +36,11 @@
 - [ ] Dual key rotation process undocumented in repo (Content vs Live). Evidence: no docs or scripts found.
 
 **Engineering Debt**
-- [ ] `any` types in Gemini/tooling paths. Evidence: `lib/gemini-live.ts`, `hooks/useRehabSpecialist.ts`, `functions/src/index.ts`, `lib/firestore-service.ts`.
-- [ ] Duplicated live session logic between doctor/rehab hooks. Evidence: `hooks/usePlantDoctor.ts` and `hooks/useRehabSpecialist.ts` share similar connect/send/cleanup flows.
-- [ ] No explicit live-session state machine. Evidence: `lib/gemini-live.ts` relies on flags only.
-- [ ] AudioContext lifecycle duplicated. Evidence: `hooks/usePlantDoctor.ts`, `hooks/useRehabSpecialist.ts`, `lib/audio-service.ts` each create/manage contexts.
-- [ ] Date handling is scattered (timezone logic duplicated). Evidence: `hooks/useAppState.ts`, `components/PlantCard.tsx`, `components/PlantStatusBadge.tsx`, `components/pages/InventoryPage.tsx`, `components/plant-details/LastWateredSection.tsx`.
+- [x] `any` types in Gemini/tooling paths removed. Evidence: `lib/gemini-live.ts`, `hooks/useRehabSpecialist.ts`, `functions/src/index.ts`, `lib/firestore-service.ts`.
+- [x] Shared live session media pipeline extracted. Evidence: `lib/live-media.ts`, `hooks/usePlantDoctor.ts`, `hooks/useRehabSpecialist.ts`.
+- [x] Explicit live-session state machine added. Evidence: `lib/gemini-live.ts`.
+- [x] AudioContext lifecycle centralized with shared capture context. Evidence: `lib/audio-capture.ts`, `hooks/usePlantDoctor.ts`, `hooks/useRehabSpecialist.ts`.
+- [x] Date handling centralized across components. Evidence: `lib/date-utils.ts`, `components/plant-details/LastWateredSection.tsx`.
 
 **Performance & Scaling**
 - [ ] Canvas capture and base64 encoding every 1s (main thread). Evidence: `hooks/usePlantDoctor.ts`, `hooks/useRehabSpecialist.ts`.
@@ -45,7 +49,7 @@
 - [x] MediaThrottler wired into livestream frame capture. Evidence: `hooks/usePlantDoctor.ts`, `hooks/useRehabSpecialist.ts`.
 
 **Product & UX**
-- [ ] Limited user-facing error UI (stream errors + care guide only). Evidence: banners in `components/pages/DoctorPage.tsx`, `components/pages/PlantDetailPage.tsx` + care guide errors in `components/Manager.tsx`.
+- [x] Expanded user-facing error UI (global toast + stream + care guide). Evidence: `components/GlobalErrorToast.tsx`, `app/layout.tsx`, `contexts/AppContext.tsx`, `components/pages/DoctorPage.tsx`, `components/pages/PlantDetailPage.tsx`, `components/Manager.tsx`.
 - [x] Permission-denied errors surfaced to users. Evidence: stream error banners via `contexts/AppContext.tsx`.
 - [ ] No data export/import UI. Evidence: no components or routes for export/import.
 - [ ] Offline behavior not surfaced. Evidence: Firestore persistence enabled, but no UX for offline status.

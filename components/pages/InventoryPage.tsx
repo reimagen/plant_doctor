@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { Plant, HomeProfile } from '@/types'
+import { getNextWaterDate, getWateringDaysDiff } from '@/lib/date-utils'
 import { PlantCard } from '@/components/PlantCard'
 import { Icons } from '@/lib/constants'
 
@@ -30,23 +31,12 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
 
     return list.sort((a, b) => {
       if (sortBy === 'urgency') {
-        const getDaysDiff = (p: Plant) => {
-          if (!p.lastWateredAt) return null
-          const lastDate = new Date(p.lastWateredAt)
-          const nextDate = new Date(lastDate)
-          nextDate.setDate(lastDate.getDate() + p.cadenceDays)
-          const now = new Date()
-          nextDate.setHours(0, 0, 0, 0)
-          now.setHours(0, 0, 0, 0)
-          return Math.ceil((nextDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-        }
-
         const score = (p: Plant) => {
           // 0: Critical status
           if (p.status === 'critical') return 0
 
           // Check overdue status with grace period
-          const daysDiff = getDaysDiff(p)
+          const daysDiff = getWateringDaysDiff(p.lastWateredAt, p.cadenceDays)
           const isWateringDay = daysDiff !== null && (daysDiff === 0 || daysDiff === -1)
           const isOverdue = daysDiff !== null && daysDiff < -1  // After 1-day grace
 
@@ -89,7 +79,7 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
         if (res !== 0) return res
         // Tiebreaker: sort by days until watering (closest first)
         const getNext = (p: Plant) => {
-          const daysDiff = getDaysDiff(p)
+          const daysDiff = getWateringDaysDiff(p.lastWateredAt, p.cadenceDays)
           if (daysDiff === null) return Infinity
           return daysDiff
         }
@@ -98,10 +88,9 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
 
       if (sortBy === 'watering schedule') {
         const getNext = (p: Plant) => {
-          if (!p.lastWateredAt) return Infinity
-          const d = new Date(p.lastWateredAt)
-          d.setDate(d.getDate() + p.cadenceDays)
-          return d.getTime()
+          const next = getNextWaterDate(p.lastWateredAt, p.cadenceDays)
+          if (!next) return Infinity
+          return next.getTime()
         }
         return getNext(a) - getNext(b)
       }

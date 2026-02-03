@@ -8,11 +8,18 @@ export class AudioService {
     this.sampleRate = sampleRate
   }
 
+  private getAudioContextConstructor() {
+    const webkit = (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    return window.AudioContext || webkit
+  }
+
   async ensureContext() {
     if (typeof window === 'undefined') return null
 
     if (!this.ctx || this.ctx.state === 'closed') {
-      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)({
+      const AudioContextCtor = this.getAudioContextConstructor()
+      if (!AudioContextCtor) return null
+      this.ctx = new AudioContextCtor({
         sampleRate: this.sampleRate,
       })
     }

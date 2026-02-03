@@ -26,6 +26,14 @@ interface HomeProfile {
   seasonMode: string
 }
 
+interface RescuePlanStep {
+  action: string
+  phase: 'phase-1' | 'phase-2' | 'phase-3'
+  duration?: string
+  sequencing?: number
+  successCriteria?: string
+}
+
 // Simple rate limiter
 let tokens = 10
 let lastRefill = Date.now()
@@ -133,7 +141,7 @@ async function generateCareGuide(ai: GoogleGenAI, plant: Plant, homeProfile: Hom
   }
 }
 
-async function generateRescuePlan(ai: GoogleGenAI, plant: Plant, homeProfile: HomeProfile): Promise<any[]> {
+async function generateRescuePlan(ai: GoogleGenAI, plant: Plant, homeProfile: HomeProfile): Promise<RescuePlanStep[]> {
   const lastDate = plant.lastWateredAt ? new Date(plant.lastWateredAt) : null
   const nextDate = lastDate ? new Date(lastDate) : null
   if (nextDate && lastDate) {

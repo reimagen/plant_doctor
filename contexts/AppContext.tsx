@@ -23,6 +23,9 @@ interface AppContextValue {
   isStreamActive: boolean
   streamError: string | null
   clearStreamError: () => void
+  globalError: string | null
+  reportError: (message: string) => void
+  clearGlobalError: () => void
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
@@ -34,7 +37,9 @@ export function useApp() {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const state = useAppState()
+  const [globalError, setGlobalError] = useState<string | null>(null)
+  const reportError = (message: string) => setGlobalError(message)
+  const state = useAppState(reportError)
   const { start, stop } = useMediaStream()
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [isConnecting, setIsConnecting] = useState(false)
@@ -77,7 +82,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     isStreamActive: stream !== null || isConnecting,
     streamError,
     clearStreamError: () => setStreamError(null),
-  }), [state, stream, streamMode, isConnecting, streamError])
+    globalError,
+    reportError,
+    clearGlobalError: () => setGlobalError(null),
+  }), [state, stream, streamMode, isConnecting, streamError, globalError])
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }

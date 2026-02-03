@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Plant, HomeProfile } from '@/types'
+import { getNextWaterDate } from '@/lib/date-utils'
 import { useCareGuide } from '@/hooks/useCareGuide'
 import { useRescueTaskManager } from '@/hooks/useRescuePlan'
 import { CareGuideSection } from '@/components/plant-details/CareGuideSection'
@@ -34,11 +35,7 @@ export const Manager: React.FC<Props> = ({
   onClose
 }) => {
   const isPending = plant.status === 'pending'
-  const lastDate = plant.lastWateredAt ? new Date(plant.lastWateredAt) : null
-  const nextDate = lastDate ? new Date(lastDate) : null
-  if (nextDate && lastDate) {
-    nextDate.setDate(lastDate.getDate() + plant.cadenceDays)
-  }
+  const nextDate = getNextWaterDate(plant.lastWateredAt, plant.cadenceDays)
   const isOverdue = nextDate ? nextDate.getTime() < Date.now() : false
 
   const { isGenerating, error: careGuideError, generateTips } = useCareGuide(

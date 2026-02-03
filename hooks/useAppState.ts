@@ -6,8 +6,9 @@ import { FirestoreService } from '@/lib/firestore-service'
 import { ensureUser } from '@/lib/firebase-auth'
 import { getCurrentSeason } from '@/lib/season'
 import { DEFAULT_HOME_PROFILE } from '@/lib/constants'
+import { getWateringDaysDiff } from '@/lib/date-utils'
 
-export const useAppState = () => {
+export const useAppState = (onError?: (message: string) => void) => {
   const [plants, setPlants] = useState<Plant[]>([])
   const [homeProfile, setHomeProfile] = useState<HomeProfile>(DEFAULT_HOME_PROFILE)
   const [isHydrated, setIsHydrated] = useState(false)
@@ -41,6 +42,7 @@ export const useAppState = () => {
         setIsHydrated(true)
       } catch (err) {
         console.error('[useAppState] Hydration failed:', err)
+        onError?.('Unable to load your saved plants. Please refresh and try again.')
         // Fallback so the app still works
         setIsHydrated(true)
       }
@@ -77,16 +79,9 @@ export const useAppState = () => {
     const timer = setInterval(() => {
       setPlants(prev => prev.map(p => {
         if (p.status === 'warning' && p.lastWateredAt) {
-          const lastDate = new Date(p.lastWateredAt)
-          const nextDate = new Date(lastDate)
-          nextDate.setDate(lastDate.getDate() + (p.cadenceDays || 7))
+          const daysDiff = getWateringDaysDiff(p.lastWateredAt, p.cadenceDays || 7)
 
-          const now = new Date()
-          nextDate.setHours(0, 0, 0, 0)
-          now.setHours(0, 0, 0, 0)
-          const daysDiff = Math.ceil((nextDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-
-          if (daysDiff <= 1) {
+          if (daysDiff !== null && daysDiff <= 1) {
             return { ...p, needsCheckIn: true }
           } else {
             return { ...p, needsCheckIn: false }
@@ -114,6 +109,7 @@ export const useAppState = () => {
       })
 
       if (!response.ok) {
+        onError?.('Care guide request failed. Please try again.')
         throw new Error(`API error generating care guide: ${response.status}`)
       }
 
@@ -126,9 +122,11 @@ export const useAppState = () => {
         )
       } else if (data.error) {
         console.error(`Care guide generation API error: ${data.error}`)
+        onError?.('Care guide generation failed. Please try again.')
       }
     } catch (e) {
       console.error('Failed to generate care guide on add:', e)
+      onError?.('Care guide generation failed. Please try again.')
     } finally {
       careGuideRequestsRef.current.delete(plant.id)
     }
@@ -189,18 +187,7 @@ export const useAppState = () => {
     setPlants(prev => prev.map(p => {
       if (p.id !== id) return p
 
-      const getDaysDiff = () => {
-        if (!p.lastWateredAt) return null
-        const lastDate = new Date(p.lastWateredAt)
-        const nextDate = new Date(lastDate)
-        nextDate.setDate(lastDate.getDate() + (p.cadenceDays || 7))
-        const now = new Date()
-        nextDate.setHours(0, 0, 0, 0)
-        now.setHours(0, 0, 0, 0)
-        return Math.ceil((nextDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      }
-
-      const daysDiff = getDaysDiff()
+      const daysDiff = getWateringDaysDiff(p.lastWateredAt, p.cadenceDays || 7)
       const majorThreshold = p.overdueThresholdMajor ?? 5
       const daysOverdue = daysDiff !== null && daysDiff < -1 ? Math.abs(daysDiff) - 1 : 0
       const wasMajorOverdue = daysOverdue > majorThreshold

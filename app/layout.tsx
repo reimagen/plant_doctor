@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { AppProvider } from '@/contexts/AppContext'
 import { Navigation } from '@/components/Navigation'
+import { GlobalErrorToast } from '@/components/GlobalErrorToast'
 
 export const metadata: Metadata = {
   title: 'Plant Doctor AI',
@@ -13,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="font-sans antialiased">
         <AppProvider>
+          <GlobalErrorToast />
           <main className="min-h-screen bg-stone-50 max-w-xl mx-auto">
             {children}
           </main>

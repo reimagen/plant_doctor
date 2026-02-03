@@ -6,6 +6,8 @@ import { HomeProfile, Plant } from '@/types'
 import { GeminiLiveSession } from '@/lib/gemini-live'
 import { AudioService } from '@/lib/audio-service'
 import { ToolCallRateLimiter, MediaThrottler } from '@/lib/rate-limiter'
+import { createCaptureContext, closeCaptureContext } from '@/lib/audio-capture'
+import { setupLiveMediaPipeline } from '@/lib/live-media'
 
 export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Plant) => void) => {
   const [isCalling, setIsCalling] = useState(false)
@@ -14,9 +16,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
 
   const sessionRef = useRef<GeminiLiveSession | null>(null)
   const audioServiceRef = useRef(new AudioService(24000))
-  const workletRef = useRef<AudioWorkletNode | null>(null)
-  const muteGainRef = useRef<GainNode | null>(null)
-  const intervalRef = useRef<number | null>(null)
+  const mediaCleanupRef = useRef<(() => void) | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const toolCallLimiterRef = useRef(new ToolCallRateLimiter(15, 60000))
   const mediaThrottlerRef = useRef(new MediaThrottler(1000))
@@ -65,31 +65,20 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
     isConnectingRef.current = false
     setIsCalling(false)
 
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
+    if (mediaCleanupRef.current) {
+      mediaCleanupRef.current()
+      mediaCleanupRef.current = null
     }
     mediaThrottlerRef.current.reset()
     if (keepaliveIntervalRef.current) {
       clearInterval(keepaliveIntervalRef.current)
       keepaliveIntervalRef.current = null
     }
-    if (workletRef.current) {
-      workletRef.current.port.onmessage = null
-      workletRef.current.disconnect()
-      workletRef.current = null
-    }
-    if (muteGainRef.current) {
-      muteGainRef.current.disconnect()
-      muteGainRef.current = null
-    }
     sessionRef.current?.close()
     sessionRef.current = null
     await audioServiceRef.current.close()
-    if (audioContextRef.current?.state !== 'closed') {
-      await audioContextRef.current?.close()
-      audioContextRef.current = null
-    }
+    await closeCaptureContext(audioContextRef.current)
+    audioContextRef.current = null
   }, []) // No dependencies - uses refs only
 
   const startCall = useCallback(async (
@@ -119,8 +108,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
     }
 
     try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 })
-      await audioCtx.resume()
+      const audioCtx = await createCaptureContext(16000)
       audioContextRef.current = audioCtx
       await audioServiceRef.current.ensureContext()
 
@@ -182,46 +170,25 @@ Output Format: Always call propose_plant_to_inventory with:
               }
             }, 15000)
 
-            const source = audioCtx.createMediaStreamSource(stream)
-            await audioCtx.audioWorklet.addModule('/pcm-capture-worklet.js')
-            const worklet = new AudioWorkletNode(audioCtx, 'pcm-capture-processor')
-            workletRef.current = worklet
-            const muteGain = audioCtx.createGain()
-            muteGain.gain.value = 0
-            muteGainRef.current = muteGain
-            worklet.port.onmessage = (event) => {
-              if (!sessionRef.current?.session) return
-              const pcm = GeminiLiveSession.encodeAudio(event.data as Float32Array)
-              sessionRef.current.sendMedia(pcm, 'audio/pcm;rate=' + audioCtx.sampleRate)
-            }
-            source.connect(worklet)
-            worklet.connect(muteGain)
-            muteGain.connect(audioCtx.destination)
-
-            const hasVideo = stream.getVideoTracks().length > 0
-            if (hasVideo && videoRef.current && canvasRef.current) {
-              const video = videoRef.current
-              const canvas = canvasRef.current
-              intervalRef.current = window.setInterval(() => {
-                if (!sessionRef.current?.session || video.paused) return
-                if (!mediaThrottlerRef.current.shouldSendFrame()) return
-                const ctx = canvas.getContext('2d')
-                if (!ctx) return
-                canvas.width = 320
-                canvas.height = (320 * video.videoHeight) / video.videoWidth
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-                canvas.toBlob(blob => {
-                  if (blob && sessionRef.current?.session) {
-                    const reader = new FileReader()
-                    reader.onloadend = () => {
-                      const base64 = (reader.result as string).split(',')[1]
-                      sessionRef.current?.sendMedia(base64, 'image/jpeg')
-                    }
-                    reader.readAsDataURL(blob)
-                  }
-                }, 'image/jpeg', 0.5)
-              }, 1000)
-            }
+            mediaCleanupRef.current = await setupLiveMediaPipeline({
+              stream,
+              audioContext: audioCtx,
+              videoRef,
+              canvasRef,
+              onAudioChunk: (chunk) => {
+                if (!sessionRef.current?.session) return
+                const pcm = GeminiLiveSession.encodeAudio(chunk)
+                sessionRef.current.sendMedia(pcm, 'audio/pcm;rate=' + audioCtx.sampleRate)
+              },
+              onImageFrame: (base64) => {
+                if (sessionRef.current?.session) {
+                  sessionRef.current.sendMedia(base64, 'image/jpeg')
+                }
+              },
+              imageWidth: 320,
+              imageQuality: 0.5,
+              shouldSendFrame: () => mediaThrottlerRef.current.shouldSendFrame()
+            })
           },
           onMessage: async (msg) => {
             const audio = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data

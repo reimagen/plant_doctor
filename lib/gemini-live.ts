@@ -14,19 +14,30 @@ export interface GeminiLiveConfig {
   }
 }
 
+export type GeminiLiveState = 'idle' | 'connecting' | 'active' | 'closing' | 'closed'
+
+interface GeminiSessionLike {
+  sendRealtimeInput: (data: unknown) => void
+  sendToolResponse: (data: unknown) => void
+}
+
 export class GeminiLiveSession {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public session: any = null
+  public session: GeminiSessionLike | null = null
   private config: GeminiLiveConfig
   private isClosing: boolean = false
   private isClosed: boolean = false
   private proxyWs: WebSocket | null = null
+  private state: GeminiLiveState = 'idle'
 
   constructor(config: GeminiLiveConfig) {
     this.config = config
   }
 
   async connect() {
+    if (this.state === 'connecting' || this.state === 'active') {
+      return
+    }
+    this.state = 'connecting'
     this.isClosing = false
     this.isClosed = false
 
@@ -59,6 +70,7 @@ export class GeminiLiveSession {
       ws.onclose = (e) => {
         console.log('[GeminiLiveSession] Proxy WebSocket closed:', e.code, e.reason)
         this.isClosed = true
+        this.state = 'closed'
         this.proxyWs = null
         this.session = null
         this.config.callbacks.onClose?.()
@@ -82,6 +94,7 @@ export class GeminiLiveSession {
 
         if (msg.type === 'open') {
           console.log('[GeminiLiveSession] Gemini session ready via proxy')
+          this.state = 'active'
           // Create a proxy session object that mimics the SDK session interface
           this.session = {
             sendRealtimeInput: (data: unknown) => {
@@ -144,6 +157,7 @@ export class GeminiLiveSession {
           onclose: (e: CloseEvent) => {
             console.log('[GeminiLiveSession] WebSocket connection closed. Code:', e.code, 'Reason:', e.reason, 'Clean:', e.wasClean);
             this.isClosed = true
+            this.state = 'closed'
             if (!this.session) {
               closeEvent = () => {
                 this.session = null
@@ -166,8 +180,9 @@ export class GeminiLiveSession {
         },
       })
 
-      this.session = await sessionPromise
+      this.session = (await sessionPromise) as GeminiSessionLike
       console.log('[GeminiLiveSession] Session established, this.session is now set.');
+      this.state = 'active'
 
       if (closeEvent) {
         console.log('[GeminiLiveSession] WebSocket closed during connect, firing deferred close.');
@@ -183,6 +198,7 @@ export class GeminiLiveSession {
       return this.session
     } catch (err) {
       console.error('[GeminiLiveSession] Error during connection attempt:', err);
+      this.state = 'closed'
       this.config.callbacks.onError?.(err)
       throw err
     }
@@ -190,7 +206,7 @@ export class GeminiLiveSession {
 
   sendInitialGreet(text: string) {
     console.log('[GeminiLiveSession] sendInitialGreet called, session:', !!this.session, 'isClosing:', this.isClosing, 'isClosed:', this.isClosed);
-    if (this.session && !this.isClosing && !this.isClosed) {
+    if (this.session && this.state === 'active' && !this.isClosing && !this.isClosed) {
       try {
         this.session.sendRealtimeInput({
           parts: [{ text }]
@@ -205,7 +221,7 @@ export class GeminiLiveSession {
   }
 
   sendMedia(data: string, mimeType: string) {
-    if (this.session && !this.isClosing && !this.isClosed) {
+    if (this.session && this.state === 'active' && !this.isClosing && !this.isClosed) {
       try {
         this.session.sendRealtimeInput({
           media: { data, mimeType }
@@ -217,7 +233,7 @@ export class GeminiLiveSession {
   }
 
   sendToolResponse(id: string, name: string, response: unknown) {
-    if (this.session && !this.isClosing && !this.isClosed) {
+    if (this.session && this.state === 'active' && !this.isClosing && !this.isClosed) {
       try {
         this.session.sendToolResponse({
           functionResponses: { id, name, response }
@@ -231,6 +247,7 @@ export class GeminiLiveSession {
   close() {
     this.isClosing = true
     this.isClosed = true
+    this.state = 'closing'
     if (this.proxyWs) {
       this.proxyWs.close()
       this.proxyWs = null
@@ -238,6 +255,11 @@ export class GeminiLiveSession {
     if (this.session) {
       this.session = null
     }
+    this.state = 'closed'
+  }
+
+  getState() {
+    return this.state
   }
 
   static encodeAudio(float32Array: Float32Array): string {

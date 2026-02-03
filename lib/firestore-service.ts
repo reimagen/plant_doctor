@@ -13,6 +13,10 @@ import { Plant, HomeProfile } from '@/types'
 import { DEFAULT_HOME_PROFILE } from './constants'
 import { TEST_PLANTS } from './test-data'
 
+type FirestorePlant = Omit<Plant, 'notesSessions'> & {
+  notesSessions?: string | string[][]
+}
+
 function userPlantsCol(userId: string) {
   return collection(getDb(), 'users', userId, 'plants')
 }
@@ -28,7 +32,7 @@ export const FirestoreService = {
     const snap = await getDocs(userPlantsCol(userId))
     if (snap.empty) return TEST_PLANTS
     return snap.docs.map((d) => {
-      const plant = d.data() as Plant
+      const plant = d.data() as FirestorePlant
       // Deserialize nested array from JSON string
       if (typeof plant.notesSessions === 'string') {
         try {
@@ -37,7 +41,7 @@ export const FirestoreService = {
           plant.notesSessions = undefined
         }
       }
-      return plant
+      return plant as Plant
     })
   },
 
@@ -49,9 +53,9 @@ export const FirestoreService = {
     plants.forEach((p) => {
       const ref = doc(userPlantsCol(userId), p.id)
       // Serialize nested array to avoid Firestore nested array limitation
-      const plantData = { ...p }
+      const plantData: FirestorePlant = { ...p }
       if (p.notesSessions) {
-        plantData.notesSessions = JSON.stringify(p.notesSessions) as any
+        plantData.notesSessions = JSON.stringify(p.notesSessions)
       }
       // Remove undefined values - Firestore doesn't accept them
       Object.keys(plantData).forEach(key => {
@@ -71,7 +75,7 @@ export const FirestoreService = {
         return
       }
       cb(snap.docs.map((d) => {
-        const plant = d.data() as Plant
+        const plant = d.data() as FirestorePlant
         // Deserialize nested array from JSON string
         if (typeof plant.notesSessions === 'string') {
           try {
@@ -80,7 +84,7 @@ export const FirestoreService = {
             plant.notesSessions = undefined
           }
         }
-        return plant
+        return plant as Plant
       }))
     })
   },

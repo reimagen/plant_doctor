@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Plant } from '@/types'
+import { toDateInputValue, toIsoFromDateInput } from '@/lib/date-utils'
 
 interface Props {
   plant: Plant
@@ -22,19 +23,16 @@ export const LastWateredSection: React.FC<Props> = ({
   const [localDate, setLocalDate] = useState('')
 
   useEffect(() => {
-    if (plant.lastWateredAt) {
-      setLocalDate(new Date(plant.lastWateredAt).toISOString().split('T')[0])
-    }
+    setLocalDate(toDateInputValue(plant.lastWateredAt))
   }, [plant.lastWateredAt])
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setLocalDate(val)
 
-    if (val) {
-      const newDate = new Date(val)
-      newDate.setHours(12, 0, 0, 0)
-      onUpdate(plant.id, { lastWateredAt: newDate.toISOString() })
+    const iso = toIsoFromDateInput(val)
+    if (iso) {
+      onUpdate(plant.id, { lastWateredAt: iso })
     }
   }
 

@@ -40,7 +40,9 @@ export const Doctor: React.FC<Props> = ({
     startRehabCall,
     stopCall: stopRehabCall,
     isCalling: isRehabCalling,
-    isGeneratingPlan
+    isGeneratingPlan,
+    planError,
+    clearPlanError
   } = useRehabSpecialist(homeProfile, onUpdatePlant)
 
   const activeMode = rehabPlant ? 'rehab' : 'discovery'
@@ -117,6 +119,22 @@ export const Doctor: React.FC<Props> = ({
       )}
 
       <canvas ref={canvasRef} className="hidden" />
+
+      {planError && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl pointer-events-auto">
+          <div className="bg-red-500/90 backdrop-blur-xl border border-red-400/60 rounded-3xl px-5 py-4 shadow-2xl flex items-center justify-between gap-4">
+            <p className="text-xs font-bold text-white">
+              {planError}
+            </p>
+            <button
+              onClick={() => clearPlanError()}
+              className="text-[10px] font-black uppercase tracking-widest text-white/90 hover:text-white"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {isCalling && discoveryLog.length > 0 && (
         <div className="absolute right-6 top-1/2 -translate-y-1/2 z-20 flex flex-col items-end gap-3 pointer-events-none max-w-[180px]">
