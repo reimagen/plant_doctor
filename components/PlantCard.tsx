@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Plant } from '@/types'
 import { Icons } from '@/lib/constants'
 import { PlantStatusBadge } from '@/components/PlantStatusBadge'
@@ -13,7 +14,7 @@ interface Props {
   onCheckIn?: (id: string, mode: 'discovery' | 'rehab') => void
 }
 
-export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, onReview, onCheckIn }) => {
+const PlantCardComponent: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, onReview, onCheckIn }) => {
   const getNextWaterDate = () => {
     if (!plant.lastWateredAt) return null
     const lastDate = new Date(plant.lastWateredAt)
@@ -241,3 +242,6 @@ export const PlantCard: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete, 
     </div>
   )
 }
+
+export const PlantCard = memo(PlantCardComponent)
+PlantCard.displayName = 'PlantCard'

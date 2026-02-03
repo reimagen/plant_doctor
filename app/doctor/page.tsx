@@ -10,6 +10,7 @@ function DoctorPageInner() {
   const {
     stream, streamMode, isConnecting, homeProfile, plants,
     addPlant, updatePlant, handleStartStream, handleStopStream,
+    streamError, clearStreamError,
   } = useApp()
 
   const rehabPlantId = searchParams.get('plantId')
@@ -33,6 +34,8 @@ function DoctorPageInner() {
       isConnecting={isConnecting}
       homeProfile={homeProfile}
       plants={plants}
+      streamError={streamError}
+      onClearStreamError={clearStreamError}
       onAutoDetect={addPlant}
       onUpdatePlant={updatePlant}
       onStartStream={handleStartStream}

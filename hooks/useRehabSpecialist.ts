@@ -5,7 +5,7 @@ import { Type, FunctionDeclaration } from '@google/genai'
 import { HomeProfile, Plant } from '@/types'
 import { GeminiLiveSession } from '@/lib/gemini-live'
 import { AudioService } from '@/lib/audio-service'
-import { ToolCallRateLimiter } from '@/lib/rate-limiter'
+import { ToolCallRateLimiter, MediaThrottler } from '@/lib/rate-limiter'
 
 export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: string, updates: Partial<Plant>) => void) => {
   const [isCalling, setIsCalling] = useState(false)
@@ -19,6 +19,7 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
   const intervalRef = useRef<number | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const toolCallLimiterRef = useRef(new ToolCallRateLimiter(10, 60000))
+  const mediaThrottlerRef = useRef(new MediaThrottler(1000))
   const isConnectingRef = useRef(false) // Guard against multiple connection attempts
 
   const homeProfileRef = useRef(homeProfile)
@@ -83,6 +84,7 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
       clearInterval(intervalRef.current)
       intervalRef.current = null
     }
+    mediaThrottlerRef.current.reset()
     if (workletRef.current) {
       workletRef.current.port.onmessage = null
       workletRef.current.disconnect()
@@ -117,6 +119,7 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
     isConnectingRef.current = true
     setIsCalling(true)
     rescueTasksRef.current = plant.rescuePlanTasks
+    mediaThrottlerRef.current.reset()
 
     const proxyUrl = process.env.NEXT_PUBLIC_CLOUD_RUN_URL
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
@@ -197,6 +200,7 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
               const video = videoRef.current
               const canvas = canvasRef.current
               intervalRef.current = window.setInterval(() => {
+                if (!mediaThrottlerRef.current.shouldSendFrame()) return
                 const ctx = canvas.getContext('2d')
                 if (!ctx || !session.session) return
 

@@ -21,6 +21,8 @@ interface AppContextValue {
   handleStartStream: () => Promise<void>
   handleStopStream: () => void
   isStreamActive: boolean
+  streamError: string | null
+  clearStreamError: () => void
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
@@ -37,16 +39,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [isConnecting, setIsConnecting] = useState(false)
   const [streamMode, setStreamMode] = useState<'video' | null>(null)
+  const [streamError, setStreamError] = useState<string | null>(null)
 
   const handleStartStream = async () => {
     if (isConnecting || stream || streamMode !== null) return
+    setStreamError(null)
     setIsConnecting(true)
     setStreamMode('video')
     try {
       const newStream = await start()
       setStream(newStream)
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to start video stream.'
       console.error('Failed to start video stream:', error)
+      setStreamError(message)
       setStreamMode(null)
     } finally {
       setIsConnecting(false)
@@ -58,6 +64,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setStream(null)
     setStreamMode(null)
     setIsConnecting(false)
+    setStreamError(null)
   }
 
   const value = useMemo<AppContextValue>(() => ({
@@ -68,7 +75,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     handleStartStream,
     handleStopStream,
     isStreamActive: stream !== null || isConnecting,
-  }), [state, stream, streamMode, isConnecting])
+    streamError,
+    clearStreamError: () => setStreamError(null),
+  }), [state, stream, streamMode, isConnecting, streamError])
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }

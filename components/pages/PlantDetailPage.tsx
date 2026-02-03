@@ -15,9 +15,20 @@ interface Props {
   onDelete: (id: string) => void
   onAdopt: (id: string) => void
   onStartStream: () => void
+  streamError?: string | null
+  onClearStreamError?: () => void
 }
 
-export const PlantDetailPage: React.FC<Props> = ({ plant, homeProfile, onUpdate, onDelete, onAdopt, onStartStream }) => {
+export const PlantDetailPage: React.FC<Props> = ({
+  plant,
+  homeProfile,
+  onUpdate,
+  onDelete,
+  onAdopt,
+  onStartStream,
+  streamError,
+  onClearStreamError
+}) => {
   const router = useRouter()
   const [isEditingName, setIsEditingName] = useState(false)
   const [nickname, setNickname] = useState(plant.name || '')
@@ -56,6 +67,21 @@ export const PlantDetailPage: React.FC<Props> = ({ plant, homeProfile, onUpdate,
 
   return (
     <div className="min-h-screen bg-stone-50 animate-fade-in">
+      {streamError && (
+        <div className="mx-6 mt-4">
+          <div className="bg-red-500/90 backdrop-blur-xl border border-red-400/60 rounded-3xl px-5 py-4 shadow-2xl flex items-center justify-between gap-4">
+            <p className="text-xs font-bold text-white">
+              {streamError}
+            </p>
+            <button
+              onClick={() => onClearStreamError?.()}
+              className="text-[10px] font-black uppercase tracking-widest text-white/90 hover:text-white"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       {/* Header Section */}
       <div className="relative bg-white border-b border-stone-100 p-6">
         <button

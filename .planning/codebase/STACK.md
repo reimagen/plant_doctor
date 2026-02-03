@@ -1,114 +1,88 @@
 # Technology Stack
 
-**Analysis Date:** 2026-01-18
+**Analysis Date:** 2026-02-03
 
 ## Languages
 
 **Primary:**
-- TypeScript 5.x - All application code (`.ts`, `.tsx` files)
+- TypeScript (Next.js app, Firebase Functions)
 
 **Secondary:**
-- HTML - Via JSX in React components
-- CSS - Tailwind utility classes (npm installed)
+- JavaScript (WebSocket proxy)
+- HTML/CSS (via JSX + Tailwind)
 
 ## Runtime
 
-**Environment:**
-- Node.js 18+ (Next.js requirement)
-- Browser (Web APIs: AudioContext, MediaDevices, localStorage)
+**App Runtime:**
+- Node.js 18+ for Next.js
+- Browser APIs: MediaDevices, AudioContext, localStorage
 
-**Package Manager:**
-- npm
-- Lockfile: `package-lock.json`
+**Functions Runtime:**
+- Node.js 20 (Firebase Functions `engines.node`)
 
-## Frameworks
+**WebSocket Proxy Runtime:**
+- Node.js (Express + ws)
 
-**Core:**
-- Next.js 15.x - Full-stack React framework with App Router
-- React 19.x - UI framework with functional components and hooks
-- React DOM 19.x - DOM rendering
+## Frameworks & Libraries
 
-**Build/Dev:**
-- Next.js built-in compiler (replaces Vite)
-- SWC for fast compilation
+**Core UI:**
+- Next.js 15
+- React 19
 
 **Styling:**
-- Tailwind CSS 3.x (npm installed, PostCSS configured)
+- Tailwind CSS 3
+- PostCSS + Autoprefixer
 
-**Testing:**
-- Vitest (planned)
+**Backend/Infra:**
+- Firebase Auth (anonymous)
+- Firestore (client SDK with persistence)
+- Firebase Cloud Functions (HTTPS)
+- Express + ws (WebSocket proxy)
 
-## Key Dependencies
+**AI:**
+- `@google/genai` (Gemini Live + Content)
 
-**Critical:**
-- `@google/genai` - Google Gemini AI SDK for live audio/video sessions and content generation
+## Tooling
 
-**Dev Dependencies:**
-- `@types/node` - Node.js type definitions
-- `@types/react` - React type definitions
-- `typescript` - TypeScript compiler
-- `tailwindcss` - Utility-first CSS framework
-- `postcss` - CSS processing
-- `autoprefixer` - CSS vendor prefixing
+**Linting:**
+- ESLint (`eslint-config-next`)
 
-## Configuration
+**Type Checking:**
+- TypeScript `strict` mode
 
-**Environment Variables:**
-- `GEMINI_API_KEY` - Server-only, for Content API (no `NEXT_PUBLIC_` prefix)
-- `NEXT_PUBLIC_GEMINI_API_KEY` - Client-side, for Live API (domain-restricted)
-- Auto-loaded from `.env.local` by Next.js
+## Package Management
 
-**TypeScript Configuration (`tsconfig.json`):**
-- Target: ES2022
-- Module: ESNext with bundler resolution
-- JSX: react-jsx (automatic runtime)
-- Path alias: `@/*` maps to project root
-- Next.js recommended settings
-
-**Next.js Configuration (`next.config.ts`):**
-- App Router enabled (default)
-- TypeScript config
-
-**Tailwind Configuration:**
-- `tailwind.config.ts` - Theme customization, content paths
-- `postcss.config.js` - PostCSS plugins (tailwindcss, autoprefixer)
-
-## Platform Requirements
-
-**Development:**
-- Node.js 18+
 - npm
-- Modern browser with camera/microphone access
-- Environment variables in `.env.local`
-
-**Production:**
-- Vercel hosting (zero-config deployment)
-- HTTPS required (automatic on Vercel)
-- Modern browser (Chrome, Firefox, Safari, Edge)
-
-**Browser APIs Used:**
-- `navigator.mediaDevices.getUserMedia` - Camera and microphone access
-- `AudioContext` / `webkitAudioContext` - Audio processing and playback
-- `localStorage` - Plant and profile persistence
-- `FileReader` - Image encoding for Gemini API
+- Lockfiles: `package-lock.json` (root, functions, websocket-proxy)
 
 ## Scripts
 
+**App:**
 ```bash
-npm run dev      # Start Next.js dev server
-npm run build    # Build for production
-npm run start    # Start production server
-npm run lint     # Run ESLint
+npm run dev
+npm run build
+npm run start
+npm run lint
 ```
 
-## Deployment
+**Functions:**
+```bash
+cd functions
+npm run build
+npm run serve
+npm run deploy
+```
 
-**Target:** Vercel
-- Zero-config deployment from Git
-- Automatic HTTPS
-- Environment variables via Vercel dashboard
-- Edge Functions available for API routes if needed
+**WebSocket Proxy:**
+```bash
+cd websocket-proxy
+npm run start
+```
+
+## Testing
+
+- No test framework or test scripts configured
 
 ---
 
-*Stack analysis: 2026-01-18*
+*Stack analysis: 2026-02-03*

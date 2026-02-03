@@ -18,6 +18,8 @@ interface Props {
   onStartStream: () => void
   onStopStream: () => void
   rehabPlant: Plant | null | undefined
+  streamError?: string | null
+  onClearStreamError?: () => void
 }
 
 /**
@@ -36,7 +38,9 @@ export const DoctorPage: React.FC<Props> = ({
   onUpdatePlant,
   onStartStream,
   onStopStream,
-  rehabPlant
+  rehabPlant,
+  streamError,
+  onClearStreamError
 }) => {
   const searchParams = useSearchParams()
   const mode = searchParams.get('mode')
@@ -110,6 +114,21 @@ export const DoctorPage: React.FC<Props> = ({
 
   return (
     <div className="relative h-screen bg-black overflow-hidden">
+      {streamError && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 w-[90%] max-w-xl">
+          <div className="bg-red-500/90 backdrop-blur-xl border border-red-400/60 rounded-3xl px-5 py-4 shadow-2xl flex items-center justify-between gap-4">
+            <p className="text-xs font-bold text-white">
+              {streamError}
+            </p>
+            <button
+              onClick={() => onClearStreamError?.()}
+              className="text-[10px] font-black uppercase tracking-widest text-white/90 hover:text-white"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       {/* Celebration overlay — rendered independently so it survives overlay unmount */}
       {showCelebration && (
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl animate-slide-up">

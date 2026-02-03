@@ -1,216 +1,179 @@
 # Architecture
 
-**Analysis Date:** 2026-01-18 (Updated with Guardrails implementation)
+**Analysis Date:** 2026-02-03
 
 ## Pattern Overview
 
-**Overall:** Next.js App Router with Server/Client Component Architecture + AI Guardrails
+**Overall:** Next.js App Router with client-first UI, Firebase-backed persistence, and Gemini AI (live via WebSocket + content via Cloud Functions)
 
 **Key Characteristics:**
-- Next.js App Router for file-based routing (replaces state-based view switching)
-- Server Components for pages, layouts, and data fetching
-- Client Components (`'use client'`) for interactive features
-- API Routes for secure server-side Gemini Content API calls with validation and rate limiting
-- Client-side Gemini Live API for real-time audio/video (WebSocket) with tool call rate limiting
-- Feature-based hooks encapsulate client-side AI/media logic with rate limiters
-- localStorage persistence handled in Client Components
-- Structured logging with prefixed messages for monitoring and debugging
-- System prompts enforce "PLANT-ONLY FOCUS" mode to prevent off-topic AI interactions
+- Next.js App Router with client-rendered pages (`'use client'` on all pages)
+- Centralized app state via `AppProvider` (React Context)
+- Firebase Auth (anonymous) + Firestore for persistence with offline support
+- Next.js API route proxies to Firebase Cloud Function for Gemini content generation
+- Gemini Live sessions run in the browser via WebSocket, optionally through a proxy service
+- Feature hooks encapsulate media capture and AI session logic
+- Rate limiting on client tool calls and in Cloud Function requests
 
 ## Layers
 
-**Server Components Layer:**
-- Purpose: Render pages, layouts, and static content on the server
-- Location: `app/page.tsx`, `app/layout.tsx`, `app/*/page.tsx`
-- Contains: Async components, server-side data fetching, SEO metadata
-- Depends on: Types
-- Used by: Next.js router
+**Routing & Layout Layer:**
+- Purpose: Page routes and application shell
+- Location: `app/layout.tsx`, `app/page.tsx`, `app/doctor/page.tsx`, `app/plants/page.tsx`, `app/settings/page.tsx`
+- Contains: Route-level components, layout, global styles
+- Depends on: Context, page components
 
-**API Routes Layer:**
-- Purpose: Server-side proxy for Gemini Content API (keeps API key secure)
-- Location: `app/api/`
-- Contains: Route handlers for POST requests to Gemini
-- Depends on: `@google/genai`, server environment variables
-- Used by: Client Components via fetch
+**UI Components Layer:**
+- Purpose: Presentational and page-level UI
+- Location: `components/`, `components/pages/`, `components/plant-details/`
+- Contains: Inventory, Doctor, Plant Detail, Settings views and UI sections
+- Depends on: Hooks, Types, Context data
 
-**Client Components Layer:**
-- Purpose: Interactive UI that requires browser APIs or user interaction
-- Location: Components with `'use client'` directive
-- Contains: Camera/audio features, forms, localStorage access, state management
-- Depends on: Hooks, Types, Browser APIs
-- Used by: Server Components (as children)
+**Context & State Layer:**
+- Purpose: Centralized app state and actions
+- Location: `contexts/AppContext.tsx`, `hooks/useAppState.ts`
+- Contains: Plant CRUD, hydration/persistence, stream state
+- Depends on: Firestore service, Firebase auth, hooks
 
 **Hooks Layer:**
-- Purpose: Encapsulate client-side stateful logic (AI sessions, media, persistence)
+- Purpose: Encapsulate feature logic (AI sessions, media, content generation)
 - Location: `hooks/`
-- Contains: Plant CRUD, Gemini Live sessions, media capture, audio playback
-- Depends on: Services (lib/), Types, Browser APIs
-- Used by: Client Components only
+- Contains: Plant doctor, rehab specialist, media stream, care guide, rescue plan
+- Depends on: Services (lib), browser APIs, Types
 
 **Services Layer:**
-- Purpose: External API clients and browser API wrappers
+- Purpose: External integrations and shared utilities
 - Location: `lib/`
-- Contains: Gemini Live session, audio playback, localStorage abstraction
-- Depends on: External SDKs (@google/genai), Browser APIs
-- Used by: Hooks, Client Components
+- Contains: Firestore service, Firebase auth/config, Gemini live session, rate limiting, audio
+- Depends on: Firebase SDK, @google/genai, browser APIs
+
+**API Layer (Next.js):**
+- Purpose: Server-side proxy for Gemini content requests
+- Location: `app/api/gemini/content/route.ts`
+- Depends on: Firebase Cloud Function endpoint
+
+**Backend AI Layer (Firebase Functions):**
+- Purpose: Gemini content generation (care guides, rescue plans)
+- Location: `functions/src/index.ts`
+- Depends on: @google/genai, Firebase Functions params
+
+**WebSocket Proxy Layer (optional):**
+- Purpose: Proxy Gemini Live WebSocket from browser to Gemini API
+- Location: `websocket-proxy/index.js`
+- Depends on: @google/genai, ws, express
 
 **Types Layer:**
-- Purpose: Shared type definitions
-- Location: `types/`
-- Contains: TypeScript interfaces
-- Depends on: Nothing
-- Used by: All other layers
+- Purpose: Shared domain types
+- Location: `types/index.ts`
+- Used by: All layers
 
 ## Data Flow
 
-**Navigation Flow:**
+**App Hydration & Persistence Flow:**
+1. `AppProvider` mounts and calls `useAppState()`
+2. `ensureUser()` performs anonymous Firebase Auth
+3. `FirestoreService.migrateFromLocalStorage()` (one-time)
+4. Firestore loads plants + home profile
+5. Updates are persisted back to Firestore on state changes
 
-1. User clicks navigation link (`next/link`)
-2. Next.js router handles navigation (no state-based view switching)
-3. Target page's Server Component renders
-4. Client Components hydrate for interactivity
+**Plant Discovery (Live) Flow:**
+1. User opens `/doctor` and starts stream
+2. `useMediaStream()` provides camera/audio stream
+3. `usePlantDoctor()` connects to Gemini Live (direct API key or `websocket-proxy`)
+4. Audio + video frames sent every second
+5. Gemini tool call `propose_plant_to_inventory` triggers
+6. Hook builds `Plant` object and calls `addPlant()`
+7. New plant appears in inventory with status `pending`
 
-**Plant Discovery Flow:**
+**Care Guide Generation Flow:**
+1. Pending plant triggers `useAppState` care guide request (or manual request in `useCareGuide`)
+2. Client calls `/api/gemini/content` (Next.js API route)
+3. API route forwards to Firebase Cloud Function `geminiContent`
+4. Function calls Gemini Content API and returns tips
+5. Plant updated with `careGuide` and timestamp
 
-1. User navigates to `/doctor` via Navigation
-2. `DoctorPage` (Client Component) mounts
-3. User activates camera via toggle button
-4. `usePlantDoctor` hook starts media stream and Gemini Live session
-5. Video frames and audio sent to Gemini every 1 second (client-side WebSocket)
-6. Gemini calls `propose_plant_to_inventory` tool when plant detected
-7. Hook captures current frame and calls `onAutoDetect` callback
-8. `useAppState.addPlant()` adds plant with `pending` status
-9. User navigates to `/` (inventory) to see pending plant
-
-**Care Guide Generation Flow (Server-Side):**
-
-1. Client Component requests care guide via fetch to `/api/gemini/content`
-2. API Route handler receives request with plant data
-3. Server-side code calls Gemini Content API with secure `GEMINI_API_KEY`
-4. Response returned to Client Component
-5. UI updates with care guide
-
-**State Management:**
-- Plant CRUD and profile managed in `useAppState` hook (Client Component)
-- Navigation handled by Next.js router (not in app state)
-- Persistence via localStorage (Client Components only)
-- Server Components pass initial props; Client Components manage interactivity
+**Rescue Plan Generation & Rehab Flow:**
+1. Rehab session starts in `/doctor?plantId=...`
+2. `useRehabSpecialist()` handles live session and tool calls
+3. Tool `create_rescue_plan` triggers a `/api/gemini/content` request
+4. Cloud Function returns structured steps
+5. Plant updated with `rescuePlanTasks` and status transitions
 
 ## Key Abstractions
 
+**AppProvider:**
+- Purpose: Provides app state + streaming control to all pages
+- Location: `contexts/AppContext.tsx`
+
+**FirestoreService:**
+- Purpose: CRUD for plants and home profile; localStorage migration
+- Location: `lib/firestore-service.ts`
+
 **GeminiLiveSession:**
-- Purpose: Wraps WebSocket connection to Gemini Live API (client-side only)
+- Purpose: Browser WebSocket client for Gemini Live (direct or via proxy)
 - Location: `lib/gemini-live.ts`
-- Pattern: Class with connect/send/close lifecycle, callback-based message handling
-- Note: Cannot be proxied through API routes due to WebSocket nature
 
-**API Route Handlers:**
-- Purpose: Server-side Gemini Content API proxy
-- Location: `app/api/gemini/content/route.ts`
-- Pattern: POST handler that forwards requests to Gemini, returns JSON
+**WebSocket Proxy:**
+- Purpose: Server-side Gemini Live proxy for browser clients
+- Location: `websocket-proxy/index.js`
 
-**AudioService:**
-- Purpose: Manages audio playback of Gemini voice responses
-- Location: `lib/audio-service.ts`
-- Pattern: Class managing AudioContext and buffer queue for gapless playback
+**Cloud Function (geminiContent):**
+- Purpose: Server-side Gemini Content generation with rate limiting
+- Location: `functions/src/index.ts`
 
-**Plant:**
-- Purpose: Core domain entity representing a tracked houseplant
-- Location: `types/index.ts`
-- Pattern: Plain object with status enum driving UI states
-
-**HomeProfile:**
-- Purpose: User's home environment settings for AI context
-- Location: `types/index.ts`
-- Pattern: Simple object stored in localStorage, passed to AI prompts
-
-**Rate Limiting & Guardrails (Added 2026-01-18):**
-- **ToolCallRateLimiter:** Limits tool function calls per time window
-  - Location: `lib/rate-limiter.ts`
-  - Rehab mode: 10 calls/min (verify_rehab_success, mark_rescue_task_complete)
-  - Discovery mode: 15 calls/min (propose_plant_to_inventory)
-  - Rate-limited calls logged with `[RATE_LIMIT]` prefix and rejected gracefully
-
-- **TokenBucketLimiter:** Burst-friendly rate limiting for API endpoints
-  - Location: `lib/rate-limiter.ts`
-  - API endpoint `/api/gemini/content`: 10 tokens, 2 refill/sec
-  - Exceeded limit returns HTTP 429 with descriptive error
-
-- **PlantContextValidator:** Validates plant-related content via keyword matching
-  - Location: `lib/rate-limiter.ts`
-  - Reserved for future integration into request filtering
-  - Contains 29 plant-related keywords for context validation
+**ToolCallRateLimiter:**
+- Purpose: Client-side tool call throttling for live sessions
+- Location: `lib/rate-limiter.ts`
 
 ## Entry Points
 
 **Application Entry:**
-- Location: `app/layout.tsx` (root layout)
-- Triggers: Any page navigation
-- Responsibilities: HTML shell, global styles, Navigation component
+- `app/layout.tsx`: Root layout, context provider, navigation
 
-**Page Entries:**
-- Location: `app/page.tsx` (home/inventory), `app/doctor/page.tsx`, `app/settings/page.tsx`
-- Triggers: Route navigation via Next.js
-- Responsibilities: Render page content, instantiate Client Components
+**Pages:**
+- `app/page.tsx`: Inventory
+- `app/doctor/page.tsx`: Live doctor + rehab
+- `app/plants/page.tsx`: Plant detail
+- `app/settings/page.tsx`: Home profile settings
 
-**API Entries:**
-- Location: `app/api/gemini/content/route.ts`
-- Triggers: POST requests from Client Components
-- Responsibilities: Proxy Gemini Content API calls with server-side key
+**API Route:**
+- `app/api/gemini/content/route.ts`: Proxies to Cloud Function
 
-**AI Session Entries:**
-- Location: `hooks/usePlantDoctor.ts:startCall()`, `hooks/useRehabSpecialist.ts:startRehabCall()`
-- Triggers: User toggles camera button or navigates to rehab
-- Responsibilities: Initialize media, connect WebSocket, start streaming
+**Cloud Function:**
+- `functions/src/index.ts`: `geminiContent` HTTPS function
+
+**WebSocket Proxy (optional):**
+- `websocket-proxy/index.js`: `/plant-doctor` and `/rehab-specialist`
 
 ## Error Handling
 
-**Strategy:** Catch-and-recover with graceful degradation
+**Strategy:** Local try/catch with graceful fallbacks
 
 **Patterns:**
-- API Routes return proper HTTP status codes and error messages
-- Client Components handle fetch errors with try/catch
-- AI hooks wrap connection in try/catch, call `stopCall()` on error
-- `onError` and `onClose` callbacks trigger cleanup
-- StorageService returns defaults on parse errors
-- No global error boundary; errors handled at feature level
-
-**Next.js Error Handling:**
-- `error.tsx` files can be added for route-level error boundaries
-- `loading.tsx` files for loading states during navigation
+- API route returns proper HTTP status codes and error messages
+- Cloud Function returns 400/429/500 with descriptive errors
+- Live session hooks call `stopCall()` on error/close
+- Firestore hydration failures still mark `isHydrated` to keep UI usable
 
 ## Cross-Cutting Concerns
 
-**Logging:** Structured logging via prefixed console messages (Added 2026-01-18)
-- Prefixes: `[RATE_LIMIT]`, `[TOOL_CALL]`, `[API_REQUEST]`, `[SUCCESS]`, `[GENERATION_ERROR]`, `[PARSE_ERROR]`, `[INVALID_REQUEST]`
-- Logs include relevant context (plant names, species, operation types) for debugging and monitoring
-- Legacy: `console.error`, `console.warn` in catch blocks
+**Logging:**
+- Structured console logs in hooks and functions
+- Prefixed tags: `[API_REQUEST]`, `[RESCUE_PLAN]`, `[RATE_LIMIT]`, `[SUCCESS]`, `[GENERATION_ERROR]`
 
-**Validation:**
-- TypeScript compile-time type checking
-- Runtime validation for API inputs in `/api/gemini/content` route handler
-- Request validation checks: request type, plant species presence, homeProfile presence
+**Rate Limiting:**
+- Client: `ToolCallRateLimiter` for tool calls (doctor and rehab)
+- Backend: token bucket in `functions/src/index.ts` for content API
 
-**Rate Limiting & Guardrails (Added 2026-01-18):**
-- **Tool Call Limits:** Rehab mode (10 calls/min), Discovery mode (15 calls/min) via `ToolCallRateLimiter`
-- **API Endpoint Limits:** Token bucket (10 tokens, 2 refill/sec) via `TokenBucketLimiter` on `/api/gemini/content`
-- **System Prompt Enforcement:** "PLANT-ONLY FOCUS" mode with explicit CRITICAL RULES for both rehab and discovery modes
-- **Context Validation:** `PlantContextValidator` available for keyword-based plant content detection
-- Rate-limited requests return HTTP 429 with descriptive error messages
-
-**Authentication:** None for users; API key managed server-side for Content API, client-side (domain-restricted) for Live API
-
-**Persistence:** localStorage via Client Components with automatic sync on state changes
+**Authentication & Storage:**
+- Firebase anonymous auth in browser
+- Firestore persistence with IndexedDB offline support
+- LocalStorage migration on first run
 
 **Server/Client Boundary:**
-- Default to Server Components (no directive needed)
-- Add `'use client'` only for components that need:
-  - Browser APIs (localStorage, AudioContext, MediaDevices)
-  - React hooks (useState, useEffect)
-  - Event handlers
-- Keep client boundary as low as possible in component tree
+- Pages are client components; server-side data is minimal
+- API route used only as a proxy to Cloud Function
 
 ---
 
-*Architecture analysis: 2026-01-18*
-*Updated with guardrails, rate limiting, and structured logging: 2026-01-18*
+*Architecture analysis: 2026-02-03*

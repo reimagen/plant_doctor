@@ -5,7 +5,7 @@ import { Type, FunctionDeclaration } from '@google/genai'
 import { HomeProfile, Plant } from '@/types'
 import { GeminiLiveSession } from '@/lib/gemini-live'
 import { AudioService } from '@/lib/audio-service'
-import { ToolCallRateLimiter } from '@/lib/rate-limiter'
+import { ToolCallRateLimiter, MediaThrottler } from '@/lib/rate-limiter'
 
 export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Plant) => void) => {
   const [isCalling, setIsCalling] = useState(false)
@@ -19,6 +19,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
   const intervalRef = useRef<number | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const toolCallLimiterRef = useRef(new ToolCallRateLimiter(15, 60000))
+  const mediaThrottlerRef = useRef(new MediaThrottler(1000))
   const isConnectingRef = useRef(false) // Guard against multiple connection attempts
   const keepaliveIntervalRef = useRef<number | null>(null) // Keepalive to prevent proxy timeout
 
@@ -68,6 +69,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
       clearInterval(intervalRef.current)
       intervalRef.current = null
     }
+    mediaThrottlerRef.current.reset()
     if (keepaliveIntervalRef.current) {
       clearInterval(keepaliveIntervalRef.current)
       keepaliveIntervalRef.current = null
@@ -106,6 +108,7 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
     setIsCalling(true)
     setDiscoveryLog([])
     proposedSpeciesRef.current.clear()
+    mediaThrottlerRef.current.reset()
 
     const proxyUrl = process.env.NEXT_PUBLIC_CLOUD_RUN_URL
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY
@@ -201,6 +204,7 @@ Output Format: Always call propose_plant_to_inventory with:
               const canvas = canvasRef.current
               intervalRef.current = window.setInterval(() => {
                 if (!sessionRef.current?.session || video.paused) return
+                if (!mediaThrottlerRef.current.shouldSendFrame()) return
                 const ctx = canvas.getContext('2d')
                 if (!ctx) return
                 canvas.width = 320

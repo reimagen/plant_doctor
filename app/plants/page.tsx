@@ -8,7 +8,7 @@ import { PlantDetailPage } from '@/components/pages/PlantDetailPage'
 function PlantDetailInner() {
   const searchParams = useSearchParams()
   const id = searchParams.get('id')
-  const { plants, homeProfile, updatePlant, removePlant, adoptPlant, handleStartStream } = useApp()
+  const { plants, homeProfile, updatePlant, removePlant, adoptPlant, handleStartStream, streamError, clearStreamError } = useApp()
 
   const plant = id ? plants.find(p => p.id === id) : undefined
 
@@ -29,6 +29,8 @@ function PlantDetailInner() {
         onDelete={removePlant}
         onAdopt={adoptPlant}
         onStartStream={handleStartStream}
+        streamError={streamError}
+        onClearStreamError={clearStreamError}
       />
     </div>
   )

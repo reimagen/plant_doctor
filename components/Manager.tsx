@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Plant, HomeProfile } from '@/types'
 import { useCareGuide } from '@/hooks/useCareGuide'
 import { useRescueTaskManager } from '@/hooks/useRescuePlan'
@@ -10,6 +11,7 @@ import { HealthNotesSection } from '@/components/plant-details/HealthNotesSectio
 import { IdealConditionsSection } from '@/components/plant-details/IdealConditionsSection'
 import { LastWateredSection } from '@/components/plant-details/LastWateredSection'
 import { RescuePlanSection } from '@/components/plant-details/RescuePlanSection'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 interface Props {
   plant: Plant
@@ -46,12 +48,10 @@ export const Manager: React.FC<Props> = ({
   )
 
   const { handleTaskComplete } = useRescueTaskManager(plant, onUpdate)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const handleDelete = () => {
-    if (confirm(`Remove ${plant.name || plant.species} from your jungle?`)) {
-      onDelete?.(plant.id)
-      onClose?.()
-    }
+    setConfirmOpen(true)
   }
 
   return (
@@ -95,6 +95,20 @@ export const Manager: React.FC<Props> = ({
       </div>
 
       {onDelete && <DangerZoneSection onDelete={handleDelete} />}
+
+      <ConfirmDialog
+        isOpen={confirmOpen}
+        title={`Remove ${plant.name || plant.species}?`}
+        description="This will delete the plant and its history."
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false)
+          onDelete?.(plant.id)
+          onClose?.()
+        }}
+      />
     </div>
   )
 }
