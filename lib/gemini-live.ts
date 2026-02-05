@@ -1,4 +1,5 @@
 import { GoogleGenAI, LiveServerMessage, Modality, FunctionDeclaration } from '@google/genai'
+import geminiConfig from '../functions/shared/gemini-config.json'
 
 export interface GeminiLiveConfig {
   apiKey?: string
@@ -146,6 +147,11 @@ export class GeminiLiveSession {
         model: this.config.model,
         config: {
           responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: geminiConfig.voice }
+            }
+          },
           tools: this.config.tools,
           systemInstruction: this.config.systemInstruction,
         },

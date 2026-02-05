@@ -2,7 +2,7 @@ const express = require('express')
 const http = require('http')
 const { WebSocketServer, WebSocket } = require('ws')
 const { GoogleGenAI, Modality } = require('@google/genai')
-const geminiConfig = require('../functions/shared/gemini-config.json')
+const geminiConfig = require('./gemini-config.json')
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 if (!GEMINI_API_KEY) {
@@ -76,6 +76,11 @@ wss.on('connection', async (clientWs, req) => {
           model: endpointConfig.model,
           config: {
             responseModalities: [Modality.AUDIO],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: geminiConfig.voice }
+              }
+            },
             tools: msg.tools || undefined,
             systemInstruction: msg.systemInstruction || undefined,
           },
