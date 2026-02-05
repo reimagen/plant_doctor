@@ -8,7 +8,7 @@ export const TEST_PLANTS: Plant[] = [
   // PENDING - New Discovery
   {
     id: 'status-pending',
-    name: 'Monstera Mystery',
+    name: 'Monty',
     species: 'Monstera Deliciosa',
     photoUrl: 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?q=80&w=800&auto=format&fit=crop',
     location: 'Entryway',
@@ -32,7 +32,7 @@ export const TEST_PLANTS: Plant[] = [
   // HEALTHY - Green badge, water in 5 days
   {
     id: 'status-healthy',
-    name: 'Peaceful Pothos',
+    name: 'Perry',
     species: 'Epipremnum Aureum',
     photoUrl: 'https://images.unsplash.com/photo-1589923188900-85dbbfc08db2?q=80&w=800&auto=format&fit=crop',
     location: 'Bookshelf',
@@ -54,10 +54,10 @@ export const TEST_PLANTS: Plant[] = [
     careGuideGeneratedAt: new Date(Date.now() - (3 * oneDayMs)).toISOString()
   },
 
-  // HEALTHY - Green badge, healthy status, water today (watering day)
+  // MONITORING - Amber badge, water today (watering day)
   {
     id: 'status-monitoring',
-    name: 'Amber Alert',
+    name: 'Callie',
     species: 'Calathea Orbifolia',
     photoUrl: 'https://images.unsplash.com/photo-1614594975525-e45190c55d0b?q=80&w=800&auto=format&fit=crop',
     location: 'Bedroom',
@@ -65,7 +65,7 @@ export const TEST_PLANTS: Plant[] = [
     cadenceDays: 7,
     overdueThresholdMinor: 2,
     overdueThresholdMajor: 5,
-    status: 'healthy',
+    status: 'warning',
     needsCheckIn: false,
     lightIntensity: 'Low',
     lightQuality: 'Indirect',
@@ -79,107 +79,6 @@ export const TEST_PLANTS: Plant[] = [
     careGuideGeneratedAt: new Date(Date.now() - (7 * oneDayMs)).toISOString()
   },
 
-  // MONITORING - Yellow badge, warning status, water in 3 days, no checkup yet
-  {
-    id: 'status-water-1d',
-    name: 'Almost There',
-    species: 'Alocasia Amazonica',
-    photoUrl: 'https://images.unsplash.com/photo-1630627829883-f76fc44ff4e8?q=80&w=800&auto=format&fit=crop',
-    location: 'Living Room Corner',
-    lastWateredAt: new Date(Date.now() - (4 * oneDayMs)).toISOString(),
-    cadenceDays: 7,
-    overdueThresholdMinor: 2,
-    overdueThresholdMajor: 5,
-    status: 'warning',
-    needsCheckIn: false,
-    lightIntensity: 'Bright',
-    lightQuality: 'Indirect',
-    nearWindow: true,
-    windowDirection: 'South',
-    careGuide: [
-      'Plant is in monitoring status.',
-      'Shows minor stress signs.',
-      'Checkup will be due soon when water is needed.'
-    ],
-    careGuideGeneratedAt: new Date(Date.now() - (4 * oneDayMs)).toISOString()
-  },
-
-  // MONITORING ON WATERING DAY - Yellow badge, warning status, water today, checkup not yet triggered
-  // This tests the priority fix: monitoring should show even on watering day
-  {
-    id: 'status-monitoring-watering-day',
-    name: 'Checkup Pending',
-    species: 'Anthurium Warocqueanum',
-    photoUrl: 'https://images.unsplash.com/photo-1599599810694-b5ac4dd84e2f?q=80&w=800&auto=format&fit=crop',
-    location: 'Bathroom',
-    lastWateredAt: new Date(Date.now() - (7 * oneDayMs)).toISOString(),
-    cadenceDays: 7,
-    overdueThresholdMinor: 2,
-    overdueThresholdMajor: 5,
-    status: 'warning',
-    needsCheckIn: false,
-    lightIntensity: 'Medium',
-    lightQuality: 'Indirect',
-    nearWindow: false,
-    windowDirection: 'East',
-    careGuide: [
-      'Plant is in monitoring status and needs water today.',
-      'Even though it is watering day, the monitoring status takes priority.',
-      'Badge shows MONITORING (amber), not HEALTHY (green).'
-    ],
-    careGuideGeneratedAt: new Date(Date.now() - (7 * oneDayMs)).toISOString()
-  },
-
-  // CHECK-UP DUE - Amber badge, warning status, water due today, checkup triggered
-  {
-    id: 'status-checkup-due',
-    name: 'Needs Attention',
-    species: 'Anthurium Clarinervium',
-    photoUrl: 'https://images.unsplash.com/photo-1584447908256-e576c29f0cf7?q=80&w=800&auto=format&fit=crop',
-    location: 'Dining Table',
-    lastWateredAt: new Date(Date.now() - (7 * oneDayMs)).toISOString(),
-    cadenceDays: 7,
-    overdueThresholdMinor: 2,
-    overdueThresholdMajor: 5,
-    status: 'warning',
-    needsCheckIn: false,
-    lightIntensity: 'Medium',
-    lightQuality: 'Indirect',
-    nearWindow: false,
-    windowDirection: 'East',
-    careGuide: [
-      'Check-up is due now - tap "Start Checkup" to begin a health assessment call.',
-      'During the call, discuss watering and any health concerns.',
-      'Plant will be reassessed after the checkup.'
-    ],
-    careGuideGeneratedAt: new Date(Date.now() - (5 * oneDayMs)).toISOString()
-  },
-
-  // THIRSTY - Blue button, overdue by 1 day (but healthy status, so just "Water Now" button, no checkup)
-  {
-    id: 'status-thirsty',
-    name: 'Thirsty Ficus',
-    species: 'Ficus Lyrata',
-    photoUrl: 'https://images.unsplash.com/photo-1597055181300-e3633a207519?q=80&w=800&auto=format&fit=crop',
-    location: 'Corner Nook',
-    lastWateredAt: new Date(Date.now() - (8 * oneDayMs)).toISOString(),
-    cadenceDays: 7,
-    overdueThresholdMinor: 2,
-    overdueThresholdMajor: 5,
-    status: 'healthy',
-    needsCheckIn: false,
-    lightIntensity: 'Bright',
-    lightQuality: 'Direct',
-    nearWindow: true,
-    windowDirection: 'South',
-    careGuide: [
-      'Plant is overdue for water by 1 day.',
-      'Tap "Water Now" to log watering and restore to healthy status.',
-      'No health assessment needed at this time.'
-    ],
-    careGuideGeneratedAt: new Date(Date.now() - (6 * oneDayMs)).toISOString()
-  },
-
   // EMERGENCY - Red badge, overdue by 3+ days, with 3-phase rescue plan
   // TEST: Complete tasks one-by-one to verify:
   // 1. During livestream: Overlay shows ONLY Phase 1 (First Aid) tasks
@@ -188,7 +87,7 @@ export const TEST_PLANTS: Plant[] = [
   // 4. Only after all phase-1 complete does status flip to "Monitoring" (warning status)
   {
     id: 'status-emergency',
-    name: 'Ruby in Crisis',
+    name: 'Cathy',
     species: 'Calathea Ornata',
     photoUrl: 'https://images.unsplash.com/photo-1614594975525-e45190c55d0b?q=80&w=800&auto=format&fit=crop',
     location: 'Kitchen Window',
