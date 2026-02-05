@@ -1,6 +1,7 @@
 import { onRequest } from 'firebase-functions/v2/https'
 import { GoogleGenAI, Type } from '@google/genai'
 import { defineString } from 'firebase-functions/params'
+import geminiConfig from '../shared/gemini-config.json'
 
 const geminiApiKey = defineString('GEMINI_API_KEY')
 
@@ -112,7 +113,7 @@ async function generateCareGuide(ai: GoogleGenAI, plant: Plant, homeProfile: Hom
   const idealConditions = plant.idealConditions || 'None provided'
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash',
+    model: geminiConfig.models.content,
     contents: `Generate 4 concise care tips for a ${plant.species}.
       Home Environment: ${JSON.stringify(homeProfile)}.
       Specific Placement: ${microEnv}.
@@ -155,7 +156,7 @@ async function generateRescuePlan(ai: GoogleGenAI, plant: Plant, homeProfile: Ho
   const microEnv = `Light: ${plant.lightIntensity} ${plant.lightQuality}, Near Window: ${plant.nearWindow ? 'Yes' : 'No'}`
 
   const response = await ai.models.generateContent({
-    model: 'gemini-2.0-flash',
+    model: geminiConfig.models.content,
     contents: `This ${plant.species} needs a rescue plan.
       CURRENT CONDITION: ${condition}.
       LAST WATERED: ${plant.lastWateredAt} (Cadence: every ${plant.cadenceDays} days).

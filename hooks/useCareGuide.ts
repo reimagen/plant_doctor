@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { HomeProfile, Plant } from '@/types'
+import geminiConfig from '@/functions/shared/gemini-config.json'
 
 export const useCareGuide = (
   plant: Plant,
@@ -10,6 +11,7 @@ export const useCareGuide = (
 ) => {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const contentRoute = geminiConfig.api.contentRoute
 
   const generateTips = useCallback(async () => {
     if (!plant.species) return
@@ -17,7 +19,7 @@ export const useCareGuide = (
     setError(null)
     try {
       console.log(`[API_REQUEST] Generating care guide for ${plant.species}`)
-      const response = await fetch('/api/gemini/content', {
+      const response = await fetch(contentRoute, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

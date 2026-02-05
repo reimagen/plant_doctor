@@ -4,6 +4,7 @@
     "noImplicitReturns": true,
     "noUnusedLocals": false,
     "outDir": "lib",
+    "resolveJsonModule": true,
     "sourceMap": true,
     "strict": true,
     "skipLibCheck": true,

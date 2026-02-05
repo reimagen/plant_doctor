@@ -8,6 +8,7 @@ import { AudioService } from '@/lib/audio-service'
 import { ToolCallRateLimiter, MediaThrottler } from '@/lib/rate-limiter'
 import { createCaptureContext, closeCaptureContext } from '@/lib/audio-capture'
 import { setupLiveMediaPipeline } from '@/lib/live-media'
+import geminiConfig from '@/functions/shared/gemini-config.json'
 
 export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Plant) => void) => {
   const [isCalling, setIsCalling] = useState(false)
@@ -22,6 +23,8 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
   const mediaThrottlerRef = useRef(new MediaThrottler(1000))
   const isConnectingRef = useRef(false) // Guard against multiple connection attempts
   const keepaliveIntervalRef = useRef<number | null>(null) // Keepalive to prevent proxy timeout
+  const liveModel = geminiConfig.models.liveAudio
+  const plantDoctorEndpoint = geminiConfig.liveEndpoints.plantDoctor
 
   const onPlantDetectedRef = useRef(onPlantDetected)
   onPlantDetectedRef.current = onPlantDetected
@@ -113,8 +116,8 @@ export const usePlantDoctor = (homeProfile: HomeProfile, onPlantDetected: (p: Pl
       await audioServiceRef.current.ensureContext()
 
       const session = new GeminiLiveSession({
-        ...(proxyUrl ? { proxyUrl: `${proxyUrl}/plant-doctor` } : { apiKey }),
-        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+        ...(proxyUrl ? { proxyUrl: `${proxyUrl}${plantDoctorEndpoint.path}` } : { apiKey }),
+        model: liveModel,
         systemInstruction: `You are the Plant Doctor performing a "Jungle Inventory" - PLANT-ONLY MODE.
 
 CRITICAL RULES:

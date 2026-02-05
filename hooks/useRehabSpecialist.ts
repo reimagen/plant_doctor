@@ -8,6 +8,7 @@ import { AudioService } from '@/lib/audio-service'
 import { ToolCallRateLimiter, MediaThrottler } from '@/lib/rate-limiter'
 import { createCaptureContext, closeCaptureContext } from '@/lib/audio-capture'
 import { setupLiveMediaPipeline } from '@/lib/live-media'
+import geminiConfig from '@/functions/shared/gemini-config.json'
 
 export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: string, updates: Partial<Plant>) => void) => {
   const [isCalling, setIsCalling] = useState(false)
@@ -22,6 +23,9 @@ export const useRehabSpecialist = (homeProfile: HomeProfile, onUpdate: (id: stri
   const toolCallLimiterRef = useRef(new ToolCallRateLimiter(10, 60000))
   const mediaThrottlerRef = useRef(new MediaThrottler(1000))
   const isConnectingRef = useRef(false) // Guard against multiple connection attempts
+  const liveModel = geminiConfig.models.liveAudio
+  const rehabEndpoint = geminiConfig.liveEndpoints.rehabSpecialist
+  const contentRoute = geminiConfig.api.contentRoute
 
   const homeProfileRef = useRef(homeProfile)
   homeProfileRef.current = homeProfile
@@ -167,8 +171,8 @@ Instructions:
 Home Environment: ${JSON.stringify(homeProfileRef.current)}`
 
       const session = new GeminiLiveSession({
-        ...(proxyUrl ? { proxyUrl: `${proxyUrl}/rehab-specialist` } : { apiKey }),
-        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+        ...(proxyUrl ? { proxyUrl: `${proxyUrl}${rehabEndpoint.path}` } : { apiKey }),
+        model: liveModel,
         systemInstruction,
         tools: [{ functionDeclarations: [createRescuePlanFunction, verifyRehabFunction, markRescueTaskCompleteFunction] }],
         callbacks: {
@@ -322,8 +326,8 @@ Home Environment: ${JSON.stringify(homeProfileRef.current)}`
                       }
                     }, 15000)
 
-                    console.log(`[RESCUE_PLAN] Making API request to /api/gemini/content`)
-                    const response = await fetch('/api/gemini/content', {
+                    console.log(`[RESCUE_PLAN] Making API request to ${contentRoute}`)
+                    const response = await fetch(contentRoute, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({

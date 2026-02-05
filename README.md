@@ -19,6 +19,8 @@ View your app in AI Studio: https://ai.studio/apps/drive/1oNvmu0BLbJMCd1GmrOziBh
 ## Deployment
 
 ### Frontend changes (components, hooks, styles, lib/)
+Comment out NEXT_PUBLIC_GEMINI_API_KEY before deploying to Firebase
+
 ```bash
 npm run build
 firebase deploy --only hosting

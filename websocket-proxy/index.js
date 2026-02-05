@@ -2,6 +2,7 @@ const express = require('express')
 const http = require('http')
 const { WebSocketServer, WebSocket } = require('ws')
 const { GoogleGenAI, Modality } = require('@google/genai')
+const geminiConfig = require('../functions/shared/gemini-config.json')
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 if (!GEMINI_API_KEY) {
@@ -17,14 +18,12 @@ const wss = new WebSocketServer({ server })
 app.get('/health', (req, res) => res.json({ status: 'ok' }))
 
 // Endpoint configs
-const ENDPOINT_CONFIGS = {
-  '/plant-doctor': {
-    model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-  },
-  '/rehab-specialist': {
-    model: 'gemini-2.5-flash-native-audio-preview-12-2025',
-  },
-}
+const ENDPOINT_CONFIGS = Object.fromEntries(
+  Object.values(geminiConfig.liveEndpoints).map((endpoint) => [
+    endpoint.path,
+    { model: geminiConfig.models[endpoint.modelKey] },
+  ])
+)
 
 wss.on('connection', async (clientWs, req) => {
   const path = req.url?.split('?')[0] || ''

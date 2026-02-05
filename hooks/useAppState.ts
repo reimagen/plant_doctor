@@ -7,6 +7,7 @@ import { ensureUser } from '@/lib/firebase-auth'
 import { getCurrentSeason } from '@/lib/season'
 import { DEFAULT_HOME_PROFILE } from '@/lib/constants'
 import { getWateringDaysDiff } from '@/lib/date-utils'
+import geminiConfig from '@/functions/shared/gemini-config.json'
 
 export const useAppState = (onError?: (message: string) => void) => {
   const [plants, setPlants] = useState<Plant[]>([])
@@ -14,6 +15,7 @@ export const useAppState = (onError?: (message: string) => void) => {
   const [isHydrated, setIsHydrated] = useState(false)
   const careGuideRequestsRef = useRef(new Set<string>())
   const userIdRef = useRef<string | null>(null)
+  const contentRoute = geminiConfig.api.contentRoute
 
   // Hydrate from Firestore on mount (with localStorage migration)
   useEffect(() => {
@@ -98,7 +100,7 @@ export const useAppState = (onError?: (message: string) => void) => {
     if (careGuideRequestsRef.current.has(plant.id)) return
     careGuideRequestsRef.current.add(plant.id)
     try {
-      const response = await fetch('/api/gemini/content', {
+      const response = await fetch(contentRoute, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

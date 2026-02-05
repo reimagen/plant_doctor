@@ -7,8 +7,7 @@
 - Source: `CONCERNS.md` (strategy-only).
 
 ## Decisions Needed
-
-**1) Gemini Live API key exposure**
+**1) Gemini Live API key exposure** - RESOLVED, must comment out NEXT_PUBLIC_GEMINI_API_KEY
 - **Problem:** Browser clients can connect directly to Gemini Live using `NEXT_PUBLIC_GEMINI_API_KEY`.
 - **Risk:** Key is exposed in JS bundle and network traffic.
 - **Options:**
