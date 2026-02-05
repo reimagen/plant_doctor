@@ -18,7 +18,7 @@ interface Props {
   onUpdate: (id: string, updates: Partial<Plant>) => void
 }
 
-type SortOption = 'urgency' | 'watering schedule' | 'name'
+type SortOption = 'urgency' | 'water schedule' | 'name'
 
 export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, onAdopt, onDelete, onUpdate }) => {
   const router = useRouter()
@@ -87,7 +87,7 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
         return getNext(a) - getNext(b)
       }
 
-      if (sortBy === 'watering schedule') {
+      if (sortBy === 'water schedule') {
         const getNext = (p: Plant) => {
           const next = getNextWaterDate(p.lastWateredAt, p.cadenceDays)
           if (!next) return Infinity
@@ -105,15 +105,15 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
   }, [junglePlantsRaw, sortBy])
 
   return (
-    <div className="p-6 animate-fade-in pb-24 min-h-screen bg-stone-50">
+    <div className="p-6 animate-fade-in pb-16 min-h-screen bg-stone-50">
       <header className="mb-6">
-        <div className="flex justify-center mb-4">
-          <div className="relative h-10 w-24 overflow-hidden">
+        <div className="flex justify-center mb-0">
+          <div className="relative h-12 w-28 overflow-hidden">
             <Image
               src="/pd-logo.png"
               alt="Plant Daddy logo"
               fill
-              sizes="96px"
+              sizes="112px"
               className="object-cover object-center"
               priority
             />
@@ -121,12 +121,12 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
         </div>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-black text-stone-800 tracking-tight">My Jungle</h1>
-            <p className="text-stone-500 font-medium">You have {junglePlantsRaw.length} active companions</p>
+            <h1 className="text-3xl font-black text-stone-800 tracking-tight">My Jungle</h1>
+            <p className="mt-0 text-stone-500 font-medium">{junglePlantsRaw.length} active companions</p>
           </div>
           <button
             onClick={() => router.push('/doctor?mode=add-plant')}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-2xl text-sm font-bold hover:bg-green-700 transition-all active:scale-95"
+            className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-2xl text-xs font-bold whitespace-nowrap hover:bg-green-700 transition-all active:scale-95"
           >
             <Icons.Plus />
             Add Plant
@@ -135,10 +135,9 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
       </header>
 
       {pendingPlants.length > 0 && (
-        <section className="mb-12">
-          <div className="flex items-center justify-end gap-2 mb-6">
-            <span className="w-2 h-2 bg-orange-500 rounded-full" />
-            <h2 className="text-xs font-black text-stone-400 uppercase tracking-widest">Pending Adoption ({pendingPlants.length})</h2>
+        <section className="mb-8">
+          <div className="flex items-center justify-start mb-6">
+            <h2 className="text-base font-black text-stone-900 uppercase tracking-widest">Pending Adoption ({pendingPlants.length})</h2>
           </div>
           <div className="grid gap-4">
             {pendingPlants.map((plant) => (
@@ -158,17 +157,16 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
 
       <section>
         <div className="flex flex-col gap-4 mb-6">
-          <div className="flex items-center justify-end">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full" />
-              <h2 className="text-xs font-black text-stone-400 uppercase tracking-widest">The Jungle</h2>
+          <div className="flex items-center justify-start">
+            <div className="flex items-center">
+              <h2 className="text-base font-black text-stone-900 uppercase tracking-widest">The Jungle</h2>
             </div>
           </div>
 
           {/* Sorting Bar */}
           <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Sort by:</span>
           <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-            {(['urgency', 'watering schedule', 'name'] as const).map((option) => (
+            {(['urgency', 'water schedule', 'name'] as const).map((option) => (
               <button
                 key={option}
                 onClick={() => setSortBy(option)}
@@ -177,7 +175,7 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
                   : 'bg-white text-stone-500 border border-stone-100 hover:bg-stone-50'
                   }`}
               >
-                {option === 'urgency' ? 'Urgency' : option === 'watering schedule' ? 'Watering Schedule' : 'Name'}
+                {option === 'urgency' ? 'Urgency' : option === 'water schedule' ? 'Water Schedule' : 'Name'}
               </button>
             ))}
           </div>

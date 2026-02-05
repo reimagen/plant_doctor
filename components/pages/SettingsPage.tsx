@@ -36,23 +36,31 @@ export const SettingsPage: React.FC<Props> = ({ profile, onChange }) => {
   )
 
   return (
-    <div className="p-6 pb-24 space-y-8 animate-fade-in min-h-screen bg-stone-50">
-      <header className="text-center">
-        <div className="flex justify-center mb-4">
-          <div className="relative h-10 w-24 overflow-hidden">
-            <Image
-              src="/pd-logo.png"
-              alt="Plant Daddy logo"
-              fill
-              sizes="96px"
-              className="object-cover object-center"
-              priority
-            />
+    <div className="p-6 pb-24 space-y-4 animate-fade-in min-h-screen bg-stone-50">
+      <div className="space-y-3">
+        <header className="text-center">
+          <div className="flex justify-center mb-1">
+            <div className="relative h-12 w-28 overflow-hidden">
+              <Image
+                src="/pd-logo.png"
+                alt="Plant Daddy logo"
+                fill
+                sizes="112px"
+                className="object-cover object-center"
+                priority
+              />
+            </div>
           </div>
+          <h1 className="text-3xl font-black text-stone-800">Home Profile</h1>
+          <p className="text-stone-500">Creates custom care plans based on your home environment.</p>
+        </header>
+
+        <div className="bg-green-50 p-6 rounded-[32px] border border-green-100">
+          <p className="text-green-800 text-sm leading-relaxed">
+            <span className="font-black">Expert Tip:</span> During <span className="font-bold">{profile.seasonMode}</span>, plants typically need {profile.seasonMode === 'Summer' ? 'increased' : 'reduced'} water frequency. Your Plant Doctor uses these factors for every diagnosis.
+          </p>
         </div>
-        <h1 className="text-3xl font-black text-stone-800">Home Profile</h1>
-        <p className="text-stone-500">How Gemini adapts care to your environment</p>
-      </header>
+      </div>
 
       <section className="bg-white rounded-[40px] p-8 shadow-sm border border-stone-100 space-y-8">
         <div className="flex items-center justify-between">
@@ -83,11 +91,6 @@ export const SettingsPage: React.FC<Props> = ({ profile, onChange }) => {
         {renderOptionGroup('Natural Light', ['low', 'medium', 'bright'] as const, profile.light, (v) => update('light', v))}
       </section>
 
-      <div className="bg-green-50 p-6 rounded-[32px] border border-green-100">
-        <p className="text-green-800 text-sm leading-relaxed">
-          <span className="font-black">Expert Tip:</span> During <span className="font-bold">{profile.seasonMode}</span>, plants typically need {profile.seasonMode === 'Summer' ? 'increased' : 'reduced'} water frequency. Your Plant Doctor uses these factors for every diagnosis.
-        </p>
-      </div>
     </div>
   )
 }

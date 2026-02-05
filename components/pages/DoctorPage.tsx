@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { HomeProfile, Plant } from '@/types'
@@ -60,11 +61,11 @@ export const DoctorPage: React.FC<Props> = ({
   const getWelcomeMessage = () => {
     if (currentPlant) {
       const plantLabel = currentPlant.name || currentPlant.species || 'Unknown Plant'
-      return `Begin livestream checkup for ${plantLabel}`
+      return `Start Livestream to Begin Checkup`
     } else if (mode === 'add-plant') {
-      return 'Begin a livestream to add a plant'
+      return 'Start Livestream to Add a Plant'
     } else {
-      return 'The doctor is (always) in'
+      return 'Plant Daddy Is (Always) Here'
     }
   }
 
@@ -73,10 +74,6 @@ export const DoctorPage: React.FC<Props> = ({
 
   // Check if we should show the rescue timeline overlay
   const showRescueOverlay = rehabPlant && rehabPlant.rescuePlanTasks && rehabPlant.rescuePlanTasks.length > 0
-
-  // Only show Phase 1 (First Aid) tasks during livestream
-  // Phase 2 and 3 are only visible in plant details
-  const hasIncompletePhase1 = rehabPlant?.rescuePlanTasks?.some(t => t.phase === 'phase-1' && !t.completed) ?? false
 
   // Memoize phase-1 tasks to prevent unnecessary re-renders of FirstAidStepOverlay
   const phase1Tasks = useMemo(() => {
@@ -90,6 +87,12 @@ export const DoctorPage: React.FC<Props> = ({
   const allPhase1Complete = phase1Tasks.length > 0 && phase1Tasks.every(t => t.completed)
   const [showCelebration, setShowCelebration] = useState(false)
   const celebrationShownRef = useRef(false)
+  const [rescueOverlayHeight, setRescueOverlayHeight] = useState<number | null>(null)
+
+  // Only show Phase 1 (First Aid) tasks during livestream
+  // Phase 2 and 3 are only visible in plant details
+  const hasIncompletePhase1 = rehabPlant?.rescuePlanTasks?.some(t => t.phase === 'phase-1' && !t.completed) ?? false
+  const hasRescueOverlay = !!showRescueOverlay && hasIncompletePhase1 && !showCelebration
 
   useEffect(() => {
     if (allPhase1Complete && !celebrationShownRef.current) {
@@ -99,6 +102,12 @@ export const DoctorPage: React.FC<Props> = ({
       return () => clearTimeout(timer)
     }
   }, [allPhase1Complete])
+
+  useEffect(() => {
+    if (!hasRescueOverlay) {
+      setRescueOverlayHeight(null)
+    }
+  }, [hasRescueOverlay])
 
   // If we have a plantId but no plant found, show loading state
   if (plantId && !currentPlant) {
@@ -148,39 +157,84 @@ export const DoctorPage: React.FC<Props> = ({
       )}
 
       {/* Top overlay - First Aid (Phase 1) rescue steps OR How to Use */}
-      {showRescueOverlay && hasIncompletePhase1 && !showCelebration ? (
-        <FirstAidStepOverlay tasks={phase1Tasks} />
+      {hasRescueOverlay ? (
+        <FirstAidStepOverlay tasks={phase1Tasks} onHeightChange={setRescueOverlayHeight} />
       ) : !showCelebration && !isActive && !plantId ? (
         /* Discovery mode welcome with instructions */
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[80%] max-w-sm">
           <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-3 py-2 shadow-2xl">
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 text-center">
-              {getWelcomeMessage()}
-            </p>
-            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 mt-3 text-left">
-              How to Use:
-            </p>
-            <p className="text-xs font-bold text-stone-800 mt-2">
-              1. Start a video livestream to inventory all of your plants
-            </p>
-            <p className="text-xs font-bold text-stone-800 mt-1">
-              2. Focus your plant in the ring below
-            </p>
-            <p className="text-xs font-bold text-stone-800 mt-1">
-              3. Begin the chat by saying "Hello"
-            </p>
-            <p className="text-xs font-bold text-stone-800 mt-1">
-              4. The Doctor will identify and add plants to your Jungle
-            </p>
+            <div className="flex justify-center mb-0">
+              <div className="relative h-10 w-24 overflow-hidden">
+                <Image
+                  src="/pd-logo.png"
+                  alt="Plant Daddy logo"
+                  fill
+                  sizes="96px"
+                  className="object-cover object-center"
+                />
+              </div>
+            </div>
+            {mode !== 'add-plant' && (
+              <p className="text-lg font-black text-stone-900 text-center mt-0">
+                {getWelcomeMessage()}
+              </p>
+            )}
+            <div className="px-2 pb-1">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 mt-1 text-left">
+                How to Use:
+              </p>
+              <p className="text-xs font-bold text-stone-800 mt-2">
+                1. Start the video call
+              </p>
+              <p className="text-xs font-bold text-stone-800 mt-1">
+                2. Say "Hello"
+              </p>
+              <p className="text-xs font-bold text-stone-800 mt-1">
+                3. Show Plant Daddy your plants
+              </p>
+              <p className="text-xs font-bold text-stone-800 mt-1">
+                4. Focus your plant in the ring
+              </p>
+            </div>
           </div>
         </div>
       ) : !showCelebration && !isActive && plantId ? (
         /* Plant checkup mode - smaller message */
         <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[80%] max-w-sm">
-          <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-3 py-2 shadow-2xl">
+          <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-4 py-3 shadow-2xl">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 text-center">
               {getWelcomeMessage()}
             </p>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Status / plant name label */}
+      {(isActive && isGeneratingPlan) || (isActive && geminiActive) || plantId ? (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 z-30"
+          style={{ top: hasRescueOverlay && rescueOverlayHeight ? rescueOverlayHeight + 40 : 112 }}
+        >
+          <div className="bg-black/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 pointer-events-none">
+            {isActive && isGeneratingPlan ? (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
+                  Generating Plan...
+                </span>
+              </div>
+            ) : isActive && geminiActive ? (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
+                  Daddy Active
+                </span>
+              </div>
+            ) : (
+              <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
+                Plant: {currentPlant?.name || currentPlant?.species || 'Plant Checkup'}
+              </span>
+            )}
           </div>
         </div>
       ) : null}
@@ -197,29 +251,6 @@ export const DoctorPage: React.FC<Props> = ({
 
       {/* Stream Controls Overlay - centered column */}
       <div className="absolute bottom-32 w-full left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-3">
-        {/* Label: status or plant name */}
-        <div className="bg-black/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 pointer-events-none">
-          {isActive && isGeneratingPlan ? (
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
-                Generating Plan...
-              </span>
-            </div>
-          ) : isActive && geminiActive ? (
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
-                Doctor Active
-              </span>
-            </div>
-          ) : (
-            <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
-              {plantId ? (currentPlant?.name || currentPlant?.species || 'Plant Checkup') : 'Inventory Sweep'}
-            </span>
-          )}
-        </div>
-
         {/* Call Button */}
         {!isActive ? (
           <button

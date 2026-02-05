@@ -59,8 +59,8 @@ export const Navigation: React.FC = () => {
             pathname === '/doctor' ? 'text-green-600 scale-110' : 'text-stone-400'
           }`}
         >
-          <Icons.DoctorStethoscope />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Doctor</span>
+          <Icons.Human />
+          <span className="text-[10px] font-bold uppercase tracking-widest">DADDY</span>
         </Link>
 
         <Link

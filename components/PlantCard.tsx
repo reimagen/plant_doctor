@@ -41,6 +41,13 @@ const PlantCardComponent: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete
   const isRed = isEmergency
   const isYellow = !isRed && (isCheckInNeeded || isOverdue || isMonitoring || isMajorOverdue || hasIncompleteRescueTasks)
 
+  const overdueTimeline = (overdueDays: number) => (
+    <span className="inline-flex items-center gap-1">
+      <Icons.Droplet />
+      <span>{overdueDays}d overdue</span>
+    </span>
+  )
+
   const getStatusConfig = () => {
     if (isPending) return {
       label: 'New Discovery',
@@ -51,7 +58,7 @@ const PlantCardComponent: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete
     }
     if (isEmergency) return {
       label: 'Emergency',
-      timeline: daysOverdue > 0 ? `Water now - ${daysOverdue}d overdue` : 'Needs attention',
+      timeline: daysOverdue > 0 ? overdueTimeline(daysOverdue) : 'Needs attention',
       dot: 'bg-red-500',
       pill: 'bg-red-100 text-red-700',
       ring: 'ring-red-200'
@@ -59,7 +66,7 @@ const PlantCardComponent: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete
     // Monitoring/checkup conditions take precedence over watering day
     if (isCheckInNeeded || isMajorOverdue || isMinorOverdue || isMonitoring || hasIncompleteRescueTasks) return {
       label: 'Monitoring',
-      timeline: daysOverdue > 0 ? `Water now - ${daysOverdue}d overdue` : (daysDiff !== null ? (daysDiff > 0 ? `Water in ${daysDiff}d` : 'Water today') : ''),
+      timeline: daysOverdue > 0 ? overdueTimeline(daysOverdue) : (daysDiff !== null ? (daysDiff > 0 ? `Water in ${daysDiff}d` : 'Water today') : ''),
       dot: 'bg-amber-500',
       pill: 'bg-amber-100 text-amber-700',
       ring: 'ring-amber-200'
@@ -184,20 +191,22 @@ const PlantCardComponent: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete
   }
 
   const hoverStyles = isRed
-    ? 'border-red-100'
+    ? 'border-red-100 hover:border-red-300 hover:shadow-xl hover:shadow-red-100/60'
     : isYellow
       ? 'border-amber-100 hover:border-amber-300 hover:shadow-xl hover:shadow-amber-100/60'
-      : 'border-stone-100 hover:border-green-200 hover:shadow-xl hover:shadow-stone-200/50'
+      : 'border-stone-100 hover:border-green-200 hover:shadow-xl hover:shadow-green-100/60'
 
   return (
     <div className={`group relative bg-white rounded-[40px] p-5 border transition-all duration-500 ${hoverStyles}`}>
       {isPending && (
         <button
           onClick={(e) => { e.stopPropagation(); onDelete?.(plant.id) }}
-          className="absolute top-4 right-4 p-2 bg-stone-100 text-stone-400 rounded-full hover:bg-stone-200 hover:text-stone-600 active:scale-95 transition-all z-10"
+          className="absolute top-4 right-4 p-1.5 bg-stone-100 text-stone-400 rounded-full hover:bg-stone-200 hover:text-stone-600 active:scale-95 transition-all z-10 sm:top-5 sm:right-5 sm:p-2"
           title="Release plant"
         >
-          <Icons.X />
+          <span className="block scale-75 sm:scale-100">
+            <Icons.X />
+          </span>
         </button>
       )}
       <div className="flex gap-5 mb-6">

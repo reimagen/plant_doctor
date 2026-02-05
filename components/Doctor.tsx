@@ -110,7 +110,7 @@ export const Doctor: React.FC<Props> = ({
 
       {!isAudioOnly && (
         <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-          <div className={`relative w-[40vmin] h-[40vmin] max-w-[320px] max-h-[320px] rounded-full ${isGeneratingPlan ? 'animate-pulse' : ''}`}>
+          <div className={`relative w-[50vmin] h-[50vmin] max-w-[380px] max-h-[380px] rounded-full ${isGeneratingPlan ? 'animate-pulse' : ''}`}>
             <div className={`absolute inset-0 rounded-full border ${isGeneratingPlan ? 'border-amber-400/70' : 'border-white/50'}`} />
             <div className={`absolute inset-3 rounded-full border ${isGeneratingPlan ? 'border-amber-400/30' : 'border-white/20'}`} />
             <div className={`absolute inset-0 rounded-full ${isGeneratingPlan ? 'shadow-[0_0_40px_rgba(251,191,36,0.4)]' : 'shadow-[0_0_30px_rgba(255,255,255,0.25)]'}`} />

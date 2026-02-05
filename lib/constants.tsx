@@ -65,6 +65,17 @@ export const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 4h2.5M13.5 4H16" />
     </svg>
   ),
+  Droplet: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c3.5 4.2 6 7.9 6 10.5a6 6 0 0 1-12 0C6 10.9 8.5 7.2 12 3Z" />
+    </svg>
+  ),
+  Human: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 20a7 7 0 0 1 14 0" />
+    </svg>
+  ),
   ChevronLeft: () => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-6 h-6">
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />

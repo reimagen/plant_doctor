@@ -100,12 +100,12 @@ export const PlantDetailPage: React.FC<Props> = ({
         </button>
 
         <div className="flex justify-center mb-4">
-          <div className="relative h-10 w-24 overflow-hidden">
+          <div className="relative h-12 w-28 overflow-hidden">
             <Image
               src="/pd-logo.png"
               alt="Plant Daddy logo"
               fill
-              sizes="96px"
+              sizes="112px"
               className="object-cover object-center"
               priority
             />
