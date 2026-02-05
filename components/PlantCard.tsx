@@ -183,8 +183,14 @@ const PlantCardComponent: React.FC<Props> = ({ plant, onWater, onAdopt, onDelete
     return null
   }
 
+  const hoverStyles = isRed
+    ? 'border-red-100'
+    : isYellow
+      ? 'border-amber-100 hover:border-amber-300 hover:shadow-xl hover:shadow-amber-100/60'
+      : 'border-stone-100 hover:border-green-200 hover:shadow-xl hover:shadow-stone-200/50'
+
   return (
-    <div className={`group relative bg-white rounded-[40px] p-5 border transition-all duration-500 ${isRed ? 'border-red-100' : 'border-stone-100 hover:border-green-200 hover:shadow-xl hover:shadow-stone-200/50'}`}>
+    <div className={`group relative bg-white rounded-[40px] p-5 border transition-all duration-500 ${hoverStyles}`}>
       {isPending && (
         <button
           onClick={(e) => { e.stopPropagation(); onDelete?.(plant.id) }}

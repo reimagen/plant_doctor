@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
 import { Plant, HomeProfile } from '@/types'
@@ -105,18 +106,32 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
 
   return (
     <div className="p-6 animate-fade-in pb-24 min-h-screen bg-stone-50">
-      <header className="mb-10 flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-black text-stone-800 tracking-tight">My Jungle</h1>
-          <p className="text-stone-500 font-medium">You have {junglePlantsRaw.length} active companions</p>
+      <header className="mb-6">
+        <div className="flex justify-center mb-4">
+          <div className="relative h-10 w-24 overflow-hidden">
+            <Image
+              src="/pd-logo.png"
+              alt="Plant Daddy logo"
+              fill
+              sizes="96px"
+              className="object-cover object-center"
+              priority
+            />
+          </div>
         </div>
-        <button
-          onClick={() => router.push('/doctor?mode=add-plant')}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-2xl text-sm font-bold hover:bg-green-700 transition-all active:scale-95"
-        >
-          <Icons.Plus />
-          Add Plant
-        </button>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-black text-stone-800 tracking-tight">My Jungle</h1>
+            <p className="text-stone-500 font-medium">You have {junglePlantsRaw.length} active companions</p>
+          </div>
+          <button
+            onClick={() => router.push('/doctor?mode=add-plant')}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-2xl text-sm font-bold hover:bg-green-700 transition-all active:scale-95"
+          >
+            <Icons.Plus />
+            Add Plant
+          </button>
+        </div>
       </header>
 
       {pendingPlants.length > 0 && (
@@ -158,8 +173,8 @@ export const InventoryPage: React.FC<Props> = ({ plants, homeProfile, onWater, o
                 key={option}
                 onClick={() => setSortBy(option)}
                 className={`flex-shrink-0 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${sortBy === option
-                  ? 'bg-stone-800 text-white shadow-lg shadow-stone-200'
-                  : 'bg-white text-stone-400 border border-stone-100 hover:bg-stone-50'
+                  ? 'bg-stone-400 text-white shadow-lg shadow-stone-200'
+                  : 'bg-white text-stone-500 border border-stone-100 hover:bg-stone-50'
                   }`}
               >
                 {option === 'urgency' ? 'Urgency' : option === 'watering schedule' ? 'Watering Schedule' : 'Name'}

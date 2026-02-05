@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { HomeProfile } from '@/types'
 
 interface Props {
@@ -36,7 +37,19 @@ export const SettingsPage: React.FC<Props> = ({ profile, onChange }) => {
 
   return (
     <div className="p-6 pb-24 space-y-8 animate-fade-in min-h-screen bg-stone-50">
-      <header>
+      <header className="text-center">
+        <div className="flex justify-center mb-4">
+          <div className="relative h-10 w-24 overflow-hidden">
+            <Image
+              src="/pd-logo.png"
+              alt="Plant Daddy logo"
+              fill
+              sizes="96px"
+              className="object-cover object-center"
+              priority
+            />
+          </div>
+        </div>
         <h1 className="text-3xl font-black text-stone-800">Home Profile</h1>
         <p className="text-stone-500">How Gemini adapts care to your environment</p>
       </header>

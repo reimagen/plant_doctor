@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 import { Plant, HomeProfile } from '@/types'
 import { Icons } from '@/lib/constants'
@@ -83,15 +84,13 @@ export const PlantDetailPage: React.FC<Props> = ({
         </div>
       )}
       {/* Header Section */}
-      <div className="relative bg-white border-b border-stone-100 p-6">
+      <div className="relative bg-white border-b border-stone-100 px-6 pt-4 pb-6">
         <button
           onClick={handleBack}
           className="absolute top-4 left-4 p-2 bg-stone-100 text-stone-500 rounded-full hover:bg-stone-200 transition-colors"
         >
           <Icons.ChevronLeft />
         </button>
-
-        {/* Rehab Call Button */}
         <button
           onClick={handleStartRehab}
           className="absolute top-4 right-4 p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition-colors"
@@ -100,7 +99,20 @@ export const PlantDetailPage: React.FC<Props> = ({
           <Icons.Video />
         </button>
 
-        <div className="flex gap-5 items-center pt-8">
+        <div className="flex justify-center mb-4">
+          <div className="relative h-10 w-24 overflow-hidden">
+            <Image
+              src="/pd-logo.png"
+              alt="Plant Daddy logo"
+              fill
+              sizes="96px"
+              className="object-cover object-center"
+              priority
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-5 items-center pt-2">
           <div className="w-24 h-24 rounded-3xl overflow-hidden shadow-sm flex-shrink-0 border-4 border-stone-50">
             <img src={plant.photoUrl} className="w-full h-full object-cover" alt={plant.species} />
           </div>
@@ -151,7 +163,7 @@ export const PlantDetailPage: React.FC<Props> = ({
       {/* Pending Adoption Banner */}
       {isPending && (
         <div className="mx-6 mt-4 p-5 bg-gradient-to-r from-amber-50 to-orange-50 rounded-3xl border border-amber-200">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex-1">
               <p className="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] mb-1">
                 Pending Adoption
@@ -169,7 +181,7 @@ export const PlantDetailPage: React.FC<Props> = ({
             <button
               onClick={handleAdopt}
               disabled={!canAdopt}
-              className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${canAdopt
+              className={`self-start sm:self-auto px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${canAdopt
                 ? 'bg-green-600 text-white shadow-lg shadow-green-100 hover:bg-green-700 active:scale-95'
                 : 'bg-stone-200 text-stone-400 cursor-not-allowed'
                 }`}
