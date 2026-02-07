@@ -1,0 +1,281 @@
+'use client'
+
+import Image from 'next/image'
+import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { HomeProfile, Plant } from '@/types'
+import { Doctor } from '@/components/Doctor'
+import { FirstAidStepOverlay } from '@/components/plant-details/FirstAidStepOverlay'
+import { Icons } from '@/lib/constants'
+
+interface Props {
+  stream: MediaStream | null
+  streamMode: 'video' | null
+  isConnecting: boolean
+  homeProfile: HomeProfile
+  plants: Plant[]
+  onAutoDetect: (plant: Plant, options?: { forceNew?: boolean }) => void
+  onUpdatePlant: (id: string, updates: Partial<Plant>) => void
+  onStartStream: () => void
+  onStopStream: () => void
+  rehabPlant: Plant | null | undefined
+  streamError?: string | null
+  onClearStreamError?: () => void
+}
+
+/**
+ * DoctorPage - Orchestrator page for livestream modes
+ * Coordinates the Doctor component (livestream UI) with state management
+ * Reads plantId from URL search params for rehab mode
+ * Provides start/stop controls for video and audio streams
+ */
+export const DoctorPage: React.FC<Props> = ({
+  stream,
+  streamMode,
+  isConnecting,
+  homeProfile,
+  plants,
+  onAutoDetect,
+  onUpdatePlant,
+  onStartStream,
+  onStopStream,
+  rehabPlant,
+  streamError,
+  onClearStreamError
+}) => {
+  const searchParams = useSearchParams()
+  const mode = searchParams.get('mode')
+  const plantId = searchParams.get('plantId')
+  const isAddPlantMode = mode === 'add-plant'
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
+  const [geminiActive, setGeminiActive] = useState(false)
+
+  // Look up plant by ID directly from plants array
+  const currentPlant = plantId ? plants.find(p => p.id === plantId) : null
+
+  const handleAutoDetect = (plant: Plant) => {
+    onAutoDetect(plant, { forceNew: isAddPlantMode })
+  }
+
+  // Determine welcome message based on entry route
+  const getWelcomeMessage = () => {
+    if (currentPlant) {
+      const plantLabel = currentPlant.name || currentPlant.species || 'Unknown Plant'
+      return `Start Livestream to Begin Checkup`
+    } else if (mode === 'add-plant') {
+      return 'Start Livestream to Add a Plant'
+    } else {
+      return 'Plant Daddy Is (Always) Here'
+    }
+  }
+
+  // Consider a call active if either stream exists OR streamMode is set
+  const isActive = stream !== null || streamMode !== null
+
+  // Check if we should show the rescue timeline overlay
+  const showRescueOverlay = rehabPlant && rehabPlant.rescuePlanTasks && rehabPlant.rescuePlanTasks.length > 0
+
+  // Memoize phase-1 tasks to prevent unnecessary re-renders of FirstAidStepOverlay
+  const phase1Tasks = useMemo(() => {
+    if (!rehabPlant?.rescuePlanTasks) return []
+    return rehabPlant.rescuePlanTasks
+      .filter(task => task.phase === 'phase-1')
+      .sort((a, b) => (a.sequencing ?? 0) - (b.sequencing ?? 0))
+  }, [rehabPlant?.rescuePlanTasks])
+
+  // Track phase-1 completion for celebration — lives here so it survives overlay unmount
+  const allPhase1Complete = phase1Tasks.length > 0 && phase1Tasks.every(t => t.completed)
+  const [showCelebration, setShowCelebration] = useState(false)
+  const celebrationShownRef = useRef(false)
+  const [rescueOverlayHeight, setRescueOverlayHeight] = useState<number | null>(null)
+
+  // Only show Phase 1 (First Aid) tasks during livestream
+  // Phase 2 and 3 are only visible in plant details
+  const hasIncompletePhase1 = rehabPlant?.rescuePlanTasks?.some(t => t.phase === 'phase-1' && !t.completed) ?? false
+  const hasRescueOverlay = !!showRescueOverlay && hasIncompletePhase1 && !showCelebration
+
+  useEffect(() => {
+    if (allPhase1Complete && !celebrationShownRef.current) {
+      celebrationShownRef.current = true
+      setShowCelebration(true)
+      const timer = setTimeout(() => setShowCelebration(false), 4000)
+      return () => clearTimeout(timer)
+    }
+  }, [allPhase1Complete])
+
+  useEffect(() => {
+    if (!hasRescueOverlay) {
+      setRescueOverlayHeight(null)
+    }
+  }, [hasRescueOverlay])
+
+  // If we have a plantId but no plant found, show loading state
+  if (plantId && !currentPlant) {
+    return (
+      <div className="relative h-screen bg-black overflow-hidden flex items-center justify-center">
+        <div className="text-white/60 text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-white/20 border-t-white/60 rounded-full mx-auto mb-4"></div>
+          <p className="text-sm font-bold uppercase tracking-widest">Loading Plant Data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative h-screen bg-black overflow-hidden">
+      {streamError && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-40 w-[90%] max-w-xl">
+          <div className="bg-red-500/90 backdrop-blur-xl border border-red-400/60 rounded-3xl px-5 py-4 shadow-2xl flex items-center justify-between gap-4">
+            <p className="text-xs font-bold text-white">
+              {streamError}
+            </p>
+            <button
+              onClick={() => onClearStreamError?.()}
+              className="text-[10px] font-black uppercase tracking-widest text-white/90 hover:text-white"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Celebration overlay — rendered independently so it survives overlay unmount */}
+      {showCelebration && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[90%] max-w-xl animate-slide-up">
+          <div className="bg-green-500/90 backdrop-blur-xl border border-green-400/60 rounded-3xl px-5 py-4 shadow-2xl">
+            <div className="flex items-center justify-center gap-3">
+              <div className="text-center">
+                <p className="text-sm font-black text-white">
+                  First Aid Completed!
+                </p>
+                <p className="text-xs font-bold text-white/80 mt-1">
+                  Follow the monitoring steps in your Plant Detail page
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Top overlay - First Aid (Phase 1) rescue steps OR How to Use */}
+      {hasRescueOverlay ? (
+        <FirstAidStepOverlay tasks={phase1Tasks} onHeightChange={setRescueOverlayHeight} />
+      ) : !showCelebration && !isActive && !plantId ? (
+        /* Discovery mode welcome with instructions */
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[80%] max-w-sm">
+          <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-3 py-2 shadow-2xl">
+            <div className="flex justify-center mb-0">
+              <div className="relative h-10 w-24 overflow-hidden">
+                <Image
+                  src="/pd-logo.png"
+                  alt="Plant Daddy logo"
+                  fill
+                  sizes="96px"
+                  className="object-cover object-center"
+                />
+              </div>
+            </div>
+            {mode !== 'add-plant' && (
+              <p className="text-lg font-black text-stone-900 text-center mt-0">
+                {getWelcomeMessage()}
+              </p>
+            )}
+            <div className="px-2 pb-1">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 mt-1 text-left">
+                How to Use:
+              </p>
+              <p className="text-xs font-bold text-stone-800 mt-2">
+                1. Start the video call
+              </p>
+              <p className="text-xs font-bold text-stone-800 mt-1">
+                2. Say "Hello"
+              </p>
+              <p className="text-xs font-bold text-stone-800 mt-1">
+                3. Show Plant Daddy your plants
+              </p>
+              <p className="text-xs font-bold text-stone-800 mt-1">
+                4. Focus your plant in the ring
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : !showCelebration && !isActive && plantId ? (
+        /* Plant checkup mode - smaller message */
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-[80%] max-w-sm">
+          <div className="bg-white/90 backdrop-blur-xl border border-white/60 rounded-3xl px-4 py-3 shadow-2xl">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-stone-500 text-center">
+              {getWelcomeMessage()}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Status / plant name label */}
+      {(isActive && isGeneratingPlan) || (isActive && geminiActive) || plantId ? (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 z-30"
+          style={{ top: hasRescueOverlay && rescueOverlayHeight ? rescueOverlayHeight + 40 : 112 }}
+        >
+          <div className="bg-black/50 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 pointer-events-none">
+            {isActive && isGeneratingPlan ? (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
+                  Generating Plan...
+                </span>
+              </div>
+            ) : isActive && geminiActive ? (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
+                  Daddy Active
+                </span>
+              </div>
+            ) : (
+              <span className="text-white/80 text-xs font-bold uppercase tracking-widest">
+                Plant: {currentPlant?.name || currentPlant?.species || 'Plant Checkup'}
+              </span>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      <Doctor
+        stream={stream}
+        homeProfile={homeProfile}
+        rehabPlant={rehabPlant}
+        onAutoDetect={handleAutoDetect}
+        onUpdatePlant={onUpdatePlant}
+        onStatusChange={setIsGeneratingPlan}
+        onGeminiActiveChange={setGeminiActive}
+      />
+
+      {/* Stream Controls Overlay - centered column */}
+      <div className="absolute bottom-32 w-full left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-3">
+        {/* Call Button */}
+        {!isActive ? (
+          <button
+            onClick={onStartStream}
+            disabled={isConnecting || streamMode !== null}
+            className={`flex flex-col items-center gap-2 px-4 py-3 rounded-2xl transition-all ${isConnecting || streamMode !== null
+              ? 'bg-stone-500/50 cursor-not-allowed opacity-50'
+              : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+            title="Start video stream"
+          >
+            <Icons.Video />
+            <span className="text-xs font-bold uppercase">Start</span>
+          </button>
+        ) : (
+          <button
+            onClick={onStopStream}
+            className="flex flex-col items-center gap-2 px-4 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white transition-all animate-pulse"
+            title="Stop stream"
+          >
+            <Icons.Stop />
+            <span className="text-xs font-bold uppercase">Stop</span>
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}

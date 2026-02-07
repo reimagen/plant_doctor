@@ -1,35 +1,47 @@
+'use client'
 
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react'
 
+/**
+ * useMediaStream - Utility hook for managing media stream acquisition and cleanup
+ * Returns imperative start/stop functions without managing state
+ * State management is handled by the consumer (e.g., ClientApp)
+ */
 export const useMediaStream = () => {
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null)
 
-  const start = useCallback(async (videoMode: boolean = true) => {
+  const start = useCallback(async () => {
     try {
+      // Check if mediaDevices API is available (requires secure context: HTTPS or localhost)
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        const message = isLocalhost
+          ? 'Camera access not available. Your browser may have denied permission.'
+          : 'Camera access requires HTTPS. Use localhost:3000 or deploy with HTTPS.'
+        throw new Error(message)
+      }
+
       const newStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: videoMode ? { facingMode: 'environment' } : false
-      });
-      streamRef.current = newStream;
-      setStream(newStream);
-      return newStream;
+        video: { facingMode: 'environment' }
+      })
+      streamRef.current = newStream
+      return newStream
     } catch (err) {
-      console.error("Hardware access denied:", err);
-      throw err;
+      console.error('Hardware access denied:', err)
+      throw err
     }
-  }, []);
+  }, [])
 
   const stop = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => {
-        track.stop();
-        track.enabled = false;
-      });
-      streamRef.current = null;
-      setStream(null);
+        track.stop()
+        track.enabled = false
+      })
+      streamRef.current = null
     }
-  }, []);
+  }, [])
 
-  return { stream, start, stop };
-};
+  return { start, stop }
+}
